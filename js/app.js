@@ -81,6 +81,129 @@ const pad = (n) => String(n).padStart(2, "0");
 const randInt = (max) => Math.floor(Math.random() * max);
 const pick = (arr) => arr[randInt(arr.length)];
 
+/* ================= No-repeat decks （去重） ================= */
+/* Every enumerated pool is drawn as a shuffle-bag: the pool is shuffled,
+   drawn without replacement, and reshuffled only when the bag is empty —
+   so within a category nothing repeats until the whole pool has been
+   shown once. The first draw of a fresh bag never equals the last draw
+   of the previous bag (pool size > 1). The weighted category choice is
+   untouched; decks govern only which item inside the category appears.
+   Decks persist in localStorage under one versioned key, so a reload
+   resumes mid-bag instead of re-showing recent cards. Each deck records
+   its pool size and is rebuilt (alone) when its pool has grown or shrunk
+   since — pools here are expanded often, and a stale index must never
+   surface. Deck keys are per language where the pool is (poem:zh vs
+   poem:en, quotes:zh vs quotes:en); bilingual single pools (thought,
+   science…) share one deck because both languages render the same item. */
+const LS_DECKS = "nam-decks-v1";
+const deckStore = loadDeckStore();
+
+function loadDeckStore() {
+  const fresh = { v: 1, d: {}, g: {}, fp: [] };
+  try {
+    const raw = localStorage.getItem(LS_DECKS);
+    if (!raw) return fresh;
+    const s = JSON.parse(raw);
+    if (!s || s.v !== 1 || typeof s.d !== "object" || s.d === null) return fresh;
+    if (typeof s.g !== "object" || s.g === null) s.g = {};
+    if (!Array.isArray(s.fp)) s.fp = [];
+    return s;
+  } catch (e) { return fresh; }
+}
+function saveDeckStore() {
+  try {
+    localStorage.setItem(LS_DECKS, JSON.stringify(deckStore));
+  } catch (e) { /* storage unavailable (private mode): decks live in memory only */ }
+}
+function shuffledIndices(n) {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = randInt(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function deckValid(d, n) {
+  if (!d || d.n !== n || !Array.isArray(d.r)) return false;
+  const seen = new Set();
+  for (const i of d.r) {
+    if (!Number.isInteger(i) || i < 0 || i >= n || seen.has(i)) return false;
+    seen.add(i);
+  }
+  return d.l === null || d.l === undefined ||
+    (Number.isInteger(d.l) && d.l >= 0 && d.l < n);
+}
+/* Draw the next index from deck `key` for a pool of size n. The bag is
+   the array r, drawn from its end; l is the most recent draw. */
+function deckDraw(key, n) {
+  if (n <= 0) return -1;
+  let d = deckStore.d[key];
+  if (!deckValid(d, n)) {
+    const lastOk = d && Number.isInteger(d.l) && d.l >= 0 && d.l < n ? d.l : null;
+    d = { n, r: shuffledIndices(n), l: lastOk };
+    deckStore.d[key] = d;
+  }
+  if (d.r.length === 0) {
+    d.r = shuffledIndices(n);
+    // Seam rule: the first draw of the new bag (the last slot, which
+    // pop() takes) must differ from the previous bag's final draw.
+    if (n > 1 && d.l !== null && d.l !== undefined && d.r[d.r.length - 1] === d.l) {
+      [d.r[0], d.r[d.r.length - 1]] = [d.r[d.r.length - 1], d.r[0]];
+    }
+  }
+  const idx = d.r.pop();
+  d.l = idx;
+  saveDeckStore();
+  return idx;
+}
+
+/* Gossip has no fixed pool: headlines arrive from the feed and change
+   over time. Dedupe by headline — the stable identity — kept per
+   language and pruned to the current list on every draw, so brand-new
+   headlines are drawable at once and vanished ones are forgotten. When
+   everything current has been seen, a new cycle starts with the
+   previous cycle's last headline held back for one draw, so it cannot
+   repeat back-to-back (list size > 1). */
+function drawGossipItem() {
+  let g = deckStore.g[lang];
+  if (!g || !Array.isArray(g.seen)) {
+    g = { seen: [], last: null };
+    deckStore.g[lang] = g;
+  }
+  const alive = new Set(gossipCache.map((i) => i.title));
+  g.seen = g.seen.filter((title) => alive.has(title));
+  let unseen = gossipCache.filter((i) => !g.seen.includes(i.title));
+  if (!unseen.length) {
+    g.seen = gossipCache.length > 1 && g.last && alive.has(g.last) ? [g.last] : [];
+    unseen = gossipCache.filter((i) => !g.seen.includes(i.title));
+    if (!unseen.length) unseen = gossipCache.slice(); // a one-headline list
+  }
+  const item = unseen[randInt(unseen.length)];
+  g.seen.push(item.title);
+  if (g.seen.length > 500) g.seen = g.seen.slice(-500);
+  g.last = item.title;
+  saveDeckStore();
+  return item;
+}
+
+/* Chance values are generated, not enumerated, so they cannot be decked;
+   instead a bounded recent-history of value fingerprints (persisted with
+   the decks) rejects an exact repeat within the last few chance draws. */
+function chanceFingerprint(kind, value) {
+  return kind + ":" + (value && typeof value === "object" ? JSON.stringify(value) : String(value));
+}
+function rollChanceValue(kind) {
+  if (kind === "integer") return randInt(1000000);
+  if (kind === "dice") return [1 + randInt(6), 1 + randInt(6)];
+  if (kind === "coins") return Array.from({ length: 8 }, () => Math.random() < 0.5);
+  if (kind === "card") {
+    const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+    return { rank: pick(ranks), suit: pick(["S", "H", "D", "C"]) };
+  }
+  // color
+  return "#" + Array.from({ length: 3 }, () => pad(randInt(256).toString(16)).toUpperCase()).join("");
+}
+
 /* ================= Solar calculation (compact, after SunCalc) ================= */
 const RAD = Math.PI / 180;
 const DAY_MS = 86400000;
@@ -480,70 +603,80 @@ function weightedCategory() {
 function makeSelection(cat) {
   switch (cat) {
     case "world": {
-      // The moon is one extra "place" in the world pool.
-      const slot = randInt(CITIES.length + 1);
+      // The moon is one extra "place" in the world pool (slot == CITIES.length).
+      const slot = deckDraw("world", CITIES.length + 1);
       if (slot === CITIES.length) return { cat, moon: true };
       return { cat, city: CITIES[slot] };
     }
     case "poem":
-      return { cat, poemZh: pick(POEMS_ZH), poemEn: pick(POEMS_EN) };
+      return {
+        cat,
+        poemZh: POEMS_ZH[deckDraw("poem:zh", POEMS_ZH.length)],
+        poemEn: POEMS_EN[deckDraw("poem:en", POEMS_EN.length)],
+      };
     case "history": {
       const now = new Date();
       const key = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      // Today's entry is date-determined (the certainty side of the site);
+      // the deck governs only the random-day fallback pool.
       if (HISTORY[key]) return { cat, key, entry: HISTORY[key], today: true };
       const keys = Object.keys(HISTORY);
-      const rk = pick(keys);
+      const rk = keys[deckDraw("history", keys.length)];
       return { cat, key: rk, entry: HISTORY[rk], today: false };
     }
     case "thought":
-      return { cat, item: pick(THOUGHTS) };
+      return { cat, item: THOUGHTS[deckDraw("thought", THOUGHTS.length)] };
     case "science":
-      return { cat, item: pick(SCIENCE) };
+      return { cat, item: SCIENCE[deckDraw("science", SCIENCE.length)] };
     case "quotes":
-      return { cat, quoteZh: pick(QUOTES_ZH), quoteEn: pick(QUOTES_EN) };
+      return {
+        cat,
+        quoteZh: QUOTES_ZH[deckDraw("quotes:zh", QUOTES_ZH.length)],
+        quoteEn: QUOTES_EN[deckDraw("quotes:en", QUOTES_EN.length)],
+      };
     case "classics":
-      return { cat, item: pick(CLASSICS) };
+      return { cat, item: CLASSICS[deckDraw("classics", CLASSICS.length)] };
     case "almanac":
       return { cat, data: computeAlmanac(new Date()) };
     case "astro": {
-      const subtype = pick(["horoscope", "positions", "profile"]);
+      const subtype = ["horoscope", "positions", "profile"][deckDraw("astro:sub", 3)];
       if (subtype === "horoscope") {
         let signIdx = -1;
         if (userSign && Math.random() < 0.7) {
           signIdx = SIGNS.findIndex((sg) => sg.key === userSign);
         }
-        if (signIdx < 0) signIdx = randInt(SIGNS.length);
+        // The user's own sign (above) is a deliberate feature and stays
+        // random-access; every other horoscope sign comes from the deck.
+        if (signIdx < 0) signIdx = deckDraw("astro:horo", SIGNS.length);
         return { cat, subtype, horo: makeHoroscope(new Date(), signIdx) };
       }
+      // Positions are computed from the date — one card per day by
+      // construction; the subtype deck above spaces their appearances.
       if (subtype === "positions") return { cat, subtype, positions: planetPositions(new Date()) };
-      return { cat, subtype, signIdx: randInt(SIGNS.length) };
+      return { cat, subtype, signIdx: deckDraw("astro:prof", SIGNS.length) };
     }
     case "proverbs":
-      return { cat, item: pick(PROVERBS) };
+      return { cat, item: PROVERBS[deckDraw("proverbs", PROVERBS.length)] };
     case "word":
-      return { cat, item: pick(WORDS) };
+      return { cat, item: WORDS[deckDraw("word", WORDS.length)] };
     case "gossip":
-      return { cat, item: pick(gossipCache) };
+      return { cat, item: drawGossipItem() };
     case "memory":
-      return { cat, item: pick(MEMORY_PROMPTS) };
+      return { cat, item: MEMORY_PROMPTS[deckDraw("memory", MEMORY_PROMPTS.length)] };
     case "chance": {
       const kinds = ["integer", "dice", "coins", "card", "color"];
-      const kind = pick(kinds);
-      const sel = { cat, kind };
-      if (kind === "integer") sel.value = randInt(1000000);
-      if (kind === "dice") sel.value = [1 + randInt(6), 1 + randInt(6)];
-      if (kind === "coins") sel.value = Array.from({ length: 8 }, () => Math.random() < 0.5);
-      if (kind === "card") {
-        const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-        sel.value = { rank: pick(ranks), suit: pick(["S", "H", "D", "C"]) };
+      const kind = kinds[deckDraw("chance:kind", kinds.length)];
+      let value = rollChanceValue(kind);
+      for (let attempt = 0; attempt < 3 && deckStore.fp.includes(chanceFingerprint(kind, value)); attempt++) {
+        value = rollChanceValue(kind);
       }
-      if (kind === "color") {
-        sel.value = "#" + Array.from({ length: 3 }, () => pad(randInt(256).toString(16)).toUpperCase()).join("");
-      }
-      return sel;
+      deckStore.fp.push(chanceFingerprint(kind, value));
+      if (deckStore.fp.length > 16) deckStore.fp = deckStore.fp.slice(-16);
+      saveDeckStore();
+      return { cat, kind, value };
     }
     default:
-      return { cat: "thought", item: pick(THOUGHTS) };
+      return { cat: "thought", item: THOUGHTS[deckDraw("thought", THOUGHTS.length)] };
   }
 }
 
