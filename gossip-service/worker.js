@@ -23,10 +23,16 @@ const SOURCES = {
   zh: [
     `https://news.google.com/rss/topics/${TOPIC_ID}?hl=zh-CN&gl=CN&ceid=CN:zh-Hans`,
     "https://news.google.com/rss/search?q=%E5%A8%B1%E4%B9%90&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+    "https://news.google.com/rss/search?q=%E5%A8%B1%E4%B9%90&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
+    "https://www.chinanews.com.cn/rss/scroll-news.xml",
   ],
   en: [
     `https://news.google.com/rss/topics/${TOPIC_ID}?hl=en-US&gl=US&ceid=US:en`,
     "https://news.google.com/rss/search?q=entertainment&hl=en-US&gl=US&ceid=US:en",
+    "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+    "https://variety.com/feed/",
+    "https://www.hollywoodreporter.com/feed/",
+    "https://deadline.com/feed/",
   ],
 };
 
@@ -149,7 +155,7 @@ async function writeCache(lang, headlines) {
 
 const BROWSER_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-const SOURCE_TIMEOUT_MS = 6000;
+const SOURCE_TIMEOUT_MS = 12000;
 
 async function fetchSource(url) {
   const ctl = new AbortController();
@@ -168,15 +174,13 @@ async function fetchSource(url) {
 }
 
 async function fetchHeadlines(lang) {
-  const texts = [];
-  for (const url of SOURCES[lang]) {
-    try {
-      const r = await fetchSource(url);
-      if (r.ok) texts.push(r.text);
-    } catch {
-      // One bad source must not sink the others.
-    }
-  }
+  // Fetch all sources in parallel: one slow source must not stall the rest.
+  const results = await Promise.all(
+    SOURCES[lang].map((url) =>
+      fetchSource(url).catch(() => null)
+    )
+  );
+  const texts = results.filter((r) => r && r.ok).map((r) => r.text);
   if (texts.length === 0) throw new Error("all_sources_failed");
   return mergeHeadlines(texts);
 }
@@ -184,22 +188,22 @@ async function fetchHeadlines(lang) {
 // Diagnostic for /debug: per-source HTTP status and parsed item counts.
 // Relays no content beyond counts and lengths; safe to leave enabled.
 async function debugSources(lang) {
-  const out = [];
-  for (const url of SOURCES[lang]) {
-    try {
-      const r = await fetchSource(url);
-      out.push({
-        url,
-        status: r.status,
-        bytes: r.text.length,
-        looksLikeRss: r.text.includes("<item"),
-        items: r.ok ? parseFeed(r.text).length : 0,
-      });
-    } catch (e) {
-      out.push({ url, status: 0, error: String(e && e.name ? e.name : e) });
-    }
-  }
-  return out;
+  return Promise.all(
+    SOURCES[lang].map(async (url) => {
+      try {
+        const r = await fetchSource(url);
+        return {
+          url,
+          status: r.status,
+          bytes: r.text.length,
+          looksLikeRss: r.text.includes("<item"),
+          items: r.ok ? parseFeed(r.text).length : 0,
+        };
+      } catch (e) {
+        return { url, status: 0, error: String(e && e.name ? e.name : e) };
+      }
+    })
+  );
 }
 
 async function getHeadlines(lang) {
