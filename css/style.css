@@ -309,6 +309,28 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .style-chip.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 
+/* ---------- Sign selector & astrology ---------- */
+.sign-switcher { margin-top: 12px; }
+.sign-select {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.card-body .astro-stars { color: var(--accent); letter-spacing: 0.12em; }
+.card-body .swatch-sm {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  vertical-align: -1px;
+  margin: 0 4px;
+  border: 1px solid var(--card-border);
+}
+
 /* ---------- Footer ---------- */
 .footer {
   position: relative;
