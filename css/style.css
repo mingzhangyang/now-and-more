@@ -557,6 +557,45 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
   .ambient-hint { transition: none; }
 }
 
+/* ---------- Wide screens: two-column "gallery" composition ----------
+   At >= 1200px the stacked poster leaves two empty flanks, so the stage
+   becomes a grid: clock on the left (~55%, still the hero), the card on
+   the right (~45%) centered against the clock column, controls + hint
+   under the card. Everything lives inside this media query and is
+   scoped to body:not(.ambient) — ambient is a clock for the room and
+   stays single and centered at any width, and below 1200px nothing
+   changes at all. Placement is pure grid: no DOM change. */
+@media (min-width: 1200px) {
+  body:not(.ambient) .stage {
+    display: grid;
+    width: min(1240px, 94vw);
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    column-gap: 56px;
+    align-content: center;
+    justify-items: center;
+  }
+  body:not(.ambient) .tagline { grid-column: 1; grid-row: 1; }
+  body:not(.ambient) .date-line { grid-column: 1; grid-row: 2; }
+  body:not(.ambient) .clock { grid-column: 1; grid-row: 3; }
+  body:not(.ambient) .progress-track { grid-column: 1; grid-row: 4; }
+  body:not(.ambient) .card {
+    grid-column: 2;
+    grid-row: 1 / 5; /* spans the whole clock column… */
+    align-self: center; /* …and centers against it */
+    justify-self: stretch;
+    width: auto;
+  }
+  body:not(.ambient) .controls { grid-column: 2; grid-row: 5; margin-top: 18px; }
+  body:not(.ambient) .hint { grid-column: 2; grid-row: 6; }
+
+  /* The digital clocks' fixed-width digit cells total ~4.6–4.7em, so at
+     the stacked layout's 148/160px cap they would overflow the ~55%
+     column and lean into the card. Cap them to the column instead;
+     the clock stays the hero, just sized to its wall. */
+  body:not(.ambient)[data-clock-style="paper"] .clock-digital { font-size: clamp(64px, 9vw, 132px); }
+  body:not(.ambient)[data-clock-style="minimal"] .clock-digital { font-size: clamp(64px, 9vw, 132px); }
+}
+
 /* ---------- Small screens ---------- */
 @media (max-width: 560px) {
   .card { padding: 18px 18px 20px; }
