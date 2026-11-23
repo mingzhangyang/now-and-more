@@ -48,6 +48,46 @@
   }
 }
 
+/* ---------- Special-day dressing ----------
+   The special-day module sets data-season (always) and data-special
+   (festival / personal days only) on <body>. Variables live on body, so
+   they override the :root palette for the whole page subtree — and the
+   keepsake renderer, which reads computed styles from body, picks the
+   dressed palette up automatically. Ordinary days only get the seasonal
+   glow whisper below; the vermillion accent itself never moves. */
+body[data-season="spring"] { --glow-color: rgba(122, 172, 92, 0.13); }
+body[data-season="summer"] { --glow-color: rgba(232, 152, 72, 0.13); }
+body[data-season="autumn"] { --glow-color: rgba(202, 152, 62, 0.14); }
+body[data-season="winter"] { --glow-color: rgba(112, 142, 182, 0.12); }
+
+body[data-special="redgold"] { --accent: #c22f1d; --glow-color: rgba(216, 122, 42, 0.20); }
+body[data-special="moon"]    { --accent: #b57e1e; --glow-color: rgba(233, 182, 82, 0.22); }
+body[data-special="green"]   { --accent: #3e7d46; --glow-color: rgba(92, 162, 92, 0.16); }
+body[data-special="amber"]   { --accent: #b06f1e; --glow-color: rgba(212, 142, 52, 0.18); }
+body[data-special="warm"]    { --accent: #ba4a44; --glow-color: rgba(221, 112, 92, 0.18); }
+
+:root[data-theme="dark"] body[data-season="spring"] { --glow-color: rgba(132, 192, 112, 0.10); }
+:root[data-theme="dark"] body[data-season="summer"] { --glow-color: rgba(242, 162, 82, 0.10); }
+:root[data-theme="dark"] body[data-season="autumn"] { --glow-color: rgba(222, 172, 82, 0.11); }
+:root[data-theme="dark"] body[data-season="winter"] { --glow-color: rgba(132, 162, 212, 0.10); }
+:root[data-theme="dark"] body[data-special="redgold"] { --accent: #f2804d; --glow-color: rgba(238, 150, 60, 0.18); }
+:root[data-theme="dark"] body[data-special="moon"]    { --accent: #e3ac4e; --glow-color: rgba(238, 190, 90, 0.20); }
+:root[data-theme="dark"] body[data-special="green"]   { --accent: #6fae62; --glow-color: rgba(112, 182, 112, 0.14); }
+:root[data-theme="dark"] body[data-special="amber"]   { --accent: #dfa03f; --glow-color: rgba(222, 152, 62, 0.16); }
+:root[data-theme="dark"] body[data-special="warm"]    { --accent: #e0786a; --glow-color: rgba(232, 122, 102, 0.15); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body[data-season="spring"] { --glow-color: rgba(132, 192, 112, 0.10); }
+  :root:not([data-theme="light"]) body[data-season="summer"] { --glow-color: rgba(242, 162, 82, 0.10); }
+  :root:not([data-theme="light"]) body[data-season="autumn"] { --glow-color: rgba(222, 172, 82, 0.11); }
+  :root:not([data-theme="light"]) body[data-season="winter"] { --glow-color: rgba(132, 162, 212, 0.10); }
+  :root:not([data-theme="light"]) body[data-special="redgold"] { --accent: #f2804d; --glow-color: rgba(238, 150, 60, 0.18); }
+  :root:not([data-theme="light"]) body[data-special="moon"]    { --accent: #e3ac4e; --glow-color: rgba(238, 190, 90, 0.20); }
+  :root:not([data-theme="light"]) body[data-special="green"]   { --accent: #6fae62; --glow-color: rgba(112, 182, 112, 0.14); }
+  :root:not([data-theme="light"]) body[data-special="amber"]   { --accent: #dfa03f; --glow-color: rgba(222, 152, 62, 0.16); }
+  :root:not([data-theme="light"]) body[data-special="warm"]    { --accent: #e0786a; --glow-color: rgba(232, 122, 102, 0.15); }
+}
+
 * { box-sizing: border-box; }
 
 [hidden] { display: none !important; }
@@ -77,6 +117,35 @@ body {
   transition: transform 1.4s ease, opacity 1.4s ease;
   top: -15vmax;
   left: -15vmax;
+}
+
+/* Special-day dressing: a soft moon disc behind the clock area, only on
+   Mid-Autumn (body[data-special="moon"], set by the special-day module). */
+#moon-glow {
+  position: fixed;
+  left: 50%;
+  top: 4%;
+  transform: translateX(-50%);
+  width: 78vmin;
+  height: 78vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240, 198, 106, 0.20) 0%, rgba(240, 198, 106, 0.07) 46%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+body[data-special="moon"] #moon-glow { opacity: 1; }
+
+/* Full-screen micro-animation layer (meteors / snow / petals / leaves):
+   above the glow, below the stage, never interactive. */
+#fx-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ---------- Top bar ---------- */
@@ -431,6 +500,43 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   cursor: pointer;
 }
 .card-body .astro-stars { color: var(--accent); letter-spacing: 0.12em; }
+
+/* ---------- My days (settings panel) ---------- */
+.my-days-list { display: flex; flex-direction: column; gap: 6px; }
+.my-days-list:empty { display: none; }
+.my-day-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.my-day-del {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 7px;
+  cursor: pointer;
+  flex: none;
+}
+.my-day-del:hover, .my-day-del:focus-visible { color: var(--accent); }
+.myday-form { display: flex; flex-direction: column; gap: 7px; }
+.myday-name {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--ink);
+  width: 100%;
+}
+.myday-name::placeholder { color: var(--ink-soft); opacity: 0.75; }
+.myday-line { display: flex; gap: 8px; align-items: center; }
 .card-body .swatch-sm {
   display: inline-block;
   width: 13px; height: 13px;

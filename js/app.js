@@ -569,6 +569,485 @@ function makeHoroscope(date, signIdx) {
 }
 /* ================= End astrology ================= */
 
+/* ================= Special days: dressing + micro-animation ================= */
+/* The calendar dresses the page on days that mean something — solar
+   terms, lunar festivals, meteor-shower peaks, and the user's own days.
+   Restraint is the brand: ordinary days keep the vermillion accent and
+   only breathe a seasonal tint into the background glow. Everything is
+   evaluated on load and re-evaluated whenever the local date or hour
+   rolls over, so a page left open flips itself at midnight. */
+const SOLAR_TERMS_EN = ["Chunfen", "Qingming", "Guyu", "Lixia", "Xiaoman", "Mangzhong", "Xiazhi", "Xiaoshu", "Dashu", "Liqiu", "Chushu", "Bailu", "Qiufen", "Hanlu", "Shuangjiang", "Lidong", "Xiaoxue", "Daxue", "Dongzhi", "Xiaohan", "Dahan", "Lichun", "Yushui", "Jingzhe"];
+/* Annual meteor-shower peaks (month, day) — standard IMO calendar values. */
+const METEOR_SHOWERS = [[1, 3], [4, 22], [8, 12], [10, 21], [11, 17], [12, 13]];
+const TERM_ANIM = { "立春": "petals", "立秋": "leaves", "大雪": "snow", "小寒": "snow", "大寒": "snow" };
+const FESTIVALS = {
+  chuxi:     { key: "chuxi",     zh: "除夕",   en: "Chinese New Year's Eve",  dress: "redgold", anim: null },
+  chunjie:   { key: "chunjie",   zh: "春节",   en: "Chinese New Year",        dress: "redgold", anim: null },
+  yuanxiao:  { key: "yuanxiao",  zh: "元宵节", en: "Lantern Festival",        dress: "redgold", anim: null },
+  qingming:  { key: "qingming",  zh: "清明",   en: "Qingming Festival",       dress: "green",   anim: "petals" },
+  duanwu:    { key: "duanwu",    zh: "端午",   en: "Dragon Boat Festival",    dress: "green",   anim: null },
+  qixi:      { key: "qixi",      zh: "七夕",   en: "Qixi Festival",           dress: "warm",    anim: null },
+  zhongqiu:  { key: "zhongqiu",  zh: "中秋",   en: "Mid-Autumn Festival",     dress: "moon",    anim: null },
+  chongyang: { key: "chongyang", zh: "重阳",   en: "Double Ninth Festival",   dress: "amber",   anim: "leaves" },
+  dongzhi:   { key: "dongzhi",   zh: "冬至",   en: "Dongzhi, the Winter Solstice", dress: null, anim: "snow" },
+  yuandan:   { key: "yuandan",   zh: "元旦",   en: "New Year's Day",          dress: "redgold", anim: null },
+};
+
+/* Lunar (month, day, leap?) via the same Intl chinese calendar the
+   almanac uses. Leap is read off the long month name （闰六月）. */
+function lunarParts(date) {
+  try {
+    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "numeric", day: "numeric" }).formatToParts(date);
+    const mp = parts.find((x) => x.type === "month");
+    const dp = parts.find((x) => x.type === "day");
+    const month = mp ? parseInt(mp.value, 10) : NaN;
+    const day = dp ? parseInt(dp.value, 10) : NaN;
+    if (Number.isNaN(month) || Number.isNaN(day)) return null;
+    const long = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long" }).format(date);
+    return { month, day, leap: long.includes("闰") };
+  } catch (e) { return null; }
+}
+function sunLongitudeDeg(date) {
+  const lon = eclipticLongitude(solarMeanAnomaly(toDays(date)));
+  return ((lon / RAD) % 360 + 360) % 360;
+}
+function seasonOf(date) {
+  const deg = sunLongitudeDeg(date);
+  if (deg >= 315 || deg < 45) return "spring";
+  if (deg < 135) return "summer";
+  if (deg < 225) return "autumn";
+  return "winter";
+}
+/* A solar-term day is the local calendar day on which the Sun crosses
+   into a new 15° sector: the term at today's midnight differs from the
+   term at tomorrow's midnight, and the new one begins today. */
+function solarTermDay(date) {
+  const t0 = currentSolarTerm(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
+  const t1 = currentSolarTerm(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1));
+  return t0 !== t1 ? t1 : null;
+}
+function lunarFestivalOn(date) {
+  const lp = lunarParts(date);
+  if (!lp) return null;
+  if (!lp.leap) {
+    if (lp.month === 1 && lp.day === 1) return FESTIVALS.chunjie;
+    if (lp.month === 1 && lp.day === 15) return FESTIVALS.yuanxiao;
+    if (lp.month === 5 && lp.day === 5) return FESTIVALS.duanwu;
+    if (lp.month === 7 && lp.day === 7) return FESTIVALS.qixi;
+    if (lp.month === 8 && lp.day === 15) return FESTIVALS.zhongqiu;
+    if (lp.month === 9 && lp.day === 9) return FESTIVALS.chongyang;
+  }
+  if (lp.month === 12) {
+    // 除夕： the last day of the lunar year — tomorrow is 正月初一.
+    const tm = lunarParts(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1));
+    if (tm && tm.month === 1 && tm.day === 1 && !tm.leap) return FESTIVALS.chuxi;
+  }
+  return null;
+}
+
+/* ---------- My days （我的日子） ----------
+   User-defined personal days (birthdays, anniversaries), recurring
+   yearly by month/day only. Stored strictly locally under their own
+   versioned key and never sent anywhere. A day may be defined on the
+   solar or the lunar calendar; lunar days are matched through the same
+   solar→lunar conversion the almanac uses (leap months don't host
+   festivals or birthdays here — the regular month wins). */
+const LS_MYDAYS = "nam-my-days";
+const MYDAY_EFFECTS = ["dress", "petals", "meteors", "snow"];
+let myDays = loadMyDays();
+function loadMyDays() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_MYDAYS) || "null");
+    const arr = s && s.v === 1 && Array.isArray(s.days) ? s.days : (Array.isArray(s) ? s : []);
+    return arr
+      .filter((d) => d && typeof d.name === "string" && d.name.trim() &&
+        (d.cal === "lunar" || d.cal === "solar") &&
+        Number.isInteger(d.month) && d.month >= 1 && d.month <= 12 &&
+        Number.isInteger(d.day) && d.day >= 1 && d.day <= 31)
+      .map((d) => ({
+        name: d.name,
+        cal: d.cal,
+        month: d.month,
+        day: d.day,
+        effect: MYDAY_EFFECTS.includes(d.effect) ? d.effect : "dress",
+      }));
+  } catch (e) { return []; }
+}
+function saveMyDays() {
+  try {
+    localStorage.setItem(LS_MYDAYS, JSON.stringify({ v: 1, days: myDays }));
+  } catch (e) { /* storage unavailable: days live in memory only */ }
+}
+function matchPersonalDay(date) {
+  let lp = null;
+  for (const d of myDays) {
+    if (d.cal === "solar") {
+      if (date.getMonth() + 1 === d.month && date.getDate() === d.day) return d;
+    } else {
+      if (!lp) lp = lunarParts(date);
+      if (lp && !lp.leap && lp.month === d.month && lp.day === d.day) return d;
+    }
+  }
+  return null;
+}
+
+/* Precedence: a personal day outranks a festival, which outranks a bare
+   solar-term day — for the note, the dressing and the animation alike.
+   A dressing-only personal day also silences a shower that night: it is
+   their day, kept calm the way they chose. */
+function computeSpecialDay(date) {
+  const season = seasonOf(date);
+  const termDay = solarTermDay(date);
+  let festival = lunarFestivalOn(date);
+  if (!festival && termDay === "清明") festival = FESTIVALS.qingming;
+  if (!festival && termDay === "冬至") festival = FESTIVALS.dongzhi;
+  if (!festival && date.getMonth() === 0 && date.getDate() === 1) festival = FESTIVALS.yuandan;
+  const personal = matchPersonalDay(date);
+  const hour = date.getHours();
+  const showerTonight = METEOR_SHOWERS.some(([m, d]) => date.getMonth() + 1 === m && date.getDate() === d) &&
+    (hour >= 19 || hour < 5);
+  let note = null, dress = null, anim = null;
+  if (personal) {
+    note = { zh: `今日「${personal.name}」`, en: `Today: ${personal.name}` };
+    dress = "warm";
+    if (personal.effect !== "dress") anim = personal.effect;
+  } else if (festival) {
+    note = { zh: `今日${festival.zh}`, en: `${festival.en} today` };
+    dress = festival.dress;
+    anim = festival.anim;
+  } else if (termDay) {
+    note = { zh: `今日${termDay}`, en: `${SOLAR_TERMS_EN[SOLAR_TERMS.indexOf(termDay)]} today` };
+    anim = TERM_ANIM[termDay] || null;
+  }
+  if (!anim && showerTonight && !personal) anim = "meteors";
+  return { season, termDay, festival, personal, showerTonight, note, dress, anim };
+}
+
+let currentSpecial = null;
+let specialStamp = "";
+const fxDebug = {
+  season: null, termDay: null, festival: null, personal: null,
+  note: null, dress: null, animMode: null, particleCount: 0, fxEnabled: true,
+};
+try { window.__namFxState = fxDebug; } catch (e) { /* non-browser context */ }
+
+function applySpecialDay() {
+  const now = new Date();
+  currentSpecial = computeSpecialDay(now);
+  specialStamp = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}:${now.getHours()}`;
+  document.body.dataset.season = currentSpecial.season;
+  if (currentSpecial.dress) document.body.dataset.special = currentSpecial.dress;
+  else delete document.body.dataset.special;
+  fxDebug.season = currentSpecial.season;
+  fxDebug.termDay = currentSpecial.termDay;
+  fxDebug.festival = currentSpecial.festival ? currentSpecial.festival.key : null;
+  fxDebug.personal = currentSpecial.personal ? currentSpecial.personal.name : null;
+  fxDebug.note = currentSpecial.note ? currentSpecial.note[lang] : null;
+  fxDebug.dress = currentSpecial.dress;
+  syncFxEngine();
+  renderDateLine(now);
+}
+
+/* ---------- Micro-animation engine ----------
+   One fixed canvas, one rAF loop, slow and faint. Falling particles
+   (snow / petals / leaves) share one drift system parameterized by
+   size, speed and paint; meteors are lone streaks on a slow timer. */
+const LS_FX = "nam-effects";
+let fxEnabled = localStorage.getItem(LS_FX) !== "off";
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+let fxMode = null;
+let fxParts = [];
+let fxStreaks = [];
+let fxNextStreakAt = 0;
+let fxRafId = null;
+let fxLastTs = 0;
+
+const FALL_CONF = {
+  snow:   { count: 70, vyMin: 13, vyMax: 32, sizeMin: 1.1, sizeMax: 2.7 },
+  petals: { count: 24, vyMin: 10, vyMax: 22, sizeMin: 5.0, sizeMax: 9.0 },
+  leaves: { count: 20, vyMin: 12, vyMax: 26, sizeMin: 5.0, sizeMax: 9.0 },
+};
+function fxIsDark() {
+  const dt = document.documentElement.dataset.theme;
+  if (dt === "dark") return true;
+  if (dt === "light") return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function fxAllowed() { return fxEnabled && !reducedMotionQuery.matches; }
+function desiredFxMode() { return fxAllowed() && currentSpecial ? currentSpecial.anim : null; }
+
+function fxResize() {
+  const c = $("fx-canvas");
+  if (!c) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = Math.round(window.innerWidth * dpr);
+  c.height = Math.round(window.innerHeight * dpr);
+  c.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function fxSpawnFalling(mode) {
+  const conf = FALL_CONF[mode];
+  const area = window.innerWidth * window.innerHeight;
+  const n = Math.max(8, Math.round(conf.count * Math.min(1.6, Math.max(0.4, area / (1280 * 800)))));
+  fxParts = Array.from({ length: n }, () => ({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    s: conf.sizeMin + Math.random() * (conf.sizeMax - conf.sizeMin),
+    vy: conf.vyMin + Math.random() * (conf.vyMax - conf.vyMin),
+    ph: Math.random() * Math.PI * 2,
+    sway: 8 + Math.random() * 18,
+    rot: Math.random() * Math.PI * 2,
+    vr: (Math.random() - 0.5) * 0.7,
+    a: 0.4 + Math.random() * 0.4,
+  }));
+}
+function fxClear() {
+  const c = $("fx-canvas");
+  if (c) c.getContext("2d").clearRect(0, 0, window.innerWidth, window.innerHeight);
+}
+function fxStartLoop() {
+  if (fxRafId == null) {
+    fxLastTs = performance.now();
+    fxRafId = requestAnimationFrame(fxFrame);
+  }
+}
+function fxStopLoop() {
+  if (fxRafId != null) {
+    cancelAnimationFrame(fxRafId);
+    fxRafId = null;
+  }
+}
+function syncFxEngine() {
+  const want = desiredFxMode();
+  if (want !== fxMode) {
+    fxMode = want;
+    fxParts = [];
+    fxStreaks = [];
+    if (fxMode && FALL_CONF[fxMode]) fxSpawnFalling(fxMode);
+    if (fxMode === "meteors") fxNextStreakAt = performance.now() + 1200 + Math.random() * 3000;
+  }
+  fxDebug.animMode = fxMode;
+  fxDebug.fxEnabled = fxEnabled;
+  if (fxMode && !document.hidden) fxStartLoop();
+  else fxStopLoop();
+  if (!fxMode) {
+    fxDebug.particleCount = 0;
+    fxClear();
+  }
+}
+function fxFrame(ts) {
+  fxRafId = null;
+  if (!fxMode || document.hidden) return;
+  const dt = Math.min(0.05, Math.max(0.001, (ts - fxLastTs) / 1000));
+  fxLastTs = ts;
+  fxDraw(ts, dt);
+  fxRafId = requestAnimationFrame(fxFrame);
+}
+function fxDraw(ts, dt) {
+  const c = $("fx-canvas");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const W = window.innerWidth, H = window.innerHeight;
+  const dark = fxIsDark();
+  ctx.clearRect(0, 0, W, H);
+
+  if (fxMode === "meteors") {
+    if (ts >= fxNextStreakAt) {
+      const ang = (205 + Math.random() * 35) * RAD; // down-left, steep-ish
+      const speed = 520 + Math.random() * 320;
+      fxStreaks.push({
+        x: W * (0.25 + Math.random() * 0.7),
+        y: H * Math.random() * 0.3,
+        vx: Math.cos(ang) * speed,
+        vy: -Math.sin(ang) * speed,
+        life: 0,
+        maxLife: 0.7 + Math.random() * 0.4,
+        len: 90 + Math.random() * 70,
+      });
+      fxNextStreakAt = ts + 6000 + Math.random() * 8000; // one streak every ~6–14 s
+    }
+    const rgb = dark ? "255, 250, 235" : "150, 128, 84";
+    fxStreaks = fxStreaks.filter((s) => s.life < s.maxLife);
+    for (const s of fxStreaks) {
+      s.life += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      const fade = Math.sin(Math.PI * Math.min(1, s.life / s.maxLife));
+      const mag = Math.hypot(s.vx, s.vy) || 1;
+      const tx = s.x - (s.vx / mag) * s.len;
+      const ty = s.y - (s.vy / mag) * s.len;
+      const grad = ctx.createLinearGradient(s.x, s.y, tx, ty);
+      grad.addColorStop(0, `rgba(${rgb}, ${(0.75 * fade).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${rgb}, 0)`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+    }
+    fxDebug.particleCount = fxStreaks.length;
+    return;
+  }
+
+  if (!FALL_CONF[fxMode]) return;
+  for (const p of fxParts) {
+    p.y += p.vy * dt;
+    p.x += Math.sin(ts / 1400 + p.ph) * p.sway * dt;
+    p.rot += p.vr * dt;
+    if (p.y > H + 14) { p.y = -14; p.x = Math.random() * W; }
+    if (p.x > W + 20) p.x = -20;
+    if (p.x < -20) p.x = W + 20;
+    if (fxMode === "snow") {
+      ctx.fillStyle = dark ? `rgba(255, 255, 255, ${p.a.toFixed(3)})` : `rgba(128, 152, 188, ${p.a.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = fxMode === "petals"
+        ? `rgba(243, 183, 196, ${p.a.toFixed(3)})`
+        : `rgba(204, 140, 60, ${p.a.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  fxDebug.particleCount = fxParts.length;
+}
+function setFxEnabled(on) {
+  if (fxEnabled === on) { syncFxEngine(); return; }
+  fxEnabled = on;
+  try { localStorage.setItem(LS_FX, on ? "on" : "off"); } catch (e) { /* ignore */ }
+  $("fx-on").classList.toggle("active", on);
+  $("fx-off").classList.toggle("active", !on);
+  syncFxEngine();
+}
+$("fx-on").addEventListener("click", () => setFxEnabled(true));
+$("fx-off").addEventListener("click", () => setFxEnabled(false));
+if (typeof reducedMotionQuery.addEventListener === "function") {
+  reducedMotionQuery.addEventListener("change", syncFxEngine);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) fxStopLoop();
+  else syncFxEngine();
+});
+window.addEventListener("resize", fxResize);
+
+/* ---------- My days: settings UI ---------- */
+let myDayCal = "solar";
+function myDayMaxDay() {
+  if (myDayCal === "lunar") return 30;
+  const m = parseInt($("myday-month").value, 10) || 1;
+  return [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1] || 31;
+}
+function rebuildMyDayDays() {
+  const sel = $("myday-day");
+  if (!sel) return;
+  const prev = parseInt(sel.value, 10) || 1;
+  const max = myDayMaxDay();
+  sel.innerHTML = "";
+  for (let d = 1; d <= max; d++) {
+    const o = document.createElement("option");
+    o.value = String(d);
+    o.textContent = String(d);
+    sel.appendChild(o);
+  }
+  sel.value = String(Math.min(prev, max));
+}
+function refreshMyDayEffectOptions() {
+  const sel = $("myday-effect");
+  if (!sel) return;
+  const prev = sel.value || "dress";
+  sel.innerHTML = "";
+  for (const fx of MYDAY_EFFECTS) {
+    const o = document.createElement("option");
+    o.value = fx;
+    o.textContent = t().myDays.fx[fx];
+    sel.appendChild(o);
+  }
+  sel.value = MYDAY_EFFECTS.includes(prev) ? prev : "dress";
+}
+function renderMyDaysList() {
+  const wrap = $("my-days-list");
+  if (!wrap) return;
+  const md = t().myDays;
+  wrap.innerHTML = "";
+  myDays.forEach((d, idx) => {
+    const row = document.createElement("div");
+    row.className = "my-day-item";
+    const label = document.createElement("span");
+    label.textContent = `${d.name} · ${md.when(d.cal, d.month, d.day)} · ${md.fx[d.effect]}`;
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "my-day-del";
+    del.textContent = "×";
+    del.dataset.idx = String(idx);
+    del.setAttribute("aria-label", md.deleteLabel);
+    row.appendChild(label);
+    row.appendChild(del);
+    wrap.appendChild(row);
+  });
+}
+function buildMyDaysForm() {
+  const monthSel = $("myday-month");
+  if (!monthSel) return;
+  monthSel.innerHTML = "";
+  for (let m = 1; m <= 12; m++) {
+    const o = document.createElement("option");
+    o.value = String(m);
+    o.textContent = String(m);
+    monthSel.appendChild(o);
+  }
+  rebuildMyDayDays();
+  refreshMyDayEffectOptions();
+  renderMyDaysList();
+  const setCal = (cal) => {
+    myDayCal = cal;
+    $("myday-cal-solar").classList.toggle("active", cal === "solar");
+    $("myday-cal-lunar").classList.toggle("active", cal === "lunar");
+    rebuildMyDayDays();
+  };
+  $("myday-cal-solar").addEventListener("click", () => setCal("solar"));
+  $("myday-cal-lunar").addEventListener("click", () => setCal("lunar"));
+  setCal("solar");
+  monthSel.addEventListener("change", rebuildMyDayDays);
+  $("myday-add").addEventListener("click", () => {
+    const name = $("myday-name").value.trim();
+    if (!name) return; // empty name: rejected quietly
+    const entry = {
+      name,
+      cal: myDayCal,
+      month: parseInt(monthSel.value, 10) || 1,
+      day: parseInt($("myday-day").value, 10) || 1,
+      effect: $("myday-effect").value || "dress",
+    };
+    // Exact duplicates (same name + calendar + month/day) are dropped.
+    const dup = myDays.some((d) => d.name === entry.name && d.cal === entry.cal &&
+      d.month === entry.month && d.day === entry.day);
+    if (!dup) {
+      myDays.push(entry);
+      saveMyDays();
+      renderMyDaysList();
+      applySpecialDay();
+    }
+    $("myday-name").value = "";
+  });
+  $("my-days-list").addEventListener("click", (e) => {
+    const btn = e.target.closest(".my-day-del");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx, 10);
+    if (Number.isNaN(idx) || idx < 0 || idx >= myDays.length) return;
+    myDays.splice(idx, 1);
+    saveMyDays();
+    renderMyDaysList();
+    applySpecialDay();
+  });
+}
+
 /* ================= Card selection & rendering ================= */
 /* Categories available in the current language. almanac + classics are
    zh-only; proverbs + word are en-only; gossip joins only when its feed
@@ -892,20 +1371,33 @@ function setFlip(id, value) {
 }
 
 function renderDateLine(now) {
+  // Special days (festival / term / a personal day) add their note here;
+  // the keepsake reads this element, so the note is frozen into it too.
+  const note = currentSpecial && currentSpecial.note
+    ? (lang === "zh" ? currentSpecial.note.zh : currentSpecial.note.en)
+    : "";
   if (lang === "zh") {
     const dateStr = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" }).format(now);
     let lunar = "";
     try {
       lunar = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(now);
     } catch (e) { lunar = ""; }
-    $("date-line").textContent = lunar ? `${dateStr} · 农历${lunar}` : dateStr;
+    let text = lunar ? `${dateStr} · 农历${lunar}` : dateStr;
+    if (note) text += ` · ${note}`;
+    $("date-line").textContent = text;
   } else {
-    $("date-line").textContent = new Intl.DateTimeFormat("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).format(now);
+    let text = new Intl.DateTimeFormat("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).format(now);
+    if (note) text += ` · ${note}`;
+    $("date-line").textContent = text;
   }
 }
 
 function tick() {
   const now = new Date();
+  // Special-day state rolls over with the local date (and hour, for the
+  // meteor night window) even when the page is left open across midnight.
+  const stamp = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}:${now.getHours()}`;
+  if (stamp !== specialStamp) applySpecialDay();
   const sec = now.getSeconds();
   if (sec === lastSecond) return;
   lastSecond = sec;
@@ -1004,6 +1496,18 @@ function applyStaticStrings() {
   $("ambient-label").textContent = s.ambientLabel;
   $("ambient-btn").textContent = s.ambientEnter;
   $("ambient-hint").textContent = s.ambientHint;
+  $("fx-label").textContent = s.effectsLabel;
+  $("fx-on").textContent = s.effectsOn;
+  $("fx-off").textContent = s.effectsOff;
+  $("fx-on").classList.toggle("active", fxEnabled);
+  $("fx-off").classList.toggle("active", !fxEnabled);
+  $("mydays-label").textContent = s.myDays.label;
+  $("myday-name").placeholder = s.myDays.namePlaceholder;
+  $("myday-cal-solar").textContent = s.myDays.solar;
+  $("myday-cal-lunar").textContent = s.myDays.lunar;
+  $("myday-add").textContent = s.myDays.add;
+  refreshMyDayEffectOptions();
+  renderMyDaysList();
   $("encounter").textContent = encounter > 0 ? s.encounter(encounter) : "";
   document.querySelectorAll(".style-chip").forEach((chip) => {
     chip.textContent = s.clockStyles[chip.dataset.style];
@@ -1244,7 +1748,9 @@ const KEEP_W = 1080;
 const KEEP_H = 1350;
 
 function capturePalette() {
-  const cs = getComputedStyle(document.documentElement);
+  // Read from <body>, not <html>: special-day dressing overrides the
+  // palette variables on body, and the keepsake must wear them too.
+  const cs = getComputedStyle(document.body);
   const get = (name) => cs.getPropertyValue(name).trim();
   return {
     bg: get("--bg"),
@@ -1672,8 +2178,11 @@ document.addEventListener("keydown", (e) => {
 buildAnalogTicks();
 buildStyleChips();
 buildSignSelector();
+buildMyDaysForm();
+fxResize();
 setClockStyle(clockStyle);
 applyStaticStrings();
+applySpecialDay();
 refreshGossip();
 drawCard();
 setInterval(tick, 200);

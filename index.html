@@ -43,6 +43,8 @@
 </head>
 <body data-clock-style="paper">
 <div id="glow" aria-hidden="true"></div>
+<div id="moon-glow" aria-hidden="true"></div>
+<canvas id="fx-canvas" aria-hidden="true"></canvas>
 
 <header class="topbar">
   <div class="brand">
@@ -82,6 +84,32 @@
         <span id="ambient-label" class="setting-label">氛围模式</span>
         <div>
           <button id="ambient-btn" type="button" class="ambient-btn">进入</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span id="fx-label" class="setting-label">特效</span>
+        <div class="lang-segment" role="group" aria-label="Effects">
+          <button id="fx-on" type="button" class="seg-btn">开</button>
+          <button id="fx-off" type="button" class="seg-btn">关</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span id="mydays-label" class="setting-label">我的日子</span>
+        <div id="my-days-list" class="my-days-list"></div>
+        <div class="myday-form">
+          <input id="myday-name" class="myday-name" type="text" maxlength="24" placeholder="名字，如：妈妈生日" autocomplete="off">
+          <div class="myday-line">
+            <select id="myday-month" class="sign-select" aria-label="月 / Month"></select>
+            <select id="myday-day" class="sign-select" aria-label="日 / Day"></select>
+          </div>
+          <div class="lang-segment" role="group" aria-label="Calendar">
+            <button id="myday-cal-solar" type="button" class="seg-btn">公历</button>
+            <button id="myday-cal-lunar" type="button" class="seg-btn">农历</button>
+          </div>
+          <div class="myday-line">
+            <select id="myday-effect" class="sign-select" aria-label="效果 / Effect"></select>
+            <button id="myday-add" type="button" class="ambient-btn">添加</button>
+          </div>
         </div>
       </div>
     </div>
