@@ -2,6 +2,46 @@
    Certainty: the clock. Uncertainty: everything below it. */
 "use strict";
 
+/* ================= Config ================= */
+/* Gossip feed endpoint. Leave "" to disable the gossip category entirely.
+   Can also be set at runtime via window.NOW_AND_MORE_CONFIG = { gossipApi: "..." }.
+   Expected JSON: { title, source, link, publishedAt, lang } — a single headline,
+   an array of such objects, or { items: [...] }. Headlines only; content is
+   never invented locally. */
+const GOSSIP_API = "";
+const GOSSIP_CACHE_MS = 10 * 60 * 1000;
+const GOSSIP_TIMEOUT_MS = 3000;
+let gossipCache = [];
+let gossipFetchedAt = 0;
+
+function gossipEndpoint() {
+  try {
+    if (typeof window !== "undefined" && window.NOW_AND_MORE_CONFIG && window.NOW_AND_MORE_CONFIG.gossipApi) {
+      return window.NOW_AND_MORE_CONFIG.gossipApi;
+    }
+  } catch (e) { /* ignore */ }
+  return GOSSIP_API;
+}
+
+async function refreshGossip() {
+  const url = gossipEndpoint();
+  if (!url) return;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), GOSSIP_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: ctl.signal });
+    if (!res.ok) return;
+    const data = await res.json();
+    const raw = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : [data]);
+    const items = raw.filter((i) => i && i.title && i.link);
+    if (items.length) {
+      gossipCache = items;
+      gossipFetchedAt = Date.now();
+    }
+  } catch (e) { /* feed unavailable: gossip category stays excluded */ }
+  finally { clearTimeout(timer); }
+}
+
 /* ================= State ================= */
 const LS_LANG = "nam-lang";
 const LS_STYLE = "nam-clock-style";
@@ -102,13 +142,176 @@ function formatDuration(mins) {
   return lang === "zh" ? `${h} 小时 ${m} 分` : `${h}h ${m}m`;
 }
 
+/* ================= Almanac (zh only, computed per day) ================= */
+const GAN = "甲乙丙丁戊己庚辛壬癸";
+const ZHI = "子丑寅卯辰巳午未申酉戌亥";
+
+/* Julian Day Number of the local calendar date (integer, day starts at noon
+   in JDN convention; the standard civil formula below is what perpetual
+   calendars use, and its day-ganzhi offset +49 is anchored on two famous
+   dates: 1949-10-01 = 甲子日 and 2000-01-07 = 甲子日). */
+function julianDayNumber(date) {
+  const y = date.getFullYear(), m = date.getMonth() + 1, d = date.getDate();
+  const a = Math.floor((14 - m) / 12);
+  const y2 = y + 4800 - a;
+  const m2 = m + 12 * a - 3;
+  return d + Math.floor((153 * m2 + 2) / 5) + 365 * y2 +
+    Math.floor(y2 / 4) - Math.floor(y2 / 100) + Math.floor(y2 / 400) - 32045;
+}
+function ganzhiFromIndex(idx) {
+  const i = ((idx % 60) + 60) % 60;
+  return GAN[i % 10] + ZHI[i % 12];
+}
+function dayGanzhi(date) { return ganzhiFromIndex(julianDayNumber(date) + 49); }
+function yearGanzhi(date) {
+  let lunarYear = date.getFullYear();
+  try {
+    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { year: "numeric" }).formatToParts(date);
+    const yp = parts.find((x) => x.type === "year");
+    const n = yp ? parseInt(yp.value, 10) : NaN;
+    if (!Number.isNaN(n)) lunarYear = n;
+  } catch (e) { /* fall back to Gregorian year */ }
+  return ganzhiFromIndex(lunarYear - 4);
+}
+/* Deterministic per-day pseudo-random pick: the same calendar day always
+   yields the same 宜/忌. Certainty hiding inside the chance pool. */
+function seededDailyPick(pool, count, seed, exclude) {
+  let s = (seed % 2147483647) + 1;
+  const rnd = () => {
+    s = (s * 1103515245 + 12345) % 2147483648;
+    return s / 2147483648;
+  };
+  const avail = pool.filter((x) => !exclude || !exclude.includes(x));
+  const copy = avail.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, Math.min(count, copy.length));
+}
+/* 彭祖百忌： classic lookup by day stem / day branch (traditional text). */
+const PENGZU_BY_STEM = {
+  "甲": "甲不开仓，财物耗散", "乙": "乙不栽植，千株不长", "丙": "丙不修灶，必见灾殃",
+  "丁": "丁不剃头，头必生疮", "戊": "戊不受田，田主不祥", "己": "己不破券，二比并亡",
+  "庚": "庚不经络，织机虚张", "辛": "辛不合酱，主人不尝", "壬": "壬不汲水，更难提防",
+  "癸": "癸不词讼，理弱敌强",
+};
+const PENGZU_BY_BRANCH = {
+  "子": "子不问卜，自惹祸殃", "丑": "丑不冠带，主不还乡", "寅": "寅不祭祀，神鬼不尝",
+  "卯": "卯不穿井，水泉不香", "辰": "辰不哭泣，必主重丧", "巳": "巳不远行，财物伏藏",
+  "午": "午不苫盖，屋主更张", "未": "未不服药，毒气入肠", "申": "申不安床，鬼祟入房",
+  "酉": "酉不会客，醉坐颠狂", "戌": "戌不吃犬，作怪上床", "亥": "亥不嫁娶，不利新郎",
+};
+const ZHI_ANIMAL = "鼠牛虎兔龙蛇马羊猴鸡狗猪";
+const ZHI_DIRECTION = {
+  "子": "北", "丑": "东北", "寅": "东北", "卯": "东", "辰": "东南", "巳": "东南",
+  "午": "南", "未": "西南", "申": "西南", "酉": "西", "戌": "西北", "亥": "西北",
+};
+/* 十二建除 in order, index 0 = 建 (day branch == month branch). */
+const JIANCHU = ["建", "除", "满", "平", "定", "执", "破", "危", "成", "收", "开", "闭"];
+/* Solar terms by 15° step of the Sun's apparent ecliptic longitude, index 0 = 0° (春分). */
+const SOLAR_TERMS = ["春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至", "小寒", "大寒", "立春", "雨水", "惊蛰"];
+/* 吉神/凶神： simplified day-seeded picks in the same spirit as traditional
+   almanacs; glosses are our own one-liners. Not the full traditional algorithm. */
+const JISHEN = [
+  { name: "天德", gloss: "主福德庇佑" }, { name: "月德", gloss: "主和顺吉祥" },
+  { name: "天恩", gloss: "主恩泽施予" }, { name: "三合", gloss: "主和合顺遂" },
+  { name: "天喜", gloss: "主喜庆临门" }, { name: "母仓", gloss: "主积蓄丰盈" },
+  { name: "时德", gloss: "主当日得时" }, { name: "青龙", gloss: "主吉庆祥瑞" },
+  { name: "益后", gloss: "主利在长远" }, { name: "民日", gloss: "主安民宜事" },
+];
+const XIONGSHEN = [
+  { name: "天刑", gloss: "主刑伤是非" }, { name: "朱雀", gloss: "主口舌争端" },
+  { name: "白虎", gloss: "主损伤血光" }, { name: "天牢", gloss: "主束缚困顿" },
+  { name: "玄武", gloss: "主盗失暗昧" }, { name: "勾陈", gloss: "主牵连迟滞" },
+  { name: "大煞", gloss: "主诸事不利" }, { name: "往亡", gloss: "主出行不利" },
+  { name: "天火", gloss: "主火患之忧" }, { name: "四击", gloss: "主冲犯不利" },
+];
+
+function lunarMonthNumber(date) {
+  try {
+    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "numeric" }).formatToParts(date);
+    const mp = parts.find((x) => x.type === "month");
+    const n = mp ? parseInt(mp.value, 10) : NaN;
+    if (!Number.isNaN(n)) return n;
+  } catch (e) { /* fall through to name parsing */ }
+  try {
+    // Some environments return the month name instead of a number.
+    const label = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long" }).format(date);
+    const key = label.replace("闰", "").replace("月", "");
+    const names = { "正": 1, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "十一": 11, "冬": 11, "十二": 12, "腊": 12 };
+    return key in names ? names[key] : null;
+  } catch (e) { return null; }
+}
+function currentSolarTerm(date) {
+  const lon = eclipticLongitude(solarMeanAnomaly(toDays(date)));
+  const deg = ((lon / RAD) % 360 + 360) % 360;
+  return SOLAR_TERMS[Math.floor(deg / 15) % 24];
+}
+
+function computeAlmanac(date) {
+  const jdn = julianDayNumber(date);
+  let lunarLabel = "";
+  try {
+    lunarLabel = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(date);
+  } catch (e) { lunarLabel = ""; }
+  const yiCount = 4 + (jdn % 3);        // 4–6
+  const jiCount = 3 + ((jdn >> 2) % 3); // 3–5
+  const yi = seededDailyPick(ALMANAC_YI, yiCount, jdn * 2 + 1, null);
+  const ji = seededDailyPick(ALMANAC_JI, jiCount, jdn * 2 + 2, yi);
+  const gz = dayGanzhi(date);
+  const stem = gz[0], branch = gz[1];
+  const branchIdx = ZHI.indexOf(branch);
+  const conflictBranch = ZHI[(branchIdx + 6) % 12];
+  // 十二建除： month branch = lunar month mapped 正月建寅； null when lunar month unknown.
+  let jianchu = null;
+  const lm = lunarMonthNumber(date);
+  if (lm !== null && branchIdx >= 0) {
+    const monthBranchIdx = (lm + 1) % 12;
+    jianchu = JIANCHU[((branchIdx - monthBranchIdx) % 12 + 12) % 12];
+  }
+  const jiShenObjs = seededDailyPick(JISHEN.map((g) => g.name), 3, jdn * 2 + 3, null)
+    .map((n) => JISHEN.find((g) => g.name === n));
+  const xiongShenObjs = seededDailyPick(XIONGSHEN.map((g) => g.name), 2, jdn * 2 + 4, null)
+    .map((n) => XIONGSHEN.find((g) => g.name === n));
+  return {
+    lunarLabel,
+    yearGanzhi: yearGanzhi(date),
+    dayGanzhi: gz,
+    yi,
+    ji,
+    solarTerm: currentSolarTerm(date),
+    jianchu,
+    chongSha: `冲${ZHI_ANIMAL[(branchIdx + 6) % 12]}煞${ZHI_DIRECTION[conflictBranch]}`,
+    pengzu: [PENGZU_BY_STEM[stem], PENGZU_BY_BRANCH[branch]],
+    jiShen: jiShenObjs,
+    xiongShen: xiongShenObjs,
+  };
+}
+
 /* ================= Card selection & rendering ================= */
+/* Categories available in the current language. almanac + classics are
+   zh-only; proverbs + word are en-only; gossip joins only when its feed
+   has actually delivered headlines. */
+function availableCategories() {
+  const base = lang === "zh"
+    ? ["world", "poem", "history", "thought", "science", "quotes", "classics", "almanac", "chance", "memory"]
+    : ["world", "poem", "history", "thought", "science", "quotes", "proverbs", "word", "chance", "memory"];
+  const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key));
+  if (gossipCache.length) {
+    const g = CATEGORY_WEIGHTS.find((c) => c.key === "gossip");
+    if (g) list.push(g);
+  }
+  return list;
+}
+
 function weightedCategory() {
-  const total = CATEGORY_WEIGHTS.reduce((s, c) => s + c.weight, 0);
+  const avail = availableCategories();
+  const total = avail.reduce((s, c) => s + c.weight, 0); // normalized by available sum
   for (let attempt = 0; attempt < 4; attempt++) {
     let r = Math.random() * total;
-    let chosen = CATEGORY_WEIGHTS[0].key;
-    for (const c of CATEGORY_WEIGHTS) {
+    let chosen = avail[0].key;
+    for (const c of avail) {
       if (r < c.weight) { chosen = c.key; break; }
       r -= c.weight;
     }
@@ -137,6 +340,20 @@ function makeSelection(cat) {
     }
     case "thought":
       return { cat, item: pick(THOUGHTS) };
+    case "science":
+      return { cat, item: pick(SCIENCE) };
+    case "quotes":
+      return { cat, quoteZh: pick(QUOTES_ZH), quoteEn: pick(QUOTES_EN) };
+    case "classics":
+      return { cat, item: pick(CLASSICS) };
+    case "almanac":
+      return { cat, data: computeAlmanac(new Date()) };
+    case "proverbs":
+      return { cat, item: pick(PROVERBS) };
+    case "word":
+      return { cat, item: pick(WORDS) };
+    case "gossip":
+      return { cat, item: pick(gossipCache) };
     case "memory":
       return { cat, item: pick(MEMORY_PROMPTS) };
     case "chance": {
@@ -158,6 +375,12 @@ function makeSelection(cat) {
     default:
       return { cat: "thought", item: pick(THOUGHTS) };
   }
+}
+
+function esc(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function renderSelection(sel) {
@@ -200,8 +423,57 @@ function renderSelection(sel) {
     body = `<span class="big">${sel.entry.year}</span><br>${lang === "zh" ? sel.entry.zh : sel.entry.en}`;
   }
 
-  if (sel.cat === "thought" || sel.cat === "memory") {
+  if (sel.cat === "thought" || sel.cat === "memory" || sel.cat === "science") {
     body = lang === "zh" ? sel.item.zh : sel.item.en;
+  }
+
+  if (sel.cat === "quotes") {
+    const q = lang === "zh" ? sel.quoteZh : sel.quoteEn;
+    body = `<span class="poem-line">${q.text}</span><span class="poem-author">— ${q.author}</span>`;
+  }
+
+  if (sel.cat === "classics") {
+    body = `<span class="poem-line">${sel.item.text}</span><span class="poem-author">${sel.item.source}</span>`;
+  }
+
+  if (sel.cat === "proverbs") {
+    body = `<span class="poem-line">${sel.item.text}</span><div class="sub">${sel.item.meaning}</div>`;
+  }
+
+  if (sel.cat === "word") {
+    meta = sel.item.pos;
+    body = `<span class="big">${sel.item.word}</span><div class="sub">${sel.item.def}</div>` +
+      `<div class="fact-row"><span>“${sel.item.example}”</span></div>`;
+  }
+
+  if (sel.cat === "almanac") {
+    const a = sel.data;
+    const alm = s.almanac;
+    meta = a.lunarLabel ? `农历${a.lunarLabel} · ${a.yearGanzhi}年` : `${a.yearGanzhi}年`;
+    const bits = [`节气 <b>${a.solarTerm}</b>`];
+    if (a.jianchu) bits.push(`值神 <b>${a.jianchu}</b>`);
+    bits.push(`<b>${a.chongSha}</b>`);
+    body = `<span class="big">${a.dayGanzhi}日</span>` +
+      `<div class="fact-row">${bits.map((b) => `<span>${b}</span>`).join("")}</div>` +
+      `<div class="fact-row"><span><b>${alm.yi}</b> ${a.yi.join(" · ")}</span></div>` +
+      `<div class="fact-row"><span><b>${alm.ji}</b> ${a.ji.join(" · ")}</span></div>` +
+      `<div class="fact-row"><span><b>吉神</b> ${a.jiShen.map((g) => `${g.name}（${g.gloss}）`).join(" · ")}</span></div>` +
+      `<div class="fact-row"><span><b>凶神</b> ${a.xiongShen.map((g) => `${g.name}（${g.gloss}）`).join(" · ")}</span></div>` +
+      `<div class="fact-row"><span><b>彭祖百忌</b> ${a.pengzu[0]}；${a.pengzu[1]}</span></div>` +
+      `<div class="sub">${alm.footnote}</div>`;
+  }
+
+  if (sel.cat === "gossip") {
+    const g = sel.item;
+    let when = "";
+    if (g.publishedAt) {
+      const d = new Date(g.publishedAt);
+      if (!Number.isNaN(d.valueOf())) {
+        when = new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(d);
+      }
+    }
+    meta = [g.source, when].filter(Boolean).map(esc).join(" · ");
+    body = `<a class="gossip-link" href="${esc(g.link)}" target="_blank" rel="noopener">${esc(g.title)}</a>`;
   }
 
   if (sel.cat === "chance") {
@@ -234,6 +506,7 @@ function renderSelection(sel) {
 }
 
 function drawCard() {
+  if (gossipEndpoint() && Date.now() - gossipFetchedAt >= GOSSIP_CACHE_MS) refreshGossip();
   const cat = weightedCategory();
   lastCategory = cat;
   currentSelection = makeSelection(cat);
@@ -356,7 +629,12 @@ function applyStaticStrings() {
   document.querySelectorAll(".style-chip").forEach((chip) => {
     chip.textContent = s.clockStyles[chip.dataset.style];
   });
-  if (currentSelection) renderSelection(currentSelection);
+  if (currentSelection) {
+    // Language-specific categories (classics/almanac vs proverbs/word) may not
+    // exist in the new language: draw a fresh card instead of rendering them.
+    if (availableCategories().some((c) => c.key === currentSelection.cat)) renderSelection(currentSelection);
+    else { drawCard(); return; }
+  }
   lastSecond = -1; // force a clock repaint in the new language
   tick();
 }
@@ -392,7 +670,10 @@ function setClockStyle(st) {
 
 /* ================= Events & init ================= */
 $("draw-btn").addEventListener("click", drawCard);
-$("card").addEventListener("click", drawCard);
+$("card").addEventListener("click", (e) => {
+  if (e.target.closest("a")) return; // let gossip links open normally
+  drawCard();
+});
 $("card").addEventListener("keydown", (e) => {
   if (e.key === "Enter") drawCard();
 });
@@ -412,6 +693,7 @@ buildAnalogTicks();
 buildStyleChips();
 setClockStyle(clockStyle);
 applyStaticStrings();
+refreshGossip();
 drawCard();
 setInterval(tick, 200);
 tick();

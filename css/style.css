@@ -266,6 +266,15 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   border: 1px solid var(--card-border);
 }
 .card-body .moon-glyph { font-size: 44px; margin-right: 12px; vertical-align: middle; }
+.card-body a.gossip-link {
+  color: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent);
+}
+.card-body a.gossip-link:hover { color: var(--accent); }
 
 /* ---------- Controls ---------- */
 .controls { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
