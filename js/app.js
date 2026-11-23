@@ -47,6 +47,8 @@ async function refreshGossip() {
 const LS_LANG = "nam-lang";
 const LS_STYLE = "nam-clock-style";
 const LS_SIGN = "nam-sign";
+const LS_THEME = "nam-theme";
+const THEMES = ["auto", "light", "dark"];
 const CLOCK_STYLES = ["paper", "minimal", "analog", "flip", "vertical"];
 
 let lang = localStorage.getItem(LS_LANG);
@@ -55,6 +57,12 @@ if (!lang) {
 }
 let clockStyle = localStorage.getItem(LS_STYLE) || "paper";
 if (!CLOCK_STYLES.includes(clockStyle)) clockStyle = "paper";
+
+/* Theme: "auto" follows prefers-color-scheme; "light"/"dark" force a
+   palette via data-theme on <html> (also set pre-paint by the inline
+   script in index.html). */
+let theme = localStorage.getItem(LS_THEME) || "auto";
+if (!THEMES.includes(theme)) theme = "auto";
 
 /* User's zodiac sign ("" = random). Set via the sign selector; the daily
    horoscope uses it 70% of the time when set. */
@@ -818,6 +826,21 @@ function tick() {
 }
 
 /* ================= i18n & style switching ================= */
+function applyTheme() {
+  if (theme === "auto") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+  $("theme-auto").classList.toggle("active", theme === "auto");
+  $("theme-light").classList.toggle("active", theme === "light");
+  $("theme-dark").classList.toggle("active", theme === "dark");
+}
+
+function setTheme(next) {
+  if (next === theme) return;
+  theme = next;
+  localStorage.setItem(LS_THEME, theme);
+  applyTheme();
+}
+
 function applyStaticStrings() {
   const s = t();
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
@@ -832,6 +855,11 @@ function applyStaticStrings() {
   $("lang-label").textContent = s.languageLabel;
   $("lang-zh").classList.toggle("active", lang === "zh");
   $("lang-en").classList.toggle("active", lang === "en");
+  $("theme-label").textContent = s.themeLabel;
+  $("theme-auto").textContent = s.themeAuto;
+  $("theme-light").textContent = s.themeLight;
+  $("theme-dark").textContent = s.themeDark;
+  applyTheme();
   $("style-label").textContent = s.clockStyles.label;
   $("encounter").textContent = encounter > 0 ? s.encounter(encounter) : "";
   document.querySelectorAll(".style-chip").forEach((chip) => {
@@ -936,6 +964,9 @@ function setLang(next) {
 }
 $("lang-zh").addEventListener("click", () => setLang("zh"));
 $("lang-en").addEventListener("click", () => setLang("en"));
+$("theme-auto").addEventListener("click", () => setTheme("auto"));
+$("theme-light").addEventListener("click", () => setTheme("light"));
+$("theme-dark").addEventListener("click", () => setTheme("dark"));
 
 /* Settings panel: toggled by the one quiet button in the top bar; closes on
    outside click and on Esc (which returns focus to the button). */

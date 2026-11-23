@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>此时，还有 · Now, and More</title>
 <meta name="description" content="时间是确定的，下一块是什么，不确定。A precise clock, and below it, something random every minute.">
+<script>
+  /* Apply a manually chosen theme before first paint (no flash). */
+  (function () {
+    try {
+      var t = localStorage.getItem("nam-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) { /* storage unavailable: fall back to system preference */ }
+  })();
+</script>
 <link rel="stylesheet" href="css/style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,6 +38,14 @@
         <div class="lang-segment" role="group" aria-label="Language">
           <button id="lang-zh" type="button" class="seg-btn">中文</button>
           <button id="lang-en" type="button" class="seg-btn">EN</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span id="theme-label" class="setting-label">外观</span>
+        <div class="lang-segment" role="group" aria-label="Appearance">
+          <button id="theme-auto" type="button" class="seg-btn">跟随系统</button>
+          <button id="theme-light" type="button" class="seg-btn">浅色</button>
+          <button id="theme-dark" type="button" class="seg-btn">深色</button>
         </div>
       </div>
       <div class="setting-row">

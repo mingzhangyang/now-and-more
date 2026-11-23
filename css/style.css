@@ -1,5 +1,10 @@
 /* Now, and More — styles */
+/* Light palette is the default. Theme resolution:
+   - data-theme="dark"  -> dark palette, regardless of system
+   - data-theme="light" -> light palette, regardless of system
+   - no data-theme      -> system prefers-color-scheme rules */
 :root {
+  color-scheme: light;
   --bg: #f5efe2;
   --bg-soft: #efe7d6;
   --ink: #2b2620;
@@ -12,8 +17,23 @@
   --glow-color: rgba(178, 58, 42, 0.16);
 }
 
+/* Dark palette (the var assignments are repeated under the media query
+   below — a selector list cannot span a media-query boundary). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #171512;
+  --bg-soft: #1e1b17;
+  --ink: #ece5d5;
+  --ink-soft: #a29885;
+  --accent: #e0684f;
+  --card-bg: rgba(34, 30, 25, 0.85);
+  --card-border: rgba(236, 229, 213, 0.16);
+  --glow-color: rgba(224, 104, 79, 0.14);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #171512;
     --bg-soft: #1e1b17;
     --ink: #ece5d5;

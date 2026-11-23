@@ -91,6 +91,10 @@ const I18N = {
     langToggle: "EN",
     settings: "设置",
     languageLabel: "语言",
+    themeLabel: "外观",
+    themeAuto: "跟随系统",
+    themeLight: "浅色",
+    themeDark: "深色",
   },
   en: {
     title: "Now, and More",
@@ -180,6 +184,10 @@ const I18N = {
     langToggle: "中文",
     settings: "Settings",
     languageLabel: "Language",
+    themeLabel: "Appearance",
+    themeAuto: "Auto",
+    themeLight: "Light",
+    themeDark: "Dark",
   },
 };
 
