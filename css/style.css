@@ -27,6 +27,8 @@
 
 * { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+
 html, body { margin: 0; padding: 0; }
 
 body {
@@ -86,17 +88,60 @@ body {
 .brand-text strong { font-size: 17px; font-weight: 900; letter-spacing: 0.06em; }
 .brand-text small { font-size: 11px; color: var(--ink-soft); letter-spacing: 0.08em; }
 
-#lang-toggle {
+/* ---------- Settings (one quiet button + panel) ---------- */
+.settings { position: relative; }
+
+#settings-btn {
   font-family: var(--sans);
-  font-size: 13px;
-  padding: 6px 14px;
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
+  font-size: 17px;
+  line-height: 1;
+  padding: 6px 8px;
+  border: none;
   background: transparent;
-  color: var(--ink);
+  color: var(--ink-soft);
+  opacity: 0.55;
   cursor: pointer;
 }
-#lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
+#settings-btn:hover, #settings-btn:focus-visible { opacity: 1; color: var(--ink); }
+
+.settings-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 10;
+  width: 268px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 16px 18px 18px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+  text-align: left;
+}
+
+.setting-row { display: flex; flex-direction: column; gap: 7px; }
+.setting-label { font-size: 12.5px; color: var(--ink-soft); letter-spacing: 0.16em; }
+
+.lang-segment {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.seg-btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 5px 15px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.seg-btn.active { color: var(--accent); font-weight: 600; background: var(--bg-soft); }
 
 /* ---------- Stage ---------- */
 .stage {
@@ -280,23 +325,20 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .controls { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
 #draw-btn {
   font-family: var(--serif);
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: 0.14em;
-  padding: 10px 26px;
-  border-radius: 999px;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff8ee;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
   cursor: pointer;
 }
-#draw-btn:hover { opacity: 0.88; }
+#draw-btn:hover, #draw-btn:focus-visible { color: var(--accent); }
 .encounter { color: var(--ink-soft); font-size: 14px; letter-spacing: 0.1em; }
 .hint { color: var(--ink-soft); font-size: 12.5px; margin: 10px 0 0; letter-spacing: 0.08em; }
 
-/* ---------- Style switcher ---------- */
-.style-switcher { margin-top: 30px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.style-label { font-size: 12.5px; color: var(--ink-soft); letter-spacing: 0.16em; }
-.style-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+/* ---------- Clock style chips (inside the settings panel) ---------- */
+.style-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start; }
 .style-chip {
   font-family: var(--sans);
   font-size: 13px;
@@ -310,7 +352,6 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .style-chip.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 
 /* ---------- Sign selector & astrology ---------- */
-.sign-switcher { margin-top: 12px; }
 .sign-select {
   font-family: var(--sans);
   font-size: 13px;

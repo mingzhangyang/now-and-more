@@ -89,6 +89,8 @@ const I18N = {
       vertical: "竖排",
     },
     langToggle: "EN",
+    settings: "设置",
+    languageLabel: "语言",
   },
   en: {
     title: "Now, and More",
@@ -176,6 +178,8 @@ const I18N = {
       vertical: "Vertical",
     },
     langToggle: "中文",
+    settings: "Settings",
+    languageLabel: "Language",
   },
 };
 

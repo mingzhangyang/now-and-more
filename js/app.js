@@ -827,7 +827,11 @@ function applyStaticStrings() {
   $("tagline").textContent = s.tagline;
   $("draw-btn").textContent = s.drawNext;
   $("hint").textContent = s.hint;
-  $("lang-toggle").textContent = s.langToggle;
+  $("settings-btn").setAttribute("aria-label", s.settings);
+  $("settings-panel").setAttribute("aria-label", s.settings);
+  $("lang-label").textContent = s.languageLabel;
+  $("lang-zh").classList.toggle("active", lang === "zh");
+  $("lang-en").classList.toggle("active", lang === "en");
   $("style-label").textContent = s.clockStyles.label;
   $("encounter").textContent = encounter > 0 ? s.encounter(encounter) : "";
   document.querySelectorAll(".style-chip").forEach((chip) => {
@@ -844,8 +848,8 @@ function applyStaticStrings() {
   tick();
 }
 
-/* Zodiac sign selector, built dynamically and placed right after the clock
-   style switcher. Persisted like language/style. */
+/* Zodiac sign selector: a static row inside the settings panel.
+   Persisted like language/style. */
 let signSelectEl = null;
 let signLabelEl = null;
 function refreshSignOptions() {
@@ -866,18 +870,9 @@ function refreshSignOptions() {
   signSelectEl.value = userSign;
 }
 function buildSignSelector() {
-  const anchor = document.querySelector(".style-switcher");
-  if (!anchor) return;
-  const wrap = document.createElement("div");
-  wrap.className = "style-switcher sign-switcher";
-  signLabelEl = document.createElement("span");
-  signLabelEl.className = "style-label";
-  signSelectEl = document.createElement("select");
-  signSelectEl.className = "sign-select";
-  signSelectEl.setAttribute("aria-label", "Zodiac sign / 星座");
-  wrap.appendChild(signLabelEl);
-  wrap.appendChild(signSelectEl);
-  anchor.after(wrap);
+  signSelectEl = $("sign-select");
+  signLabelEl = $("sign-label");
+  if (!signSelectEl) return;
   signSelectEl.addEventListener("change", () => {
     userSign = signSelectEl.value;
     if (userSign) localStorage.setItem(LS_SIGN, userSign);
@@ -930,13 +925,37 @@ document.addEventListener("keydown", (e) => {
     drawCard();
   }
 });
-$("lang-toggle").addEventListener("click", () => {
-  lang = lang === "zh" ? "en" : "zh";
+function setLang(next) {
+  if (next === lang) return;
+  lang = next;
   localStorage.setItem(LS_LANG, lang);
   gossipCache = [];
   gossipFetchedAt = 0;
   refreshGossip();
   applyStaticStrings();
+}
+$("lang-zh").addEventListener("click", () => setLang("zh"));
+$("lang-en").addEventListener("click", () => setLang("en"));
+
+/* Settings panel: toggled by the one quiet button in the top bar; closes on
+   outside click and on Esc (which returns focus to the button). */
+const settingsBtn = $("settings-btn");
+const settingsPanel = $("settings-panel");
+function setSettingsOpen(open) {
+  settingsPanel.hidden = !open;
+  settingsBtn.setAttribute("aria-expanded", String(open));
+}
+settingsBtn.addEventListener("click", () => {
+  setSettingsOpen(settingsPanel.hidden);
+});
+document.addEventListener("click", (e) => {
+  if (!settingsPanel.hidden && !e.target.closest(".settings")) setSettingsOpen(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !settingsPanel.hidden) {
+    setSettingsOpen(false);
+    settingsBtn.focus();
+  }
 });
 
 buildAnalogTicks();

@@ -21,7 +21,26 @@
       <small id="brand-subtitle">Now, and More</small>
     </span>
   </div>
-  <button id="lang-toggle" type="button" aria-label="Switch language">EN</button>
+  <div class="settings">
+    <button id="settings-btn" type="button" aria-label="设置" aria-expanded="false" aria-controls="settings-panel">⚙</button>
+    <div id="settings-panel" class="settings-panel" role="group" aria-label="设置" hidden>
+      <div class="setting-row">
+        <span id="lang-label" class="setting-label">语言</span>
+        <div class="lang-segment" role="group" aria-label="Language">
+          <button id="lang-zh" type="button" class="seg-btn">中文</button>
+          <button id="lang-en" type="button" class="seg-btn">EN</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span id="style-label" class="setting-label">时钟样式</span>
+        <div id="style-chips" class="style-chips"></div>
+      </div>
+      <div class="setting-row">
+        <span id="sign-label" class="setting-label">我的星座</span>
+        <select id="sign-select" class="sign-select" aria-label="Zodiac sign / 星座"></select>
+      </div>
+    </div>
+  </div>
 </header>
 
 <main class="stage">
@@ -76,11 +95,6 @@
     <span id="encounter" class="encounter"></span>
   </div>
   <p id="hint" class="hint">点卡片、按空格，或等下一分钟</p>
-
-  <div class="style-switcher" role="group" aria-label="Clock style">
-    <span id="style-label" class="style-label">时钟样式</span>
-    <div id="style-chips" class="style-chips"></div>
-  </div>
 </main>
 
 <footer class="footer">
