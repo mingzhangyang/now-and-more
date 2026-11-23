@@ -147,21 +147,59 @@ async function writeCache(lang, headlines) {
   }
 }
 
+const BROWSER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+const SOURCE_TIMEOUT_MS = 6000;
+
+async function fetchSource(url) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), SOURCE_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": BROWSER_UA, Accept: "application/rss+xml, application/xml, text/xml, */*" },
+      cf: { cacheTtl: 300, cacheEverything: true },
+      signal: ctl.signal,
+    });
+    const text = await res.text();
+    return { url, status: res.status, ok: res.ok, text };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchHeadlines(lang) {
   const texts = [];
   for (const url of SOURCES[lang]) {
     try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": "now-and-more-gossip/1.0 (+https://github.com/mingzhangyang/now-and-more)" },
-        cf: { cacheTtl: 300, cacheEverything: true },
-      });
-      if (res.ok) texts.push(await res.text());
+      const r = await fetchSource(url);
+      if (r.ok) texts.push(r.text);
     } catch {
       // One bad source must not sink the others.
     }
   }
   if (texts.length === 0) throw new Error("all_sources_failed");
   return mergeHeadlines(texts);
+}
+
+// Diagnostic for /debug: per-source HTTP status and parsed item counts.
+// Relays no content beyond counts and lengths; safe to leave enabled.
+async function debugSources(lang) {
+  const out = [];
+  for (const url of SOURCES[lang]) {
+    try {
+      const r = await fetchSource(url);
+      out.push({
+        url,
+        status: r.status,
+        bytes: r.text.length,
+        looksLikeRss: r.text.includes("<item"),
+        items: r.ok ? parseFeed(r.text).length : 0,
+      });
+    } catch (e) {
+      out.push({ url, status: 0, error: String(e && e.name ? e.name : e) });
+    }
+  }
+  return out;
 }
 
 async function getHeadlines(lang) {
@@ -203,6 +241,13 @@ export default {
 
     if (url.pathname === "/health") {
       return jsonResponse({ ok: true });
+    }
+
+    if (url.pathname === "/debug") {
+      const lang = url.searchParams.get("lang") === "en" ? "en" : "zh";
+      const sources = await debugSources(lang);
+      const totalItems = sources.reduce((n, s) => n + (s.items || 0), 0);
+      return jsonResponse({ lang, totalItems, sources });
     }
 
     if (url.pathname === "/gossip") {

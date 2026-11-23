@@ -8,7 +8,7 @@
    Expected JSON: { title, source, link, publishedAt, lang } — a single headline,
    an array of such objects, or { items: [...] }. Headlines only; content is
    never invented locally. */
-const GOSSIP_API = "";
+const GOSSIP_API = "https://now-and-more.orangely.workers.dev/gossip";
 const GOSSIP_CACHE_MS = 10 * 60 * 1000;
 const GOSSIP_TIMEOUT_MS = 3000;
 let gossipCache = [];
@@ -29,7 +29,8 @@ async function refreshGossip() {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), GOSSIP_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { signal: ctl.signal });
+    const fetchUrl = url + (url.includes("?") ? "&" : "?") + "lang=" + lang;
+    const res = await fetch(fetchUrl, { signal: ctl.signal });
     if (!res.ok) return;
     const data = await res.json();
     const raw = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : [data]);
@@ -932,6 +933,9 @@ document.addEventListener("keydown", (e) => {
 $("lang-toggle").addEventListener("click", () => {
   lang = lang === "zh" ? "en" : "zh";
   localStorage.setItem(LS_LANG, lang);
+  gossipCache = [];
+  gossipFetchedAt = 0;
+  refreshGossip();
   applyStaticStrings();
 });
 
