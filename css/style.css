@@ -405,11 +405,56 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .second-random { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; letter-spacing: 0.08em; }
 .footer-note { font-size: 12px; color: var(--ink-soft); letter-spacing: 0.08em; }
 
+/* ---------- Ambient mode ---------- */
+.ambient-btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 5px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.ambient-btn:hover, .ambient-btn:focus-visible { color: var(--accent); border-color: var(--accent); }
+
+/* In ambient the page is furniture: chrome goes away, the stage centers,
+   the clock grows a little, and only the glow and the card remain. */
+body.ambient .topbar,
+body.ambient .footer,
+body.ambient .controls,
+body.ambient .hint { display: none; }
+body.ambient .stage { justify-content: center; padding: 0 0 10px; }
+body.ambient .clock { transform: scale(1.18); }
+body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !important; }
+
+.ambient-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  z-index: 20;
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 7px 18px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  user-select: none;
+}
+.ambient-hint.show { opacity: 0.85; pointer-events: auto; cursor: pointer; }
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   #glow { transition: none; }
   .card { transition: none; }
   .flip-card.tick { animation: none; }
+  .ambient-hint { transition: none; }
 }
 
 /* ---------- Small screens ---------- */

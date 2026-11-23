@@ -95,6 +95,9 @@ const I18N = {
     themeAuto: "跟随系统",
     themeLight: "浅色",
     themeDark: "深色",
+    ambientLabel: "氛围模式",
+    ambientEnter: "进入",
+    ambientHint: "Esc 退出氛围模式",
   },
   en: {
     title: "Now, and More",
@@ -188,6 +191,9 @@ const I18N = {
     themeAuto: "Auto",
     themeLight: "Light",
     themeDark: "Dark",
+    ambientLabel: "Ambient",
+    ambientEnter: "Enter",
+    ambientHint: "Press Esc to exit ambient mode",
   },
 };
 

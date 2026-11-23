@@ -861,6 +861,9 @@ function applyStaticStrings() {
   $("theme-dark").textContent = s.themeDark;
   applyTheme();
   $("style-label").textContent = s.clockStyles.label;
+  $("ambient-label").textContent = s.ambientLabel;
+  $("ambient-btn").textContent = s.ambientEnter;
+  $("ambient-hint").textContent = s.ambientHint;
   $("encounter").textContent = encounter > 0 ? s.encounter(encounter) : "";
   document.querySelectorAll(".style-chip").forEach((chip) => {
     chip.textContent = s.clockStyles[chip.dataset.style];
@@ -989,6 +992,110 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+/* ================= Ambient mode ================= */
+/* A session-only viewing mode for leaving the page on a desk screen:
+   chrome disappears, the clock breathes larger, the card stays. Nothing
+   is persisted; a reload always lands back in the normal page. Entering
+   also asks for fullscreen and a screen wake lock, both best-effort. */
+let ambientOn = false;
+let ambientHadFullscreen = false;
+let wakeLock = null;
+let cursorHideTimer = null;
+let hintHideTimer = null;
+
+function pokeAmbientUi() {
+  if (!ambientOn) return;
+  document.body.classList.remove("cursor-hidden");
+  const hint = $("ambient-hint");
+  hint.classList.add("show");
+  hint.setAttribute("aria-hidden", "false");
+  clearTimeout(cursorHideTimer);
+  clearTimeout(hintHideTimer);
+  cursorHideTimer = setTimeout(() => {
+    document.body.classList.add("cursor-hidden");
+  }, 3000);
+  hintHideTimer = setTimeout(() => {
+    hint.classList.remove("show");
+    hint.setAttribute("aria-hidden", "true");
+  }, 2600);
+}
+
+async function acquireWakeLock() {
+  try {
+    if ("wakeLock" in navigator) {
+      wakeLock = await navigator.wakeLock.request("screen");
+    }
+  } catch (e) { /* denied or unsupported: ambient still works */ }
+}
+
+function enterAmbient() {
+  if (ambientOn) return;
+  ambientOn = true;
+  document.body.classList.add("ambient");
+  setSettingsOpen(false);
+  try {
+    const p = document.documentElement.requestFullscreen
+      ? document.documentElement.requestFullscreen()
+      : null;
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch (e) { /* fullscreen is a bonus, never a requirement */ }
+  acquireWakeLock();
+  pokeAmbientUi();
+}
+
+function exitAmbient() {
+  if (!ambientOn) return;
+  ambientOn = false;
+  ambientHadFullscreen = false;
+  document.body.classList.remove("ambient", "cursor-hidden");
+  const hint = $("ambient-hint");
+  hint.classList.remove("show");
+  hint.setAttribute("aria-hidden", "true");
+  clearTimeout(cursorHideTimer);
+  clearTimeout(hintHideTimer);
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+  } catch (e) { /* ignore */ }
+  if (wakeLock) {
+    try {
+      const p = wakeLock.release();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch (e) { /* ignore */ }
+    wakeLock = null;
+  }
+}
+
+$("ambient-btn").addEventListener("click", enterAmbient);
+$("ambient-hint").addEventListener("click", exitAmbient);
+document.addEventListener("mousemove", pokeAmbientUi);
+document.addEventListener("touchstart", pokeAmbientUi, { passive: true });
+document.addEventListener("fullscreenchange", () => {
+  if (!ambientOn) return;
+  if (document.fullscreenElement) ambientHadFullscreen = true;
+  else if (ambientHadFullscreen) exitAmbient(); // Esc left fullscreen: leave ambient too
+});
+document.addEventListener("visibilitychange", () => {
+  if (ambientOn && document.visibilityState === "visible") acquireWakeLock();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && ambientOn) {
+    exitAmbient();
+    return;
+  }
+  /* "f" toggles ambient — only with the settings panel closed and never
+     while the user is typing or has a form control focused. */
+  if (
+    (e.key === "f" || e.key === "F") &&
+    !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey &&
+    settingsPanel.hidden &&
+    !(e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable]"))
+  ) {
+    if (ambientOn) exitAmbient();
+    else enterAmbient();
+  }
+});
+
+/* ================= Init ================= */
 buildAnalogTicks();
 buildStyleChips();
 buildSignSelector();
@@ -998,3 +1105,13 @@ refreshGossip();
 drawCard();
 setInterval(tick, 200);
 tick();
+
+/* Offline shell: register the service worker after load; any failure is
+   silent — the site must work exactly the same without it. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    try {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    } catch (e) { /* ignore */ }
+  });
+}

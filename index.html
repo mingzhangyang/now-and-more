@@ -10,6 +10,11 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="https://now-and-more.orangely.workers.dev/favicon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="https://now-and-more.orangely.workers.dev/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="此时，还有">
 <meta property="og:title" content="此时，还有 · Now, and More">
 <meta property="og:description" content="时间是确定的，下一块是什么，不确定。A precise clock, and below it, something random every minute.">
 <meta property="og:type" content="website">
@@ -73,9 +78,17 @@
         <span id="sign-label" class="setting-label">我的星座</span>
         <select id="sign-select" class="sign-select" aria-label="Zodiac sign / 星座"></select>
       </div>
+      <div class="setting-row">
+        <span id="ambient-label" class="setting-label">氛围模式</span>
+        <div>
+          <button id="ambient-btn" type="button" class="ambient-btn">进入</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
+
+<div id="ambient-hint" class="ambient-hint" role="button" aria-hidden="true">Esc 退出氛围模式</div>
 
 <main class="stage">
   <p id="tagline" class="tagline">时间是确定的，下一块是什么，不确定。</p>
