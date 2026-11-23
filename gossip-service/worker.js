@@ -27,7 +27,6 @@ const RSS_SOURCES = {
   zh: [
     "https://feeds.feedburner.com/ettoday/star",
     "https://feeds.feedburner.com/ettoday/realtime",
-    "https://news.mingpao.com/rss/ins/all.xml",
     "https://www.chinanews.com.cn/rss/scroll-news.xml",
   ],
   en: [
@@ -82,6 +81,30 @@ function extractTag(block, tag) {
 
 export function parseFeed(xml) {
   const items = [];
+  // Atom feeds (e.g. The Verge) use <entry> instead of <item>.
+  if (!/<item(?:\s[^>]*)?>/.test(xml) && /<entry(?:\s[^>]*)?>/.test(xml)) {
+    const head = xml.slice(0, xml.indexOf("<entry"));
+    const feedTitle = extractTag(head, "title");
+    const entryBlocks = xml.match(/<entry(?:\s[^>]*)?>[\s\S]*?<\/entry>/g) || [];
+    for (const block of entryBlocks) {
+      const title = extractTag(block, "title");
+      const linkMatch =
+        block.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/) ||
+        block.match(/<link[^>]*href="([^"]+)"/);
+      const link = linkMatch ? linkMatch[1] : "";
+      const dateRaw = extractTag(block, "published") || extractTag(block, "updated");
+      if (!title || !link) continue;
+      const parsed = dateRaw ? Date.parse(dateRaw) : NaN;
+      items.push({
+        title,
+        source: feedTitle || "Atom",
+        link,
+        publishedAt: Number.isNaN(parsed) ? null : new Date(parsed).toISOString(),
+        _ts: Number.isNaN(parsed) ? 0 : parsed,
+      });
+    }
+    return items;
+  }
   const itemBlocks = xml.match(/<item(?:\s[^>]*)?>[\s\S]*?<\/item>/g) || [];
   for (const block of itemBlocks) {
     let title = extractTag(block, "title");
