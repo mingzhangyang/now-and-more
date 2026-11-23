@@ -203,6 +203,27 @@ body[data-clock-style="minimal"] .clock-digital {
 }
 body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 
+/* Fixed-width digit cells: the fonts render "1" narrower than other
+   digits, so without this the centered time string changes width (and
+   visibly jitters) whenever a 1 enters or leaves. Each unit gets an
+   inline-block cell sized in em for the widest digit pair in either
+   digital font (measured: 1.23em serif 900 / 1.19em sans 100, incl.
+   letter-spacing), the colon gets its own cell, and tabular-nums is
+   belt-and-braces where the font subset provides it. */
+.clock-digital { font-variant-numeric: tabular-nums; }
+.clock-digital #dig-h,
+.clock-digital #dig-m,
+.clock-digital #dig-s {
+  display: inline-block;
+  width: 1.26em;
+  text-align: center;
+}
+.clock-digital .colon {
+  display: inline-block;
+  width: 0.38em;
+  text-align: center;
+}
+
 /* analog */
 .clock-analog svg { width: min(300px, 62vw); height: auto; display: block; margin: 0 auto; }
 .dial-face { fill: var(--card-bg); stroke: var(--card-border); stroke-width: 1.5; }
@@ -220,13 +241,33 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   letter-spacing: 0.22em;
   margin-top: 8px;
   color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+/* Same fixed-cell treatment as the digital clock (see above): the
+   readout is written into per-unit spans so a narrow "1" cannot pull
+   the rest of the string sideways. Cell widths cover the widest digit
+   pair / colon advance plus the 0.22em letter-spacing. */
+.analog-readout .ro-u {
+  display: inline-block;
+  width: 1.58em;
+  text-align: center;
+}
+.analog-readout .ro-c {
+  display: inline-block;
+  width: 0.52em;
+  text-align: center;
 }
 
 /* flip */
 .clock-flip { display: flex; align-items: center; gap: 10px; justify-content: center; }
 .flip-card {
   position: relative;
+  /* Fixed width (widest digit pair 1.12em + padding/border allowance):
+     a content-sized card grows/shrinks by ~6px between "11" and "88". */
+  width: calc(1.18em + 24px);
   min-width: 92px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
   padding: 14px 10px;
   font-family: var(--sans);
   font-weight: 300;
@@ -258,6 +299,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   writing-mode: vertical-rl;
   font-family: var(--serif);
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
   font-size: clamp(34px, 7.5vw, 54px);
   letter-spacing: 0.28em;
   line-height: 1.6;
@@ -271,6 +313,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   align-items: center;
   font-family: var(--serif);
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
   font-size: clamp(44px, 10vw, 72px);
   line-height: 1.25;
   letter-spacing: 0.1em;

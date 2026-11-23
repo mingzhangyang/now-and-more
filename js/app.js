@@ -791,7 +791,9 @@ function tick() {
   $("hand-second").setAttribute("transform", `rotate(${secDeg} 100 100)`);
   $("hand-minute").setAttribute("transform", `rotate(${minDeg} 100 100)`);
   $("hand-hour").setAttribute("transform", `rotate(${hourDeg} 100 100)`);
-  $("analog-readout").textContent = `${h}:${m}:${s}`;
+  $("ro-h").textContent = h;
+  $("ro-m").textContent = m;
+  $("ro-s").textContent = s;
 
   // flip
   setFlip("flip-h", h);
