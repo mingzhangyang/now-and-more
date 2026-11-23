@@ -851,6 +851,11 @@ function applyStaticStrings() {
   $("brand-subtitle").textContent = s.subtitle;
   $("tagline").textContent = s.tagline;
   $("draw-btn").textContent = s.drawNext;
+  $("capture-btn").textContent = s.capture;
+  $("capture-title").textContent = s.captureTitle;
+  $("capture-download").textContent = s.captureDownload;
+  $("capture-share").textContent = s.captureShare;
+  $("capture-close-btn").textContent = s.captureClose;
   $("hint").textContent = s.hint;
   $("settings-btn").setAttribute("aria-label", s.settings);
   $("settings-panel").setAttribute("aria-label", s.settings);
@@ -1095,6 +1100,439 @@ document.addEventListener("keydown", (e) => {
     if (ambientOn) exitAmbient();
     else enterAmbient();
   }
+});
+
+/* ================= Keepsake capture （留影） ================= */
+/* Freeze the current moment — the exact time plus the card on stage —
+   into a 1080×1350 PNG in the OG-image design language, ready to share.
+   Pure Canvas 2D: no dependencies, no backend. The capture button lives
+   in .controls, so ambient mode hides it like the other controls. */
+const KEEP_W = 1080;
+const KEEP_H = 1350;
+
+function capturePalette() {
+  const cs = getComputedStyle(document.documentElement);
+  const get = (name) => cs.getPropertyValue(name).trim();
+  return {
+    bg: get("--bg"),
+    bgSoft: get("--bg-soft"),
+    ink: get("--ink"),
+    inkSoft: get("--ink-soft"),
+    accent: get("--accent"),
+    cardBg: get("--card-bg"),
+    cardBorder: get("--card-border"),
+    glow: get("--glow-color"),
+    serif: get("--serif"),
+    sans: get("--sans"),
+  };
+}
+
+/* Flatten the rendered card body into text blocks for the canvas. Walking
+   the DOM (instead of re-deriving from the selection) keeps every
+   category — poems, almanac, astro, chance… — faithful to what is on
+   stage right now. Block kinds mirror the on-page typography. */
+function extractCardBlocks() {
+  const root = $("card-body");
+  const blocks = [];
+  let line = null;
+  const ensureLine = () => {
+    if (!line) line = { text: "", big: false, title: false };
+    return line;
+  };
+  const flush = () => {
+    if (line) {
+      const text = line.text.replace(/\s+/g, " ").trim();
+      if (text) blocks.push({ text, kind: line.big ? "big" : line.title ? "title" : "normal" });
+    }
+    line = null;
+  };
+  function walk(node, flags) {
+    if (node.nodeType === 3) {
+      const L = ensureLine();
+      L.text += node.textContent;
+      if (flags.big) L.big = true;
+      if (flags.title) L.title = true;
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    const el = node;
+    const cls = el.classList;
+    if (el.tagName === "BR") { flush(); return; }
+    if (cls.contains("swatch-sm")) return; // colour dot: its name is in the text
+    if (cls.contains("swatch")) {
+      flush();
+      const bg = el.style.backgroundColor || el.style.background;
+      if (bg) blocks.push({ type: "swatch", color: bg });
+      return;
+    }
+    if (cls.contains("fact-row")) {
+      flush();
+      const parts = [];
+      el.querySelectorAll(":scope > span").forEach((sp) => {
+        const tx = sp.textContent.replace(/\s+/g, " ").trim();
+        if (tx) parts.push(tx);
+      });
+      if (parts.length) blocks.push({ text: parts.join("  ·  "), kind: "fact" });
+      return;
+    }
+    if (cls.contains("sub") || cls.contains("poem-line")) {
+      flush();
+      const tx = el.textContent.replace(/\s+/g, " ").trim();
+      if (tx) blocks.push({ text: tx, kind: cls.contains("sub") ? "sub" : "normal" });
+      return;
+    }
+    if (cls.contains("poem-author")) {
+      const tx = el.textContent.replace(/\s+/g, " ").trim();
+      if (!tx) return;
+      if (line && line.text.trim()) line.text += "  " + tx; // beside the poem title
+      else { flush(); blocks.push({ text: tx, kind: "author" }); }
+      return;
+    }
+    const f2 = {
+      big: flags.big || cls.contains("big"),
+      title: flags.title || cls.contains("poem-title"),
+    };
+    for (const c of el.childNodes) walk(c, f2);
+    if (cls.contains("moon-glyph")) ensureLine().text += " ";
+  }
+  for (const c of root.childNodes) walk(c, {});
+  flush();
+  return blocks;
+}
+
+/* Greedy wrapping on top of measureText: breaks after spaces and around
+   CJK characters (per-character), words stay whole where they fit, and
+   explicit \n always breaks. A single over-wide token is hard-broken. */
+function isCjkChar(ch) {
+  const cp = ch.codePointAt(0);
+  return (cp >= 0x2E80 && cp <= 0x9FFF) || (cp >= 0xF900 && cp <= 0xFAFF) ||
+    (cp >= 0x20000 && cp <= 0x2FA1F) ||
+    "，。、；：？！·…—「」『』（）《》〈〉【】％".includes(ch);
+}
+function wrapText(ctx, text, maxWidth) {
+  const out = [];
+  for (const para of String(text).split("\n")) {
+    if (!para) { out.push(""); continue; }
+    const chars = Array.from(para);
+    let start = 0;
+    while (start < chars.length) {
+      while (start < chars.length && chars[start] === " ") start++;
+      if (start >= chars.length) break;
+      let end = start;
+      let lastBreak = -1;
+      while (end < chars.length) {
+        const seg = chars.slice(start, end + 1).join("");
+        if (end > start && ctx.measureText(seg).width > maxWidth) break;
+        const ch = chars[end];
+        const next = chars[end + 1];
+        if (ch === " " || isCjkChar(ch) || (next && isCjkChar(next))) lastBreak = end + 1;
+        end++;
+      }
+      if (end >= chars.length) {
+        out.push(chars.slice(start).join("").replace(/\s+$/, ""));
+        start = chars.length;
+      } else {
+        let cut = lastBreak > start ? lastBreak : end;
+        // Kinsoku-lite: closing punctuation may not start a line — pull
+        // one character down with it instead of orphaning it there.
+        const NO_LINE_START = "，。、；：？！）】》」』…·";
+        while (cut > start + 1 && cut < chars.length && NO_LINE_START.includes(chars[cut])) cut--;
+        out.push(chars.slice(start, cut).join("").replace(/\s+$/, ""));
+        start = cut;
+      }
+    }
+  }
+  return out;
+}
+
+const KEEP_KINDS = {
+  big:    { weight: 900, size: 62, lh: 1.45, color: "ink" },
+  title:  { weight: 900, size: 46, lh: 1.40, color: "ink" },
+  normal: { weight: 400, size: 40, lh: 1.72, color: "ink" },
+  fact:   { weight: 400, size: 31, lh: 1.60, color: "inkSoft" },
+  sub:    { weight: 400, size: 30, lh: 1.60, color: "inkSoft" },
+  author: { weight: 400, size: 32, lh: 1.50, color: "inkSoft" },
+};
+function keepFont(pal, spec, scale) {
+  return `${spec.weight} ${Math.max(10, Math.round(spec.size * scale))}px ${pal.serif}`;
+}
+
+/* Lay the body blocks out within maxHeight, shrinking via the caller's
+   scale steps first; if it still overflows, lines are dropped and the
+   last surviving line gains an ellipsis. */
+function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
+  const items = [];
+  let y = 0;
+  let truncated = false;
+  const gap = Math.round(12 * scale);
+  outer:
+  for (let bi = 0; bi < blocks.length; bi++) {
+    const b = blocks[bi];
+    if (bi > 0) y += gap;
+    if (b.type === "swatch") {
+      const size = Math.round(72 * scale);
+      if (y + size > maxHeight) { truncated = true; break; }
+      items.push({ type: "swatch", color: b.color, yOff: y, size });
+      y += size + Math.round(10 * scale);
+      continue;
+    }
+    const spec = KEEP_KINDS[b.kind] || KEEP_KINDS.normal;
+    const font = keepFont(pal, spec, scale);
+    ctx.font = font;
+    const size = Math.max(10, Math.round(spec.size * scale));
+    const lineH = Math.round(spec.size * scale * spec.lh);
+    for (const ln of wrapText(ctx, b.text, maxWidth)) {
+      if (y + lineH > maxHeight) { truncated = true; break outer; }
+      items.push({ type: "text", text: ln, font, color: spec.color, yOff: y, lineH, size });
+      y += lineH;
+    }
+  }
+  if (truncated) {
+    while (items.length && items[items.length - 1].type !== "text") items.pop();
+    const last = items[items.length - 1];
+    if (last) {
+      ctx.font = last.font;
+      let txt = last.text;
+      while (txt.length && ctx.measureText(txt + "…").width > maxWidth) txt = txt.slice(0, -1);
+      last.text = txt + "…";
+    }
+  }
+  return { items, height: y, truncated };
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+function setLetterSpacing(ctx, v) {
+  try { ctx.letterSpacing = v; } catch (e) { /* older engines: no spacing, still fine */ }
+}
+
+function renderKeepsakeCanvas(snap, pal) {
+  const cv = document.createElement("canvas");
+  cv.width = KEEP_W;
+  cv.height = KEEP_H;
+  const ctx = cv.getContext("2d");
+  const cx = KEEP_W / 2;
+
+  // paper + a whisper of the drifting glow, frozen in one corner
+  ctx.fillStyle = pal.bg;
+  ctx.fillRect(0, 0, KEEP_W, KEEP_H);
+  const glow = ctx.createRadialGradient(KEEP_W * 0.86, 110, 0, KEEP_W * 0.86, 110, 720);
+  glow.addColorStop(0, pal.glow);
+  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, KEEP_W, KEEP_H);
+
+  // hairline frame
+  ctx.strokeStyle = pal.cardBorder;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(46, 46, KEEP_W - 92, KEEP_H - 92);
+
+  // seal
+  const sealSize = 96;
+  ctx.save();
+  ctx.translate(cx, 108 + sealSize / 2);
+  ctx.rotate((-3 * Math.PI) / 180);
+  roundRectPath(ctx, -sealSize / 2, -sealSize / 2, sealSize, sealSize, 13);
+  ctx.fillStyle = pal.accent;
+  ctx.fill();
+  ctx.fillStyle = "#fff8ee";
+  ctx.font = `900 54px ${pal.serif}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("时", 0, 5);
+  ctx.restore();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+
+  // brand line
+  ctx.fillStyle = pal.ink;
+  ctx.font = `600 34px ${pal.serif}`;
+  setLetterSpacing(ctx, "6px");
+  ctx.fillText(snap.brand, cx, 272);
+  setLetterSpacing(ctx, "0px");
+
+  // date line (same text as on the page)
+  ctx.fillStyle = pal.inkSoft;
+  ctx.font = `400 29px ${pal.serif}`;
+  ctx.fillText(snap.dateLine, cx, 330);
+
+  // the frozen time — always serif, auto-fitted to the frame
+  let tSize = 215;
+  ctx.font = `900 ${tSize}px ${pal.serif}`;
+  while (ctx.measureText(snap.time).width > 900 && tSize > 80) {
+    tSize -= 8;
+    ctx.font = `900 ${tSize}px ${pal.serif}`;
+  }
+  ctx.fillStyle = pal.ink;
+  ctx.fillText(snap.time, cx, 568);
+
+  // cinnabar rule
+  ctx.fillStyle = pal.accent;
+  ctx.fillRect(cx - 60, 608, 120, 5);
+
+  // card panel: header (category, meta) then the body blocks
+  const panelX = 90;
+  const panelW = KEEP_W - 180;
+  const panelTop = 652;
+  const panelBottomMax = 1204;
+  const textX = panelX + 58;
+  const textW = panelW - 116;
+
+  const catBaseline = panelTop + 84;
+  const metaBaseline = catBaseline + 50;
+  const bodyTop = (snap.meta ? metaBaseline : catBaseline) + 48;
+  const availBodyH = panelBottomMax - bodyTop - 46;
+
+  let layout = null;
+  for (const scale of [1, 0.92, 0.85, 0.78, 0.72]) {
+    layout = layoutKeepsakeBody(ctx, snap.blocks, pal, textW, scale, availBodyH);
+    if (!layout.truncated) break;
+  }
+  const panelBottom = Math.min(
+    panelBottomMax,
+    Math.max(bodyTop + layout.height + 48, panelTop + 360)
+  );
+
+  roundRectPath(ctx, panelX, panelTop, panelW, panelBottom - panelTop, 18);
+  ctx.fillStyle = pal.cardBg;
+  ctx.fill();
+  ctx.strokeStyle = pal.cardBorder;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = pal.accent;
+  ctx.font = `600 30px ${pal.serif}`;
+  setLetterSpacing(ctx, "8px");
+  ctx.fillText(snap.category, textX, catBaseline);
+  setLetterSpacing(ctx, "0px");
+  if (snap.meta) {
+    ctx.fillStyle = pal.inkSoft;
+    ctx.font = `400 28px ${pal.serif}`;
+    ctx.fillText(snap.meta, textX, metaBaseline);
+  }
+
+  for (const it of layout.items) {
+    if (it.type === "swatch") {
+      roundRectPath(ctx, textX, bodyTop + it.yOff, it.size, it.size, 12);
+      ctx.fillStyle = it.color;
+      ctx.fill();
+      ctx.strokeStyle = pal.cardBorder;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else {
+      ctx.font = it.font;
+      ctx.fillStyle = pal[it.color];
+      ctx.fillText(it.text, textX, bodyTop + it.yOff + (it.lineH - it.size) / 2 + it.size * 0.8);
+    }
+  }
+
+  // footer
+  ctx.textAlign = "center";
+  ctx.fillStyle = pal.inkSoft;
+  ctx.font = `300 26px ${pal.sans}`;
+  setLetterSpacing(ctx, "3px");
+  ctx.fillText(snap.footer, cx, 1280);
+  setLetterSpacing(ctx, "0px");
+
+  return cv;
+}
+
+async function ensureCaptureFonts() {
+  try {
+    const loads = [
+      document.fonts.load("900 100px \"Noto Serif SC\""),
+      document.fonts.load("600 30px \"Noto Serif SC\""),
+      document.fonts.load("400 40px \"Noto Serif SC\""),
+      document.fonts.load("300 26px \"Noto Sans SC\""),
+    ];
+    await Promise.race([
+      Promise.all(loads).then(() => document.fonts.ready),
+      new Promise((r) => setTimeout(r, 2500)),
+    ]);
+  } catch (e) { /* fall back to whatever fonts are available */ }
+}
+
+let captureUrl = null;
+let captureFile = null;
+
+function showCapture(blob, frozen) {
+  if (captureUrl) URL.revokeObjectURL(captureUrl);
+  captureUrl = URL.createObjectURL(blob);
+  const fname = `now-and-more-${frozen.getFullYear()}${pad(frozen.getMonth() + 1)}${pad(frozen.getDate())}` +
+    `-${pad(frozen.getHours())}${pad(frozen.getMinutes())}${pad(frozen.getSeconds())}.png`;
+  $("capture-img").src = captureUrl;
+  const dl = $("capture-download");
+  dl.href = captureUrl;
+  dl.setAttribute("download", fname);
+  try {
+    captureFile = new File([blob], fname, { type: "image/png" });
+  } catch (e) { captureFile = null; }
+  const canShare = !!(captureFile && navigator.canShare && navigator.canShare({ files: [captureFile] }));
+  $("capture-share").hidden = !canShare;
+  $("capture-overlay").hidden = false;
+  $("capture-close-btn").focus();
+}
+
+function closeCapture() {
+  if ($("capture-overlay").hidden) return;
+  $("capture-overlay").hidden = true;
+  if (captureUrl) {
+    URL.revokeObjectURL(captureUrl);
+    captureUrl = null;
+  }
+  captureFile = null;
+  $("capture-btn").focus();
+}
+
+async function captureKeepsake() {
+  const btn = $("capture-btn");
+  if (btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const frozen = new Date();
+    const s = t();
+    const enc = encounter > 0 ? s.encounter(encounter) : "";
+    const snap = {
+      time: `${pad(frozen.getHours())}:${pad(frozen.getMinutes())}:${pad(frozen.getSeconds())}`,
+      dateLine: $("date-line").textContent,
+      category: $("card-category").textContent,
+      meta: $("card-meta").textContent,
+      blocks: extractCardBlocks(),
+      brand: lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有",
+      footer: enc ? `${enc} · now.orangely.xyz` : "now.orangely.xyz",
+    };
+    const pal = capturePalette();
+    await ensureCaptureFonts();
+    const cv = renderKeepsakeCanvas(snap, pal);
+    const blob = await new Promise((res) => cv.toBlob((b) => res(b), "image/png"));
+    if (blob) showCapture(blob, frozen);
+  } catch (e) { /* capture is a keepsake, never a page-breaker */ }
+  finally { btn.disabled = false; }
+}
+
+$("capture-btn").addEventListener("click", captureKeepsake);
+$("capture-close-btn").addEventListener("click", closeCapture);
+$("capture-overlay").addEventListener("click", (e) => {
+  if (e.target === $("capture-overlay")) closeCapture();
+});
+$("capture-share").addEventListener("click", async () => {
+  if (!captureFile) return;
+  try {
+    await navigator.share({ files: [captureFile], title: document.title });
+  } catch (e) { /* user cancelled or share failed: the download still works */ }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("capture-overlay").hidden) closeCapture();
 });
 
 /* ================= Init ================= */

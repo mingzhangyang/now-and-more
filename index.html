@@ -139,6 +139,7 @@
 
   <div class="controls">
     <button id="draw-btn" type="button">再抽一张</button>
+    <button id="capture-btn" type="button">留影</button>
     <span id="encounter" class="encounter"></span>
   </div>
   <p id="hint" class="hint">点卡片、按空格，或等下一分钟</p>
@@ -148,6 +149,19 @@
   <span id="second-random" class="second-random" title="每秒一个新随机数 / A new random number every second"></span>
   <span class="footer-note">Now, and More · 此时，还有</span>
 </footer>
+
+<!-- Keepsake capture result: the frozen moment as a shareable PNG -->
+<div id="capture-overlay" class="capture-overlay" hidden>
+  <div class="capture-dialog" role="dialog" aria-modal="true" aria-labelledby="capture-title">
+    <div id="capture-title" class="capture-title">留影</div>
+    <img id="capture-img" class="capture-img" alt="">
+    <div class="capture-actions">
+      <a id="capture-download" class="capture-action" href="#" download>保存图片</a>
+      <button id="capture-share" type="button" class="capture-action" hidden>分享</button>
+      <button id="capture-close-btn" type="button" class="capture-action">关闭</button>
+    </div>
+  </div>
+</div>
 
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>

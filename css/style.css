@@ -386,7 +386,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 
 /* ---------- Controls ---------- */
 .controls { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
-#draw-btn {
+#draw-btn, #capture-btn {
   font-family: var(--serif);
   font-size: 15px;
   letter-spacing: 0.14em;
@@ -396,7 +396,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   color: var(--ink-soft);
   cursor: pointer;
 }
-#draw-btn:hover, #draw-btn:focus-visible { color: var(--accent); }
+#draw-btn:hover, #draw-btn:focus-visible,
+#capture-btn:hover, #capture-btn:focus-visible { color: var(--accent); }
+#capture-btn:disabled { opacity: 0.5; cursor: default; }
 .encounter { color: var(--ink-soft); font-size: 14px; letter-spacing: 0.1em; }
 .hint { color: var(--ink-soft); font-size: 12.5px; margin: 10px 0 0; letter-spacing: 0.08em; }
 
@@ -491,6 +493,58 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
   user-select: none;
 }
 .ambient-hint.show { opacity: 0.85; pointer-events: auto; cursor: pointer; }
+
+/* ---------- Keepsake capture overlay ---------- */
+.capture-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(23, 18, 12, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.capture-dialog {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 20px 20px 18px;
+  width: min(400px, 94vw);
+  max-height: 94vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+.capture-title { font-size: 16px; font-weight: 900; letter-spacing: 0.24em; }
+.capture-img {
+  width: 100%;
+  height: auto;
+  max-height: 64vh;
+  object-fit: contain;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.capture-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.capture-action {
+  font-family: var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+.capture-action:hover, .capture-action:focus-visible { color: var(--accent); border-color: var(--accent); }
+#capture-download { color: var(--accent); border-color: var(--accent); font-weight: 600; }
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {

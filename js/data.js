@@ -98,6 +98,11 @@ const I18N = {
     ambientLabel: "氛围模式",
     ambientEnter: "进入",
     ambientHint: "Esc 退出氛围模式",
+    capture: "留影",
+    captureTitle: "留影",
+    captureDownload: "保存图片",
+    captureShare: "分享",
+    captureClose: "关闭",
   },
   en: {
     title: "Now, and More",
@@ -194,6 +199,11 @@ const I18N = {
     ambientLabel: "Ambient",
     ambientEnter: "Enter",
     ambientHint: "Press Esc to exit ambient mode",
+    capture: "Capture",
+    captureTitle: "Keepsake",
+    captureDownload: "Save image",
+    captureShare: "Share",
+    captureClose: "Close",
   },
 };
 
