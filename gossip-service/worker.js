@@ -327,6 +327,27 @@ async function getHeadlines(lang) {
   }
 }
 
+// ---------- static site assets (PNGs served from base64; see assets.js) ----------
+
+import { OG_IMAGE_B64, FAVICON192_B64, APPLE_ICON_B64 } from "./assets.js";
+
+const ASSET_ROUTES = {
+  "/og-image.png": OG_IMAGE_B64,
+  "/favicon-192.png": FAVICON192_B64,
+  "/apple-touch-icon.png": APPLE_ICON_B64,
+};
+
+function serveAsset(b64) {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=86400",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+}
+
 // ---------- worker entry ----------
 
 export default {
@@ -344,6 +365,10 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    if (ASSET_ROUTES[url.pathname]) {
+      return serveAsset(ASSET_ROUTES[url.pathname]);
+    }
 
     if (url.pathname === "/health") {
       return jsonResponse({ ok: true });

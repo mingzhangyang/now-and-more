@@ -12,8 +12,8 @@
   --accent: #b23a2a; /* vermillion */
   --card-bg: rgba(255, 252, 244, 0.82);
   --card-border: rgba(43, 38, 32, 0.14);
-  --serif: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
-  --sans: "Noto Sans SC", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Noto Serif SC", "Songti SC", "Songti TC", "STSong", SimSun, "宋体", Georgia, "Times New Roman", serif;
+  --sans: "Noto Sans SC", -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", "Helvetica Neue", Arial, sans-serif;
   --glow-color: rgba(178, 58, 42, 0.16);
 }
 
@@ -404,6 +404,13 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .second-random { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; letter-spacing: 0.08em; }
 .footer-note { font-size: 12px; color: var(--ink-soft); letter-spacing: 0.08em; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  #glow { transition: none; }
+  .card { transition: none; }
+  .flip-card.tick { animation: none; }
+}
 
 /* ---------- Small screens ---------- */
 @media (max-width: 560px) {
