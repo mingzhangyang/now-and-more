@@ -2,7 +2,8 @@
 //
 // The main site is a pure static page on Cloudflare Pages. Entertainment
 // headlines are real-time, so they cannot ship with the static build; this
-// separate Worker aggregates public Google News entertainment RSS feeds,
+// separate Worker aggregates direct publisher entertainment RSS feeds
+// (plus the Weibo hot-search board for zh),
 // caches the parsed headlines for 10 minutes (Workers Cache API), and serves
 // ONE randomly chosen recent headline as JSON. It stores nothing and only
 // relays headline + source + link from public RSS.
@@ -19,22 +20,24 @@ const MAX_AGE_MS = 72 * 60 * 60 * 1000; // drop items older than 72 hours
 const TOPIC_ID =
   "CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB";
 
-const SOURCES = {
+// Google News RSS is deliberately NOT used: from Cloudflare Workers egress
+// it times out or returns 503 (verified 2026-11-23 via /debug). Sources are
+// direct publisher feeds plus the Weibo hot-search board (HTML, zh only).
+const RSS_SOURCES = {
   zh: [
-    `https://news.google.com/rss/topics/${TOPIC_ID}?hl=zh-CN&gl=CN&ceid=CN:zh-Hans`,
-    "https://news.google.com/rss/search?q=%E5%A8%B1%E4%B9%90&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
-    "https://news.google.com/rss/search?q=%E5%A8%B1%E4%B9%90&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
+    "https://feeds.feedburner.com/ettoday/star",
+    "https://news.mingpao.com/rss/ins/all.xml",
     "https://www.chinanews.com.cn/rss/scroll-news.xml",
   ],
   en: [
-    `https://news.google.com/rss/topics/${TOPIC_ID}?hl=en-US&gl=US&ceid=US:en`,
-    "https://news.google.com/rss/search?q=entertainment&hl=en-US&gl=US&ceid=US:en",
     "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
     "https://variety.com/feed/",
     "https://www.hollywoodreporter.com/feed/",
     "https://deadline.com/feed/",
   ],
 };
+
+const WEIBO_TOP_URL = "https://s.weibo.com/top/summary";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -173,23 +176,77 @@ async function fetchSource(url) {
   }
 }
 
+// Parse the Weibo hot-search board (server-rendered HTML table).
+// Each ranked row links the word to /weibo?q=... followed by a heat number.
+// Tolerant by design: if the markup shifts, this returns [] and /debug shows it.
+export function parseWeiboTop(html) {
+  const items = [];
+  const re = /<a[^>]+href="\/weibo\?q=[^"]*"[^>]*>([^<]+)<\/a>\s*<span>([\d,]+)<\/span>/g;
+  let m;
+  let rank = 0;
+  while ((m = re.exec(html)) !== null && items.length < MAX_HEADLINES) {
+    const word = unescapeXml(m[1]);
+    const heat = m[2].replace(/,/g, "");
+    if (!word) continue;
+    rank += 1;
+    items.push({
+      title: word,
+      source: `微博热搜第${rank}名 · 热度 ${heat}`,
+      link: `https://s.weibo.com/weibo?q=${encodeURIComponent("#" + word + "#")}`,
+      publishedAt: new Date().toISOString(),
+      _ts: Date.now(),
+    });
+  }
+  return items;
+}
+
+async function fetchWeiboTop() {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), SOURCE_TIMEOUT_MS);
+  try {
+    const res = await fetch(WEIBO_TOP_URL, {
+      headers: {
+        "User-Agent": BROWSER_UA,
+        Accept: "text/html,application/xhtml+xml",
+        Referer: "https://s.weibo.com/",
+      },
+      signal: ctl.signal,
+    });
+    if (!res.ok) return [];
+    return parseWeiboTop(await res.text());
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchHeadlines(lang) {
   // Fetch all sources in parallel: one slow source must not stall the rest.
-  const results = await Promise.all(
-    SOURCES[lang].map((url) =>
-      fetchSource(url).catch(() => null)
-    )
+  const jobs = RSS_SOURCES[lang].map((url) =>
+    fetchSource(url)
+      .then((r) => (r.ok ? mergeHeadlines([r.text]) : []))
+      .catch(() => [])
   );
-  const texts = results.filter((r) => r && r.ok).map((r) => r.text);
-  if (texts.length === 0) throw new Error("all_sources_failed");
-  return mergeHeadlines(texts);
+  if (lang === "zh") jobs.push(fetchWeiboTop());
+  const pools = await Promise.all(jobs);
+  const byLink = new Map();
+  for (const pool of pools) {
+    for (const item of pool) {
+      const { _ts, ...rest } = item;
+      if (!byLink.has(rest.link)) byLink.set(rest.link, rest);
+    }
+  }
+  const merged = [...byLink.values()].slice(0, MAX_HEADLINES);
+  if (merged.length === 0) throw new Error("all_sources_failed");
+  return merged;
 }
 
 // Diagnostic for /debug: per-source HTTP status and parsed item counts.
 // Relays no content beyond counts and lengths; safe to leave enabled.
 async function debugSources(lang) {
-  return Promise.all(
-    SOURCES[lang].map(async (url) => {
+  const rss = await Promise.all(
+    RSS_SOURCES[lang].map(async (url) => {
       try {
         const r = await fetchSource(url);
         return {
@@ -204,6 +261,15 @@ async function debugSources(lang) {
       }
     })
   );
+  if (lang === "zh") {
+    try {
+      const items = await fetchWeiboTop();
+      rss.unshift({ url: WEIBO_TOP_URL, type: "weibo-html", items: items.length });
+    } catch (e) {
+      rss.unshift({ url: WEIBO_TOP_URL, type: "weibo-html", status: 0, error: String(e) });
+    }
+  }
+  return rss;
 }
 
 async function getHeadlines(lang) {
