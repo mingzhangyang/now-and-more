@@ -26,6 +26,7 @@ const TOPIC_ID =
 const RSS_SOURCES = {
   zh: [
     "https://feeds.feedburner.com/ettoday/star",
+    "https://feeds.feedburner.com/ettoday/realtime",
     "https://news.mingpao.com/rss/ins/all.xml",
     "https://www.chinanews.com.cn/rss/scroll-news.xml",
   ],
@@ -34,6 +35,11 @@ const RSS_SOURCES = {
     "https://variety.com/feed/",
     "https://www.hollywoodreporter.com/feed/",
     "https://deadline.com/feed/",
+    "https://feeds.bbci.co.uk/news/rss.xml",
+    "https://feeds.bbci.co.uk/sport/rss.xml",
+    "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "https://techcrunch.com/feed/",
+    "https://www.theverge.com/rss/index.xml",
   ],
 };
 
@@ -230,14 +236,21 @@ async function fetchHeadlines(lang) {
   );
   if (lang === "zh") jobs.push(fetchWeiboTop());
   const pools = await Promise.all(jobs);
-  const byLink = new Map();
-  for (const pool of pools) {
-    for (const item of pool) {
+  // Round-robin interleave the pools before capping, so no single source
+  // crowds out the others (each source alone can return up to MAX_HEADLINES).
+  const seen = new Set();
+  const merged = [];
+  const maxLen = Math.max(0, ...pools.map((p) => p.length));
+  for (let i = 0; i < maxLen && merged.length < MAX_HEADLINES; i++) {
+    for (const pool of pools) {
+      if (merged.length >= MAX_HEADLINES) break;
+      const item = pool[i];
+      if (!item || seen.has(item.link)) continue;
+      seen.add(item.link);
       const { _ts, ...rest } = item;
-      if (!byLink.has(rest.link)) byLink.set(rest.link, rest);
+      merged.push(rest);
     }
   }
-  const merged = [...byLink.values()].slice(0, MAX_HEADLINES);
   if (merged.length === 0) throw new Error("all_sources_failed");
   return merged;
 }

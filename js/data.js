@@ -24,7 +24,7 @@ const I18N = {
       astro: "星座占星",
       proverbs: "英文谚语",
       word: "每日一词",
-      gossip: "八卦头条",
+      gossip: "此刻热点",
     },
     world: {
       localTime: "当地时间",
@@ -111,7 +111,7 @@ const I18N = {
       astro: "Astrology",
       proverbs: "A Proverb",
       word: "Word of the Day",
-      gossip: "Gossip",
+      gossip: "Trending Now",
     },
     world: {
       localTime: "local time",
