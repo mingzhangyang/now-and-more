@@ -1288,9 +1288,7 @@ function postcardDayKey(date) {
 /* Today's postcard as a renderable selection, resolved once per local
    day (the solar-term solver is not re-run on every draw). */
 let postcardCache = { stamp: "", sel: null };
-function todaysPostcardSelection() {
-  const now = new Date();
-  const stamp = postcardDayKey(now);
+function todaysPostcardSelection(now, stamp) {
   if (postcardCache.stamp !== stamp) {
     const found = postcardForDate(now);
     postcardCache = {
@@ -1301,14 +1299,13 @@ function todaysPostcardSelection() {
   return postcardCache.sel;
 }
 let postcardGiftStamp = "";
-function postcardGifted() {
-  const stamp = postcardDayKey(new Date());
+function postcardGifted(stamp) {
   if (postcardGiftStamp === stamp) return true;
   try { return !!localStorage.getItem("nam-postcard-" + stamp); }
   catch (e) { return false; }
 }
-function markPostcardGifted() {
-  postcardGiftStamp = postcardDayKey(new Date());
+function markPostcardGifted(stamp) {
+  postcardGiftStamp = stamp;
   try { localStorage.setItem("nam-postcard-" + postcardGiftStamp, "1"); }
   catch (e) { /* Still delivered for this page session. */ }
 }
@@ -1568,27 +1565,27 @@ function drawNoteEntry() {
 }
 
 /* ---------- Dated delivery （必达） ---------- */
-function noteGiftKey() { return "nam-note-" + postcardDayKey(new Date()); }
+function noteGiftKey(stamp) { return "nam-note-" + stamp; }
 let deliveredNoteKey = "";
-function noteDeliveredToday() {
-  const key = noteGiftKey();
+function noteDeliveredToday(stamp) {
+  const key = noteGiftKey(stamp);
   if (deliveredNoteKey === key) return true;
   try { return !!localStorage.getItem(key); }
   catch (e) { return false; }
 }
-function markNoteDelivered(id) {
-  deliveredNoteKey = noteGiftKey();
+function markNoteDelivered(id, stamp) {
+  deliveredNoteKey = noteGiftKey(stamp);
   try { localStorage.setItem(deliveredNoteKey, String(id)); }
   catch (e) { /* Still delivered for this page session. */ }
 }
 /* Today's dated note as a gift selection — the earliest-created entry
    addressed to today, and only until the day's one delivery has
    happened (the key above is the record). */
-function todaysDatedNoteSelection() {
-  if (!notesList.length || noteDeliveredToday()) return null;
-  const today = noteDayStr(new Date());
+function todaysDatedNoteSelection(now, stamp) {
+  if (!notesList.length || noteDeliveredToday(stamp)) return null;
+  const today = noteDayStr(now);
   const due = notesList.find((n) => n.date === today);
-  return due ? { cat: "mine", note: due, gifted: true } : null;
+  return due ? { cat: "mine", note: due, gifted: true, giftStamp: stamp } : null;
 }
 /* ---------- Source context ---------- */
 /* The short label of the card currently on stage, captured when the
@@ -2202,11 +2199,14 @@ function renderSelection(sel) {
    the rotation with its original 12% chance (never twice in a row). */
 const POSTCARD_POOL_CHANCE = 0.12;
 function nextSelection() {
-  const dn = todaysDatedNoteSelection();
+  // Use one local-day snapshot for gift lookup, receipt check and commit.
+  const now = new Date();
+  const stamp = postcardDayKey(now);
+  const dn = todaysDatedNoteSelection(now, stamp);
   if (dn) return dn;
-  const pc = todaysPostcardSelection();
+  const pc = todaysPostcardSelection(now, stamp);
   if (pc) {
-    if (!postcardGifted()) return { ...pc, gifted: true };
+    if (!postcardGifted(stamp)) return { ...pc, gifted: true, giftStamp: stamp };
     if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) return pc;
   }
   return makeSelection(weightedCategory());
@@ -2237,8 +2237,8 @@ function drawCard() {
       lastDrawAt = Date.now();
       $("encounter").textContent = t().encounter(encounter);
       if (selected.gifted) {
-        if (selected.cat === "mine") markNoteDelivered(selected.note.id);
-        if (selected.cat === "postcard") markPostcardGifted();
+        if (selected.cat === "mine") markNoteDelivered(selected.note.id, selected.giftStamp);
+        if (selected.cat === "postcard") markPostcardGifted(selected.giftStamp);
         showGiftNotice(selected);
       } else {
         dismissGiftNotice();

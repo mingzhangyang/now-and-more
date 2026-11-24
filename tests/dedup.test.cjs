@@ -216,11 +216,94 @@ test("dated note then postcard, no gift receipt before successful render", () =>
   assert.notEqual(rendered[2].cat, "postcard");
 });
 
+// Real receipt, date selection, deck transaction and draw functions; only
+// the calendar lookup, render, storage and scheduler are test adapters.
+function midnightGiftHarness(notesList, postcards) {
+  const storage = store(), queue = [], rendered = [];
+  let now = new Date(2026, 11, 31, 23, 59, 59, 999).getTime();
+  const tomorrow = new Date(2027, 0, 1, 0, 0, 0, 1).getTime();
+  class FakeDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+    static now() { return now; }
+  }
+  const source = core + "\n" + `
+    let currentSelection = null, lastCategory = null, encounter = 0, lastDrawAt = 0;
+    let failRender = false;
+    const pad = n => String(n).padStart(2, "0");
+    const deckState = NAM_DEDUP.createDeckState(localStorage);
+    const gossipEndpoint = () => "";
+    const postcardForDate = date => postcards[noteDayStr(date)] || null;
+    const weightedCategory = () => "world";
+    const makeSelection = cat => ({ cat });
+    const t = () => ({ encounter: n => String(n) });
+    const el = { classList: { add(){}, remove(){} }, textContent: "" };
+    const $ = () => el;
+    const showGiftNotice = () => {};
+    const dismissGiftNotice = () => {};
+    const renderSelection = sel => {
+      if (failRender) throw Error("render failed");
+      rendered.push(sel);
+      crossMidnight();
+    };
+  ` + section("function postcardDayKey(", "/* The meta line") +
+    section("function noteDayStr(", "function noteDateParts(") +
+    section("function noteGiftKey(", "/* ---------- Source context") +
+    section("const POSTCARD_POOL_CHANCE", "/* ================= Clock engine") + `
+    drawsReady = true;
+    return { drawCard, fail: v => { failRender = v; } };
+  `;
+  const h = new Function("localStorage", "rendered", "setTimeout", "Date", "notesList", "postcards", "crossMidnight", source)(
+    storage, rendered, fn => queue.push(fn), FakeDate, notesList, postcards, () => { now = tomorrow; });
+  const draw = () => { assert.equal(h.drawCard(), true); queue.shift()(); };
+  return { h, storage, draw, rendered };
+}
+
+test("midnight note receipt belongs to rendered day; next day's note is still delivered", () => {
+  const { h, storage, draw, rendered } = midnightGiftHarness([
+    { id: 31, date: "2026-12-31" }, { id: 1, date: "2027-01-01" },
+  ], {});
+  h.fail(true);
+  assert.throws(draw, /render failed/);
+  assert.equal(storage.getItem("nam-note-20261231"), null);
+  assert.equal(storage.getItem("nam-note-20270101"), null);
+  h.fail(false);
+  draw();
+  assert.equal(rendered[0].note.id, 31);
+  assert.equal(storage.getItem("nam-note-20261231"), "31");
+  assert.equal(storage.getItem("nam-note-20270101"), null);
+  draw();
+  assert.equal(rendered[1].note.id, 1);
+  assert.equal(storage.getItem("nam-note-20270101"), "1");
+  draw();
+  assert.equal(rendered[2].cat, "world");
+});
+
+test("midnight postcard receipt belongs to rendered day; next day's postcard is still gifted", () => {
+  const { h, storage, draw, rendered } = midnightGiftHarness([], {
+    "2026-12-31": { key: "newyearseve" }, "2027-01-01": { key: "newyear" },
+  });
+  h.fail(true);
+  assert.throws(draw, /render failed/);
+  assert.equal(storage.getItem("nam-postcard-20261231"), null);
+  assert.equal(storage.getItem("nam-postcard-20270101"), null);
+  h.fail(false);
+  draw();
+  assert.equal(rendered[0].key, "newyearseve");
+  assert.equal(storage.getItem("nam-postcard-20261231"), "1");
+  assert.equal(storage.getItem("nam-postcard-20270101"), null);
+  draw();
+  assert.equal(rendered[1].key, "newyear");
+  assert.equal(rendered[1].gifted, true);
+  assert.equal(storage.getItem("nam-postcard-20270101"), "1");
+  draw();
+  assert.equal(rendered[2].cat, "world");
+});
+
 test("HTML load order and offline precache match the new module", () => {
   const html = read("index.html"), sw = read("sw.js");
-  assert.ok(html.indexOf("js/dedup.js?v=22") > html.indexOf("js/data.js?v=22"));
-  assert.ok(html.indexOf("js/app.js?v=22") > html.indexOf("js/dedup.js?v=22"));
-  assert.ok(sw.includes('"/js/dedup.js?v=22"'));
-  assert.ok(sw.includes('"/js/app.js?v=22"'));
-  assert.ok(sw.includes('"nam-v22"'));
+  assert.ok(html.indexOf("js/dedup.js?v=23") > html.indexOf("js/data.js?v=23"));
+  assert.ok(html.indexOf("js/app.js?v=23") > html.indexOf("js/dedup.js?v=23"));
+  assert.ok(sw.includes('"/js/dedup.js?v=23"'));
+  assert.ok(sw.includes('"/js/app.js?v=23"'));
+  assert.ok(sw.includes('"nam-v23"'));
 });
