@@ -306,14 +306,14 @@ test("midnight postcard receipt belongs to rendered day; next day's postcard is 
 
 test("HTML load order and offline precache match the new module", () => {
   const html = read("index.html"), sw = read("sw.js");
-  assert.ok(html.indexOf("js/dedup.js?v=26") > html.indexOf("js/data.js?v=26"));
-  assert.ok(html.indexOf("js/app.js?v=26") > html.indexOf("js/dedup.js?v=26"));
-  assert.ok(sw.includes('"/js/dedup.js?v=26"'));
-  assert.ok(html.indexOf("gossip-service/news-id.js?v=26") > html.indexOf("js/dedup.js?v=26"));
-  assert.ok(html.indexOf("js/gossip.js?v=26") > html.indexOf("gossip-service/news-id.js?v=26"));
-  assert.ok(html.indexOf("js/app.js?v=26") > html.indexOf("js/gossip.js?v=26"));
-  assert.ok(sw.includes('"/gossip-service/news-id.js?v=26"'));
-  assert.ok(sw.includes('"/js/gossip.js?v=26"'));
-  assert.ok(sw.includes('"/js/app.js?v=26"'));
-  assert.ok(sw.includes('"nam-v26"'));
+  assert.ok(html.indexOf("js/dedup.js?v=27") > html.indexOf("js/data.js?v=27"));
+  assert.ok(html.indexOf("js/app.js?v=27") > html.indexOf("js/dedup.js?v=27"));
+  assert.ok(sw.includes('"/js/dedup.js?v=27"'));
+  assert.ok(html.indexOf("gossip-service/news-id.js?v=27") > html.indexOf("js/dedup.js?v=27"));
+  assert.ok(html.indexOf("js/gossip.js?v=27") > html.indexOf("gossip-service/news-id.js?v=27"));
+  assert.ok(html.indexOf("js/app.js?v=27") > html.indexOf("js/gossip.js?v=27"));
+  assert.ok(sw.includes('"/gossip-service/news-id.js?v=27"'));
+  assert.ok(sw.includes('"/js/gossip.js?v=27"'));
+  assert.ok(sw.includes('"/js/app.js?v=27"'));
+  assert.ok(sw.includes('"nam-v27"'));
 });

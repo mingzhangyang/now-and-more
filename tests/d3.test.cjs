@@ -284,9 +284,130 @@ test("known-stale IndexedDB note snapshot is excluded and older load cannot repl
 
 test("library shares the write lock, signals after commit, and offline shell includes the script",()=>{
   const library=read("library.html");
-  assert.ok(library.includes('src="js/dedup.js?v=26"'));
+  assert.ok(library.includes('src="js/dedup.js?v=27"'));
   assert.ok(library.includes('NAM_DEDUP.runShared(NAM_DEDUP.browserLocks(), remove)'));
   assert.ok(library.indexOf("tx.oncomplete = function ()")<library.indexOf('localStorage.setItem("nam-notes-revision"'));
   assert.ok(app.includes("NAM_DEDUP.runShared(sharedLocks"));
-  assert.ok(read("sw.js").includes('"/js/dedup.js?v=26"'));
+  assert.ok(read("sw.js").includes('"/js/dedup.js?v=27"'));
+});
+
+/* Real draw, revision, receipt and bag logic. Only IndexedDB, the clock,
+   timers, locks and rendering are deterministic adapters. */
+function notePriorityHarness() {
+  const storage=store(),locks=fakeLocks(),requests=[],rendered=[],timers=new Map();
+  let timerId=0;
+  const date=new Date(2026,11,24,12).getTime();
+  class FakeDate extends Date {
+    constructor(...args){super(...(args.length?args:[date]));}
+    static now(){return date;}
+  }
+  const db={transaction:()=>({objectStore:()=>({getAll:()=>{const rq={};requests.push(rq);return rq;}})})};
+  const source=core+"\n"+
+    section("function validNote(n)","/* ---------- Dates ---------- */")+
+    section("function noteDayStr(","function noteDateParts(")+
+    section("function drawNoteEntry()","/* ---------- Source context")+
+    section("function postcardDayKey(","/* The meta line")+
+    section("const POSTCARD_POOL_CHANCE","/* ================= Clock engine")+String.raw`
+    let notesList=[],notesDbFailed=false,currentSelection=null,lastCategory=null,encounter=0,lastDrawAt=0;
+    const notesOpenDb=async()=>db;
+    const pad=n=>String(n).padStart(2,"0");
+    const deckState=NAM_DEDUP.createDeckState(appStorage,()=>0.999,{locks});
+    const postcardForDate=()=>({key:"test"});
+    const gossipEndpoint=()=>"",weightedCategory=()=>"world",makeSelection=cat=>({cat});
+    const t=()=>({encounter:n=>String(n)});
+    const el={classList:{add(){},remove(){}},textContent:""};
+    const $=()=>el;
+    const showGiftNotice=()=>{},dismissGiftNotice=()=>{};
+    const renderSelection=sel=>rendered.push(sel);
+    drawsReady=true;
+    return {drawCard,notesLoadAll,get pending(){return drawGate.pending;}};
+  `;
+  const h=new Function("appStorage","locks","db","rendered","Date","setTimeout","clearTimeout",source)(
+    storage,locks,db,rendered,FakeDate,
+    (fn,ms)=>{timers.set(++timerId,{fn,ms});return timerId;},
+    id=>timers.delete(id));
+  const hasTimer=ms=>[...timers.values()].some(t=>t.ms===ms);
+  const fire=ms=>{
+    const entry=[...timers].find(([,t])=>t.ms===ms);
+    assert.ok(entry,"expected timer "+ms);
+    timers.delete(entry[0]);
+    return entry[1].fn();
+  };
+  const until=async condition=>{
+    for(let i=0;i<100;i++){
+      if(condition())return;
+      await Promise.resolve();
+    }
+    assert.ok(condition(),"expected refresh/retry to be pending");
+  };
+  const due={id:1,type:"memo",text:"for today",createdAt:1,date:"2026-12-24"};
+  const unrelated={id:2,type:"memo",text:"unrelated",createdAt:2};
+  const finishRead=(i,rows)=>{requests[i].result=rows;requests[i].onsuccess();};
+  const load=async()=>{
+    const ready=h.notesLoadAll();
+    await until(()=>requests.length===1);
+    finishRead(0,[due]);
+    await ready;
+  };
+  const draw=()=>{assert.equal(h.drawCard(),true);return fire(180);};
+  const revision=value=>D.runShared(locks,()=>storage.setItem("nam-notes-revision",value));
+  return {h,storage,requests,rendered,hasTimer,fire,until,due,unrelated,finishRead,load,draw,revision};
+}
+
+test("unrelated cross-tab note edit before first draw preserves note-first gift order; retry revalidates revision",async()=>{
+  const x=notePriorityHarness();
+  await x.load();
+  await x.revision("edit-1");
+  const draw=x.draw();
+  await x.until(()=>x.requests.length===2&&x.hasTimer(500));
+  assert.equal(x.rendered.length,0);
+  assert.equal(x.h.drawCard(),false);
+  assert.equal(x.storage.getItem("nam-postcard-20261224"),null);
+  // Another tab can edit during the wait: no Web Lock is held by the reader.
+  await x.revision("edit-2");
+  x.finishRead(1,[x.due,x.unrelated]);
+  await x.until(()=>x.requests.length===3&&x.hasTimer(500));
+  x.finishRead(2,[x.due]);
+  await draw;
+  assert.deepEqual(x.rendered.map(s=>s.cat),["mine"]);
+  assert.equal(x.storage.getItem("nam-note-20261224"),"1");
+  assert.equal(x.storage.getItem("nam-postcard-20261224"),null);
+  await x.draw();
+  assert.deepEqual(x.rendered.map(s=>s.cat),["mine","postcard"]);
+  assert.equal(x.storage.getItem("nam-postcard-20261224"),"1");
+  assert.equal(x.hasTimer(500),false);
+});
+
+test("fresh snapshot confirms deletion before gifting postcard; stale due note is never delivered",async()=>{
+  const x=notePriorityHarness();
+  await x.load();
+  await x.revision("deleted");
+  const draw=x.draw();
+  await x.until(()=>x.requests.length===2&&x.hasTimer(500));
+  x.finishRead(1,[x.unrelated]);
+  await draw;
+  assert.deepEqual(x.rendered.map(s=>s.cat),["postcard"]);
+  assert.equal(x.storage.getItem("nam-note-20261224"),null);
+  assert.equal(x.storage.getItem("nam-postcard-20261224"),"1");
+});
+
+test("bounded note read timeout renders ordinary card without consuming gifts; later draw delivers note then postcard",async()=>{
+  const x=notePriorityHarness();
+  await x.load();
+  await x.revision("slow");
+  const draw=x.draw();
+  await x.until(()=>x.requests.length===2&&x.hasTimer(500));
+  x.fire(500);
+  await x.until(()=>x.hasTimer(500));
+  x.fire(500);
+  await draw;
+  assert.deepEqual(x.rendered.map(s=>s.cat),["world"]);
+  assert.equal(x.h.pending,false);
+  assert.equal(x.storage.getItem("nam-note-20261224"),null);
+  assert.equal(x.storage.getItem("nam-postcard-20261224"),null);
+  x.finishRead(1,[x.due,x.unrelated]);
+  await x.h.notesLoadAll();
+  await x.draw();
+  await x.draw();
+  assert.deepEqual(x.rendered.map(s=>s.cat),["world","mine","postcard"]);
 });

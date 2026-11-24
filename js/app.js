@@ -2187,7 +2187,20 @@ function renderSelection(sel) {
    delivered until it has rendered. After the gifts, the postcard joins
    the rotation with its original 12% chance (never twice in a row). */
 const POSTCARD_POOL_CHANCE = 0.12;
-function nextSelection() {
+const NOTE_GIFT_REFRESH_MS = 500;
+const NOTE_GIFT_REFRESH_RETRIES = 2;
+
+// Wait outside the shared lock and the synchronous render transaction.
+// A stuck IndexedDB read must not keep the draw gate or other tabs blocked.
+function waitForNoteGiftRefresh() {
+  let timer;
+  return Promise.race([
+    notesLoadAll(),
+    new Promise(resolve => { timer = setTimeout(resolve, NOTE_GIFT_REFRESH_MS); }),
+  ]).catch(() => {}).finally(() => clearTimeout(timer));
+}
+
+function nextSelection(retryNotes = true) {
   // Use one local-day snapshot for gift lookup, receipt check and commit.
   const now = new Date();
   const stamp = postcardDayKey(now);
@@ -2195,7 +2208,17 @@ function nextSelection() {
   if (dn) return dn;
   const pc = todaysPostcardSelection(now, stamp);
   if (pc) {
-    if (!postcardGifted(stamp)) return { ...pc, gifted: true, giftStamp: stamp };
+    if (!postcardGifted(stamp)) {
+      // Unknown is not the same as no due note. A revision may have changed
+      // after the opening load, even when an existing due note is unchanged.
+      if (!notesCurrent() && !noteDeliveredToday(stamp) && !notesDbFailed) {
+        if (retryNotes) return null;
+        // A bounded refresh failed: keep the stage usable without consuming
+        // the postcard receipt. A later draw can still deliver both in order.
+        return makeSelection(weightedCategory());
+      }
+      return { ...pc, gifted: true, giftStamp: stamp };
+    }
     if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) return pc;
   }
   return makeSelection(weightedCategory());
@@ -2213,28 +2236,39 @@ function drawCard() {
     const finish = () => card.classList.remove("leaving");
     try {
       // Serialize choice, synchronous render, commit and daily receipt.
-      const result = deckState.withLock(() => {
-        const selected = deckState.transact(() => {
-          const sel = nextSelection();
-          if (sel.cat === "mine" && sel.gifted) {
-            deckState.markSeen("mine", notesList.map(n => "note:" + n.id), "note:" + sel.note.id);
+      const attempt = retriesLeft => {
+        const result = deckState.withLock(() => {
+          const selected = deckState.transact(() => {
+            const sel = nextSelection(retriesLeft > 0);
+            if (!sel) return null;
+            if (sel.cat === "mine" && sel.gifted) {
+              deckState.markSeen("mine", notesList.map(n => "note:" + n.id), "note:" + sel.note.id);
+            }
+            renderSelection(sel);
+            return sel;
+          });
+          if (!selected) return false;
+          currentSelection = selected;
+          lastCategory = selected.cat;
+          encounter += 1;
+          lastDrawAt = Date.now();
+          $("encounter").textContent = t().encounter(encounter);
+          if (selected.gifted) {
+            if (selected.cat === "mine") markNoteDelivered(selected.note.id, selected.giftStamp);
+            if (selected.cat === "postcard") markPostcardGifted(selected.giftStamp);
+            showGiftNotice(selected);
+          } else {
+            dismissGiftNotice();
           }
-          renderSelection(sel);
-          return sel;
+          return true;
         });
-        currentSelection = selected;
-        lastCategory = selected.cat;
-        encounter += 1;
-        lastDrawAt = Date.now();
-        $("encounter").textContent = t().encounter(encounter);
-        if (selected.gifted) {
-          if (selected.cat === "mine") markNoteDelivered(selected.note.id, selected.giftStamp);
-          if (selected.cat === "postcard") markPostcardGifted(selected.giftStamp);
-          showGiftNotice(selected);
-        } else {
-          dismissGiftNotice();
-        }
-      });
+        // Release the lock before waiting. Reacquire it and recompute the
+        // day, note revision and receipts on every retry.
+        const retry = drawn => drawn ? undefined
+          : waitForNoteGiftRefresh().then(() => attempt(retriesLeft - 1));
+        return result && typeof result.then === "function" ? result.then(retry) : retry(result);
+      };
+      const result = attempt(NOTE_GIFT_REFRESH_RETRIES);
       if (result && typeof result.then === "function") return result.finally(finish);
       finish();
     } catch (e) {
