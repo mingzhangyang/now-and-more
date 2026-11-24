@@ -475,6 +475,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   border: 1px solid var(--card-border);
 }
 .card-body .moon-glyph { font-size: 44px; margin-right: 12px; vertical-align: middle; }
+.card-body .sky-canvas { display: block; margin: 2px auto 10px; }
+.card-body .sky-chart { width: min(350px, 82vw); height: auto; }
+.card-body .sky-illustration { width: 100%; height: auto; border-radius: 10px; }
 .card-body a.gossip-link {
   color: inherit;
   font-size: 22px;
@@ -607,6 +610,91 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   line-height: 2.3cqw;
   text-align: center;
 }
+
+/* ---------- Sky illustration card （星空插画） ----------
+   The night-sky illustration wears the postcard's dress: the same
+   fixed 3:4 composition — the painting full-bleed at the top
+   (edge-to-edge, no inset, no radius of its own; the card's radius
+   rounds the painting's top corners), cream paper only below it.
+   The painting is PORTRAIT, as Elsewhere's keepsake sky is: its
+   postcard follows the view's aspect (skyHeight = clamp(1200/aspect,
+   800, 1500)), so on a portrait screen the sky stands 1200×1500 —
+   taller than wide. Here the painting is 1080×1180, and the paper
+   below shrinks to the remaining strip (≈24.1cqw of the card's
+   133.3cqw): a compact band holding the place the painting looks
+   from as its title (the meta at its right) and tonight's
+   highlight lines for that place's sky. The strip is
+   sized by the longest copy — English, whose highlight can run to
+   three lines — so in Chinese it simply breathes a little more.
+   The cream is constant in both themes, like the postcard's.
+   The keepsake follows Elsewhere's own composition at full size: a
+   4:5 portrait painting (1080×1350) over a content-sized paper
+   panel (see renderSkyArtKeepsake). */
+.card.has-skyart {
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.card.has-skyart .card-head { display: none; }
+
+.skyart {
+  container-type: inline-size;
+  aspect-ratio: 3 / 4;
+  width: 100%;
+  background: #faf4e6;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  color: #2b2620;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.skyart .sa-photo { flex: none; }
+.skyart .sa-photo .sky-canvas {
+  margin: 0;
+  border-radius: 0;
+  width: 100%;
+  aspect-ratio: 108 / 118;
+  height: auto;
+  display: block;
+}
+.skyart .sa-text {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.4cqw 5.2cqw 1.2cqw;
+}
+.skyart .sa-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 3cqw;
+}
+.skyart .sa-title {
+  margin: 0;
+  font-size: 4.5cqw;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.skyart .sa-meta {
+  margin: 0;
+  font-size: 2.5cqw;
+  color: #6f6656;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-align: right;
+}
+.skyart .sa-line {
+  margin: 0.7cqw 0 0;
+  font-size: 3.4cqw;
+  line-height: 1.42;
+}
+.skyart .sa-line + .sa-line { margin-top: 0.3cqw; }
 
 /* ---------- Gift notice ----------
    A slim pill that floats below the brand row for the one moment a
