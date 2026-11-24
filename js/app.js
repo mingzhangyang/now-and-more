@@ -1215,15 +1215,17 @@ function buildMyDaysForm() {
 /* ================= Special-date postcards （特殊日明信片） =================
    On a day that means something — a solar term, a lunar festival, a day
    the world keeps — the site gifts the visitor one fixed composition: a
-   painting mounted on cream paper, a few lines beneath it. The geometry
-   is pure proportion, anchored on the painting's native square: paper
-   height = paper width × 1.25, the photo takes a fixed fraction of the
-   paper's inner width, and the text zone is the deterministic remainder
-   with fixed slots (title / subtitle / meta / passage / footer). The
-   stage renders it with container-query units so the composition is
-   identical at any width; the keepsake draws the same numbers at
-   1080×1350. Copy lives in POSTCARD_COPY (data.js) and is written to
-   fit the passage slot — length discipline is part of the design.
+   painting full-bleed across the top of the card, and below it a strip
+   of cream paper carrying a few lines. The geometry is pure proportion,
+   anchored on the painting's native square: paper height = paper width
+   × 1.25, the photo takes the first full width of height, and the text
+   zone is the deterministic remainder (25% of the height) with fixed
+   slots (title row with the meta at its right / a passage of at most
+   two lines / a slim footer row). The stage renders it with
+   container-query units so the composition is identical at any width;
+   the keepsake draws the same numbers at 1080×1350. Copy lives in
+   POSTCARD_COPY (data.js) and is written to fit the passage slot —
+   length discipline is part of the design.
 
    Delivery: the postcard is the FIRST card of its day, once per device
    (a per-date localStorage key, nam-postcard-<yyyymmdd>); afterwards it
@@ -1372,6 +1374,65 @@ function postcardMetaText(sel) {
   return p.pre + (p.time || "") + p.post;
 }
 
+/* ================= Gift notice （赠送提示） =================
+   The gift moment gets one quiet announcement: a slim pill under the
+   brand row that names the day and the gesture （今日大雪 · 送你一张明信
+   片 / "Daxue today · a postcard for you"). It belongs to the gift
+   only — never to pool re-entries, never to ordinary days — and it is
+   page chrome, not part of the card, so it never enters a keepsake.
+   It dismisses itself after ~10 s, when the stage card changes away
+   from the postcard, or when the visitor closes it; closing it never
+   touches the card. In ambient mode it does not appear at all: the
+   card still gifts, silently. */
+const GIFT_NOTICE_MS = 10000;
+let pendingGiftNotice = null; // selection gifted by the in-flight draw
+let giftNoticeSel = null;     // selection the visible notice belongs to
+let giftNoticeTimer = null;
+let giftNoticeHideTimer = null;
+
+function giftNoticeText(sel) {
+  const copy = POSTCARD_COPY[sel.key];
+  if (!copy) return "";
+  if (lang === "zh") return `今日${copy.titleZh} · 送你一张明信片`;
+  // English titles for the terms read "Daxue · Heavy Snow": the name
+  // alone carries the sentence ("Daxue today · a postcard for you").
+  const nameEn = copy.titleEn.split(" · ")[0];
+  return `${nameEn} today · a postcard for you`;
+}
+
+function showGiftNotice(sel) {
+  if (ambientOn) return; // ambient hides all chrome: gift stays silent
+  const bar = $("gift-notice");
+  if (!bar || !POSTCARD_COPY[sel.key]) return;
+  giftNoticeSel = sel;
+  $("gift-notice-text").textContent = giftNoticeText(sel);
+  $("gift-notice-close").setAttribute("aria-label", t().captureClose);
+  clearTimeout(giftNoticeHideTimer);
+  bar.hidden = false;
+  void bar.offsetWidth; // let the entrance transition run from the hidden state
+  bar.classList.add("show");
+  clearTimeout(giftNoticeTimer);
+  giftNoticeTimer = setTimeout(dismissGiftNotice, GIFT_NOTICE_MS);
+}
+
+function dismissGiftNotice() {
+  clearTimeout(giftNoticeTimer);
+  giftNoticeTimer = null;
+  giftNoticeSel = null;
+  const bar = $("gift-notice");
+  if (!bar || bar.hidden) return;
+  bar.classList.remove("show");
+  clearTimeout(giftNoticeHideTimer);
+  giftNoticeHideTimer = setTimeout(() => {
+    if (!bar.classList.contains("show")) bar.hidden = true;
+  }, 500);
+}
+
+$("gift-notice-close").addEventListener("click", (e) => {
+  e.stopPropagation();
+  dismissGiftNotice();
+});
+
 /* ================= Card selection & rendering ================= */
 /* Categories available in the current language. almanac + classics are
    zh-only; proverbs + word are en-only; gossip joins only when its feed
@@ -1493,21 +1554,26 @@ function renderPostcard(sel) {
   const copy = POSTCARD_COPY[sel.key];
   if (!copy) return;
   const title = lang === "zh" ? copy.titleZh : copy.titleEn;
-  const sub = lang === "zh" ? copy.subZh : copy.subEn;
   const passage = lang === "zh" ? copy.passZh : copy.passEn;
   const art = lang === "en" && copy.artEn ? copy.artEn : copy.art;
   const mp = postcardMetaParts(sel);
   const metaHtml = esc(mp.pre) + (mp.time ? `<b>${esc(mp.time)}</b>` : "") + esc(mp.post);
   const brand = lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有";
+  // English titles read "Daxue · Heavy Snow": the gloss after the
+  // separator is set smaller (see .pc-title-gloss) so the title row
+  // always leaves room for the meta at its right.
+  let titleHtml = esc(title);
+  if (lang === "en") {
+    const cut = title.indexOf(" · ");
+    if (cut > 0) titleHtml = esc(title.slice(0, cut)) + `<span class="pc-title-gloss">${esc(title.slice(cut))}</span>`;
+  }
   $("card-category").textContent = t().categories.postcard;
   $("card-meta").textContent = "";
   $("card-body").innerHTML =
     `<div class="postcard" lang="${lang === "zh" ? "zh-CN" : "en"}">` +
     `<div class="pc-photo"><img src="assets/special-dates/${art}.webp" alt="${esc(title)}" loading="lazy" decoding="async"></div>` +
     `<div class="pc-text">` +
-    `<h3 class="pc-title">${esc(title)}</h3>` +
-    `<p class="pc-sub">${esc(sub)}</p>` +
-    `<p class="pc-meta">${metaHtml}</p>` +
+    `<div class="pc-head"><h3 class="pc-title">${titleHtml}</h3><p class="pc-meta">${metaHtml}</p></div>` +
     `<p class="pc-passage">${esc(passage)}</p>` +
     `<div class="pc-foot"><span class="pc-seal">时</span><span>${esc(brand)}</span></div>` +
     `</div></div>`;
@@ -1720,6 +1786,7 @@ function nextSelection() {
     if (!postcardGifted()) {
       markPostcardGifted();
       lastCategory = "postcard";
+      pendingGiftNotice = pc; // the draw that renders this gift announces it
       return pc;
     }
     if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) {
@@ -1743,6 +1810,15 @@ function drawCard() {
     renderSelection(currentSelection);
     $("encounter").textContent = t().encounter(encounter);
     card.classList.remove("leaving");
+    // The gift notice rides the gift's own render; any other card
+    // change takes the notice away with the postcard it belonged to.
+    if (pendingGiftNotice) {
+      const giftSel = pendingGiftNotice;
+      pendingGiftNotice = null;
+      showGiftNotice(giftSel);
+    } else {
+      dismissGiftNotice();
+    }
   }, 180);
 }
 
@@ -1932,6 +2008,11 @@ function applyStaticStrings() {
         availableCategories().some((c) => c.key === currentSelection.cat)) renderSelection(currentSelection);
     else { drawCard(); return; }
   }
+  // A visible gift notice follows the language like the card does.
+  if (giftNoticeSel) {
+    $("gift-notice-text").textContent = giftNoticeText(giftNoticeSel);
+    $("gift-notice-close").setAttribute("aria-label", s.captureClose);
+  }
   lastSecond = -1; // force a clock repaint in the new language
   tick();
 }
@@ -2090,6 +2171,7 @@ function enterAmbient() {
   ambientOn = true;
   document.body.classList.add("ambient");
   setSettingsOpen(false);
+  dismissGiftNotice();
   try {
     const p = document.documentElement.requestFullscreen
       ? document.documentElement.requestFullscreen()
@@ -2503,9 +2585,10 @@ function renderKeepsakeCanvas(snap, pal) {
    When the card on stage is a special-date postcard, the keepsake IS
    the postcard: the same fixed composition, drawn at 1080×1350. The
    numbers below are the stage composition's proportions at that scale —
-   paper margin 45 (4.2% of width), inner width 990, the square painting
-   at 0.79 of the inner width (782×782, centred, mounted-print shadow),
-   and the text zone as the deterministic remainder with fixed slots. */
+   the painting full-bleed at 1080×1080 across the top, and the cream
+   paper only below it: a 270px text zone with fixed slots (a title row
+   with the meta at its right / a passage of at most two lines / a slim
+   footer row), side padding 56. */
 const PC_PAPER = "#faf4e6";
 const PC_INK = "#2b2620";
 const PC_INK_SOFT = "#6f6656";
@@ -2530,94 +2613,91 @@ function renderPostcardKeepsake(sel, img, serif) {
   const ctx = cv.getContext("2d");
   const copy = POSTCARD_COPY[sel.key];
   const title = lang === "zh" ? copy.titleZh : copy.titleEn;
-  const sub = lang === "zh" ? copy.subZh : copy.subEn;
   const passage = lang === "zh" ? copy.passZh : copy.passEn;
   const brand = lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有";
   const mp = postcardMetaParts(sel);
 
-  // The cream paper is the whole surface, in both themes.
+  // The cream paper backs the whole card (it is what the text zone is
+  // made of); the painting then covers the top 1080×1080 full-bleed.
   ctx.fillStyle = PC_PAPER;
   ctx.fillRect(0, 0, KEEP_W, KEEP_H);
+  ctx.drawImage(img, 0, 0, KEEP_W, KEEP_W);
 
-  // Mounted painting: 782×782 at (149, 45), soft print shadow, 6px radius.
-  const px = 149, py = 45, ps = 782;
-  ctx.save();
-  ctx.shadowColor = "rgba(43, 38, 32, 0.30)";
-  ctx.shadowBlur = 26;
-  ctx.shadowOffsetY = 9;
-  roundRectPath(ctx, px, py, ps, ps, 6);
-  ctx.fillStyle = "#ffffff";
-  ctx.fill();
-  ctx.restore();
-  ctx.save();
-  roundRectPath(ctx, px, py, ps, ps, 6);
-  ctx.clip();
-  ctx.drawImage(img, px, py, ps, ps);
-  ctx.restore();
-  ctx.strokeStyle = "rgba(43, 38, 32, 0.08)";
-  ctx.lineWidth = 1;
-  roundRectPath(ctx, px, py, ps, ps, 6);
-  ctx.stroke();
-
-  // Text zone: x = 45, width 990. Fixed slots, top to bottom.
-  const tx = 45, tw = 990;
+  // Text zone: y 1080→1350, x = 56, width 968. Fixed slots, mirroring
+  // the stage composition's cqw numbers at this scale.
+  const tx = 56, tw = KEEP_W - 112;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 
+  // Title row: the title at the left, the meta right-aligned on the
+  // same baseline — date in soft ink, the crossing time in vermillion.
+  const rowBaseline = 1146;
   ctx.fillStyle = PC_INK;
-  ctx.font = `900 54px ${serif}`;
+  ctx.font = `900 50px ${serif}`;
   setLetterSpacing(ctx, "1px");
-  ctx.fillText(title, tx, 901);
+  // English titles: the gloss after " · " is set smaller, as on stage.
+  let titleMain = title, titleGloss = "";
+  if (lang === "en") {
+    const cut = title.indexOf(" · ");
+    if (cut > 0) { titleMain = title.slice(0, cut); titleGloss = title.slice(cut); }
+  }
+  ctx.fillText(titleMain, tx, rowBaseline);
+  if (titleGloss) {
+    const mainW = ctx.measureText(titleMain).width;
+    ctx.font = `900 33px ${serif}`;
+    ctx.fillText(titleGloss, tx + mainW + 3, rowBaseline);
+  }
   setLetterSpacing(ctx, "0px");
 
-  ctx.fillStyle = PC_INK_SOFT;
-  ctx.font = `400 28px ${serif}`;
-  setLetterSpacing(ctx, "4px");
-  ctx.fillText(sub, tx, 949);
-  setLetterSpacing(ctx, "0px");
-
-  // Meta: date in soft ink, the crossing time in vermillion.
-  ctx.font = `400 28px ${serif}`;
-  let mx = tx;
-  ctx.fillStyle = PC_INK_SOFT;
-  ctx.fillText(mp.pre, mx, 993);
-  mx += ctx.measureText(mp.pre).width;
+  ctx.font = `400 27px ${serif}`;
+  const preW = ctx.measureText(mp.pre).width;
+  let timeW = 0;
   if (mp.time) {
-    ctx.font = `600 28px ${serif}`;
+    ctx.font = `600 27px ${serif}`;
+    timeW = ctx.measureText(mp.time).width;
+    ctx.font = `400 27px ${serif}`;
+  }
+  const postW = mp.post ? ctx.measureText(mp.post).width : 0;
+  let mx = tx + tw - (preW + timeW + postW);
+  ctx.fillStyle = PC_INK_SOFT;
+  ctx.fillText(mp.pre, mx, rowBaseline);
+  mx += preW;
+  if (mp.time) {
+    ctx.font = `600 27px ${serif}`;
     ctx.fillStyle = PC_ACCENT;
-    ctx.fillText(mp.time, mx, 993);
-    mx += ctx.measureText(mp.time).width;
-    ctx.font = `400 28px ${serif}`;
+    ctx.fillText(mp.time, mx, rowBaseline);
+    mx += timeW;
+    ctx.font = `400 27px ${serif}`;
     ctx.fillStyle = PC_INK_SOFT;
   }
-  if (mp.post) ctx.fillText(mp.post, mx, 993);
+  if (mp.post) ctx.fillText(mp.post, mx, rowBaseline);
 
-  // Passage: 46px at 1.7 line height, up to the three lines the copy
-  // was written for (baselines 1063 / 1141 / 1219).
+  // Passage: 39px at ~1.5 line height, up to the two lines the copy
+  // was written for (baselines 1212 / 1271).
   ctx.fillStyle = PC_INK;
-  ctx.font = `400 46px ${serif}`;
-  const lines = wrapText(ctx, passage, tw).slice(0, 3);
-  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1063 + i * 78));
+  ctx.font = `400 39px ${serif}`;
+  const lines = wrapText(ctx, passage, tw).slice(0, 2);
+  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1212 + i * 59));
 
   // Footer: hairline, the 时 seal at the left, the brand at the right.
   ctx.strokeStyle = "rgba(43, 38, 32, 0.10)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(tx, 1267);
-  ctx.lineTo(tx + tw, 1267);
+  ctx.moveTo(tx, 1303);
+  ctx.lineTo(tx + tw, 1303);
   ctx.stroke();
-  roundRectPath(ctx, tx, 1276, 34, 34, 7);
+  roundRectPath(ctx, tx, 1309, 25, 25, 5);
   ctx.fillStyle = PC_ACCENT;
   ctx.fill();
   ctx.fillStyle = "#fff8ec";
-  ctx.font = `900 23px ${serif}`;
+  ctx.font = `900 17px ${serif}`;
   ctx.textAlign = "center";
-  ctx.fillText("时", tx + 17, 1276 + 25);
+  ctx.fillText("时", tx + 12.5, 1309 + 18);
   ctx.textAlign = "right";
   ctx.fillStyle = PC_INK_SOFT;
-  ctx.font = `400 23px ${serif}`;
+  ctx.font = `400 22px ${serif}`;
   setLetterSpacing(ctx, "2px");
-  ctx.fillText(brand, tx + tw, 1300);
+  ctx.fillText(brand, tx + tw, 1330);
   setLetterSpacing(ctx, "0px");
 
   return cv;

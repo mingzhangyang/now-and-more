@@ -35,7 +35,7 @@
     } catch (e) { /* storage unavailable: fall back to system preference */ }
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Noto+Sans+SC:wght@100;300;400&display=swap">
@@ -116,6 +116,12 @@
   </div>
 </header>
 
+<!-- Gift notice: appears once, with the day's gifted postcard -->
+<div id="gift-notice" class="gift-notice" role="status" hidden>
+  <span id="gift-notice-text" class="gift-notice-text"></span>
+  <button id="gift-notice-close" type="button" class="gift-notice-close" aria-label="关闭">×</button>
+</div>
+
 <div id="ambient-hint" class="ambient-hint" role="button" aria-hidden="true">Esc 退出氛围模式</div>
 
 <main class="stage">
@@ -191,7 +197,7 @@
   </div>
 </div>
 
-<script src="js/data.js?v=12"></script>
-<script src="js/app.js?v=12"></script>
+<script src="js/data.js?v=14"></script>
+<script src="js/app.js?v=14"></script>
 </body>
 </html>
