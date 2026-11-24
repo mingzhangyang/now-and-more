@@ -726,9 +726,20 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .card-body .astro-stars { color: var(--accent); letter-spacing: 0.12em; }
 
-/* ---------- My days (settings panel) ---------- */
+/* ---------- My days (modal) ---------- */
 .my-days-list { display: flex; flex-direction: column; gap: 6px; }
 .my-days-list:empty { display: none; }
+.mydays-empty {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin: 0;
+}
+.mydays-dialog { align-items: stretch; text-align: left; }
+.mydays-dialog .capture-title { text-align: center; }
+.mydays-dialog .lang-segment { align-self: center; }
+.mydays-dialog .capture-actions { justify-content: center; }
 .my-day-item {
   display: flex;
   align-items: center;
@@ -742,9 +753,11 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   border: none;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 15px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
   line-height: 1;
-  padding: 2px 7px;
+  padding: 2px 4px;
   cursor: pointer;
   flex: none;
 }
@@ -776,6 +789,16 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .panel-page-link:hover, .panel-page-link:focus-visible { color: var(--accent); }
 .panel-page-arrow { font-size: 16px; letter-spacing: 0; line-height: 1; }
+/* The My Days door is a <button>, not a page link: strip the UA button
+   chrome so it wears the same clothes as the My Notes anchor. */
+button.panel-page-link {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
 
 /* Quiet footer row of the settings panel: Privacy · About */
 .panel-footer {

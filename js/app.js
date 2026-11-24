@@ -1101,7 +1101,7 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("resize", fxResize);
 
-/* ---------- My days: settings UI ---------- */
+/* ---------- My days: modal UI ---------- */
 let myDayCal = "solar";
 function myDayMaxDay() {
   if (myDayCal === "lunar") return 30;
@@ -1139,6 +1139,8 @@ function renderMyDaysList() {
   const wrap = $("my-days-list");
   if (!wrap) return;
   const md = t().myDays;
+  const empty = $("mydays-empty");
+  if (empty) empty.hidden = myDays.length > 0;
   wrap.innerHTML = "";
   myDays.forEach((d, idx) => {
     const row = document.createElement("div");
@@ -1148,13 +1150,33 @@ function renderMyDaysList() {
     const del = document.createElement("button");
     del.type = "button";
     del.className = "my-day-del";
-    del.textContent = "×";
+    del.textContent = md.deleteLabel;
     del.dataset.idx = String(idx);
-    del.setAttribute("aria-label", md.deleteLabel);
     row.appendChild(label);
     row.appendChild(del);
     wrap.appendChild(row);
   });
+}
+
+/* The modal mirrors the note modal's manners: opening closes the
+   settings panel first; Esc, the backdrop and the close button all
+   dismiss it. Focus returns to the gear on close — the row that
+   opened it sits inside the now-closed panel. */
+let myDaysOpener = null;
+function openMyDaysModal(opener) {
+  if (ambientOn) return; // no managing days in ambient mode
+  setSettingsOpen(false);
+  myDaysOpener = opener || null;
+  renderMyDaysList();
+  $("mydays-overlay").hidden = false;
+  $("myday-name").focus();
+}
+function closeMyDaysModal() {
+  if ($("mydays-overlay").hidden) return;
+  $("mydays-overlay").hidden = true;
+  if (myDaysOpener && myDaysOpener.isConnected && !settingsPanel.hidden) myDaysOpener.focus();
+  else settingsBtn.focus();
+  myDaysOpener = null;
 }
 function buildMyDaysForm() {
   const monthSel = $("myday-month");
@@ -1209,6 +1231,14 @@ function buildMyDaysForm() {
     saveMyDays();
     renderMyDaysList();
     applySpecialDay();
+  });
+  $("mydays-open").addEventListener("click", () => openMyDaysModal($("mydays-open")));
+  $("mydays-close").addEventListener("click", closeMyDaysModal);
+  $("mydays-overlay").addEventListener("click", (e) => {
+    if (e.target === $("mydays-overlay")) closeMyDaysModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("mydays-overlay").hidden) closeMyDaysModal();
   });
 }
 
@@ -2487,6 +2517,9 @@ function applyStaticStrings() {
   $("fx-on").classList.toggle("active", fxEnabled);
   $("fx-off").classList.toggle("active", !fxEnabled);
   $("mydays-label").textContent = s.myDays.label;
+  $("mydays-title").textContent = s.myDays.label;
+  $("mydays-empty").textContent = s.myDays.empty;
+  $("mydays-close").textContent = s.captureClose;
   $("myday-name").placeholder = s.myDays.namePlaceholder;
   $("myday-cal-solar").textContent = s.myDays.solar;
   $("myday-cal-lunar").textContent = s.myDays.lunar;

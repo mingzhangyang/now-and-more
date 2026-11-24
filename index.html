@@ -35,8 +35,8 @@
     } catch (e) { /* storage unavailable: fall back to system preference */ }
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=19">
-<link rel="stylesheet" href="assets/fonts/fonts.css?v=19">
+<link rel="stylesheet" href="css/style.css?v=20">
+<link rel="stylesheet" href="assets/fonts/fonts.css?v=20">
 </head>
 <body data-clock-style="paper">
 <div id="glow" aria-hidden="true"></div>
@@ -91,23 +91,7 @@
         </div>
       </div>
       <div class="setting-row">
-        <span id="mydays-label" class="setting-label">我的日子</span>
-        <div id="my-days-list" class="my-days-list"></div>
-        <div class="myday-form">
-          <input id="myday-name" class="myday-name" type="text" maxlength="24" placeholder="名字，如：妈妈生日" autocomplete="off">
-          <div class="myday-line">
-            <select id="myday-month" class="sign-select" aria-label="月 / Month"></select>
-            <select id="myday-day" class="sign-select" aria-label="日 / Day"></select>
-          </div>
-          <div class="lang-segment" role="group" aria-label="Calendar">
-            <button id="myday-cal-solar" type="button" class="seg-btn">公历</button>
-            <button id="myday-cal-lunar" type="button" class="seg-btn">农历</button>
-          </div>
-          <div class="myday-line">
-            <select id="myday-effect" class="sign-select" aria-label="效果 / Effect"></select>
-            <button id="myday-add" type="button" class="ambient-btn">添加</button>
-          </div>
-        </div>
+        <button id="mydays-open" type="button" class="panel-page-link panel-page-btn"><span id="mydays-label">我的日子</span><span class="panel-page-arrow" aria-hidden="true">›</span></button>
       </div>
       <div class="setting-row">
         <a id="notes-link" class="panel-page-link" href="library.html"><span id="notes-label">我的库</span><span class="panel-page-arrow" aria-hidden="true">›</span></a>
@@ -218,6 +202,34 @@
   </div>
 </div>
 
+<!-- My days modal: the saved days and the add form live here — the
+     settings panel keeps only a door to it, like My Notes. -->
+<div id="mydays-overlay" class="capture-overlay" hidden>
+  <div class="capture-dialog mydays-dialog" role="dialog" aria-modal="true" aria-labelledby="mydays-title">
+    <div id="mydays-title" class="capture-title">我的日子</div>
+    <div id="my-days-list" class="my-days-list"></div>
+    <p id="mydays-empty" class="mydays-empty">还没有定下什么日子</p>
+    <div class="myday-form">
+      <input id="myday-name" class="myday-name" type="text" maxlength="24" placeholder="名字，如：妈妈生日" autocomplete="off">
+      <div class="myday-line">
+        <select id="myday-month" class="sign-select" aria-label="月 / Month"></select>
+        <select id="myday-day" class="sign-select" aria-label="日 / Day"></select>
+      </div>
+      <div class="lang-segment" role="group" aria-label="Calendar">
+        <button id="myday-cal-solar" type="button" class="seg-btn">公历</button>
+        <button id="myday-cal-lunar" type="button" class="seg-btn">农历</button>
+      </div>
+      <div class="myday-line">
+        <select id="myday-effect" class="sign-select" aria-label="效果 / Effect"></select>
+        <button id="myday-add" type="button" class="ambient-btn">添加</button>
+      </div>
+    </div>
+    <div class="capture-actions">
+      <button id="mydays-close" type="button" class="capture-action">关闭</button>
+    </div>
+  </div>
+</div>
+
 <!-- Keepsake capture result: the frozen moment as a shareable PNG -->
 <div id="capture-overlay" class="capture-overlay" hidden>
   <div class="capture-dialog" role="dialog" aria-modal="true" aria-labelledby="capture-title">
@@ -231,7 +243,7 @@
   </div>
 </div>
 
-<script src="js/data.js?v=19"></script>
-<script src="js/app.js?v=19"></script>
+<script src="js/data.js?v=20"></script>
+<script src="js/app.js?v=20"></script>
 </body>
 </html>
