@@ -1212,6 +1212,166 @@ function buildMyDaysForm() {
   });
 }
 
+/* ================= Special-date postcards （特殊日明信片） =================
+   On a day that means something — a solar term, a lunar festival, a day
+   the world keeps — the site gifts the visitor one fixed composition: a
+   painting mounted on cream paper, a few lines beneath it. The geometry
+   is pure proportion, anchored on the painting's native square: paper
+   height = paper width × 1.25, the photo takes a fixed fraction of the
+   paper's inner width, and the text zone is the deterministic remainder
+   with fixed slots (title / subtitle / meta / passage / footer). The
+   stage renders it with container-query units so the composition is
+   identical at any width; the keepsake draws the same numbers at
+   1080×1350. Copy lives in POSTCARD_COPY (data.js) and is written to
+   fit the passage slot — length discipline is part of the design.
+
+   Delivery: the postcard is the FIRST card of its day, once per device
+   (a per-date localStorage key, nam-postcard-<yyyymmdd>); afterwards it
+   joins the day's rotation with a modest chance, never back-to-back.
+   One postcard per day at most — collisions resolve festival first,
+   then western days, then bare solar terms （清明 the festival beats
+   清明 the term, so the term painting qingming.webp is kept in the data
+   but the festival card is the one that ever appears). Personal days
+   （我的日子） are not postcards and are untouched by this module. */
+
+/* Painting slug per SOLAR_TERMS index (SOLAR_TERMS[0] = 春分 at 0°). */
+const TERM_SLUG_BY_IDX = [
+  "chunfen", "qingming", "guyu", "lixia", "xiaoman", "mangzhong",
+  "xiazhi", "xiaoshu", "dashu", "liqiu", "chushu", "bailu",
+  "qiufen", "hanlu", "shuangjiang", "lidong", "xiaoxue", "daxue",
+  "dongzhi", "xiaohan", "dahan", "lichun", "yushui", "jingzhe",
+];
+
+/* Day-of-month of the n-th `weekday` (0 = Sunday) of a month. */
+function nthWeekdayOfMonth(year, monthIdx, weekday, n) {
+  const first = new Date(year, monthIdx, 1).getDay();
+  return 1 + ((weekday - first + 7) % 7) + (n - 1) * 7;
+}
+/* Western (Gregorian) Easter Sunday via the anonymous computus. */
+function easterSunday(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31); // 3 = March, 4 = April
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return { month, day };
+}
+function lunarLabelOf(date) {
+  try {
+    return new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(date);
+  } catch (e) { return null; }
+}
+
+/* Which postcard (if any) belongs to the LOCAL day containing `date`.
+   Pure function of the date — returns { key, termIdx, instantMs,
+   lunarLabel } or null. Priority: lunar/fixed festival > western day >
+   solar term. */
+function postcardForDate(date) {
+  const y = date.getFullYear(), mo = date.getMonth() + 1, d = date.getDate();
+  const lp = lunarParts(date);
+  // Tier 1a: lunar festivals.
+  if (lp && !lp.leap) {
+    const lunarKey =
+      (lp.month === 1 && lp.day === 1) ? "chunjie" :
+      (lp.month === 1 && lp.day === 15) ? "yuanxiao" :
+      (lp.month === 12 && lp.day === 8) ? "laba" :
+      (lp.month === 5 && lp.day === 5) ? "duanwu" :
+      (lp.month === 7 && lp.day === 7) ? "qixi" :
+      (lp.month === 8 && lp.day === 15) ? "zhongqiu" :
+      (lp.month === 9 && lp.day === 9) ? "chongyang" : null;
+    if (lunarKey) return { key: lunarKey, termIdx: null, instantMs: null, lunarLabel: lunarLabelOf(date) };
+  }
+  if (lp && lp.month === 12) {
+    // 除夕： the last day of the lunar year — tomorrow is 正月初一.
+    const tm = lunarParts(new Date(y, date.getMonth(), d + 1));
+    if (tm && tm.month === 1 && tm.day === 1 && !tm.leap) {
+      return { key: "chuxi", termIdx: null, instantMs: null, lunarLabel: lunarLabelOf(date) };
+    }
+  }
+  const ti = solarTermInfo(date);
+  // Tier 1b: 清明 the festival (on the term day) beats 清明 the term.
+  if (ti.today && ti.today.name === "清明") {
+    return { key: "qingming-festival", termIdx: ti.today.idx, instantMs: ti.today.instant.getTime(), lunarLabel: null };
+  }
+  // Tier 1c: fixed festival — New Year's Day.
+  if (mo === 1 && d === 1) return { key: "newyear", termIdx: null, instantMs: null, lunarLabel: null };
+  // Tier 2: western days (fixed + rule-based).
+  if (mo === 2 && d === 14) return { key: "valentines", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 3 && d === 17) return { key: "stpatricks", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 4 && d === 1) return { key: "aprilfools", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 4 && d === 22) return { key: "earthday", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 10 && d === 31) return { key: "halloween", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 12 && d === 25) return { key: "christmas", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 12 && d === 31) return { key: "newyearseve", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 5 && d === nthWeekdayOfMonth(y, 4, 0, 2)) return { key: "mothers", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 6 && d === nthWeekdayOfMonth(y, 5, 0, 3)) return { key: "fathers", termIdx: null, instantMs: null, lunarLabel: null };
+  if (mo === 11 && d === nthWeekdayOfMonth(y, 10, 4, 4)) return { key: "thanksgiving", termIdx: null, instantMs: null, lunarLabel: null };
+  const es = easterSunday(y);
+  if (mo === es.month && d === es.day) return { key: "easter", termIdx: null, instantMs: null, lunarLabel: null };
+  // Tier 3: a bare solar-term day.
+  if (ti.today) {
+    return { key: TERM_SLUG_BY_IDX[ti.today.idx], termIdx: ti.today.idx, instantMs: ti.today.instant.getTime(), lunarLabel: null };
+  }
+  return null;
+}
+
+function postcardDayKey(date) {
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+}
+
+/* Today's postcard as a renderable selection, resolved once per local
+   day (the solar-term solver is not re-run on every draw). */
+let postcardCache = { stamp: "", sel: null };
+function todaysPostcardSelection() {
+  const now = new Date();
+  const stamp = postcardDayKey(now);
+  if (postcardCache.stamp !== stamp) {
+    const found = postcardForDate(now);
+    postcardCache = {
+      stamp,
+      sel: found ? Object.assign({ cat: "postcard" }, found) : null,
+    };
+  }
+  return postcardCache.sel;
+}
+function postcardGifted() {
+  try { return !!localStorage.getItem("nam-postcard-" + postcardDayKey(new Date())); }
+  catch (e) { return false; }
+}
+function markPostcardGifted() {
+  try { localStorage.setItem("nam-postcard-" + postcardDayKey(new Date()), "1"); }
+  catch (e) { /* private mode: the gift simply re-offers next load */ }
+}
+
+/* The meta line inside the composition, as segments so the term's exact
+   time can wear the vermillion accent: { pre, time|null, post }. */
+function postcardMetaParts(sel) {
+  const now = new Date();
+  if (lang === "zh") {
+    const dateStr = `${now.getMonth() + 1}月${now.getDate()}日`;
+    if (sel.instantMs != null) {
+      const hm = localHM(termDisplayInstant(new Date(sel.instantMs)));
+      return { pre: `${dateStr} · `, time: hm, post: " 交节" };
+    }
+    if (sel.lunarLabel) return { pre: `农历${sel.lunarLabel} · ${dateStr}`, time: null, post: "" };
+    return { pre: dateStr, time: null, post: "" };
+  }
+  const dateStr = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(now);
+  if (sel.instantMs != null) {
+    const hm = localHM(termDisplayInstant(new Date(sel.instantMs)));
+    return { pre: `${dateStr} · begins `, time: hm, post: "" };
+  }
+  return { pre: dateStr, time: null, post: "" };
+}
+function postcardMetaText(sel) {
+  const p = postcardMetaParts(sel);
+  return p.pre + (p.time || "") + p.post;
+}
+
 /* ================= Card selection & rendering ================= */
 /* Categories available in the current language. almanac + classics are
    zh-only; proverbs + word are en-only; gossip joins only when its feed
@@ -1329,8 +1489,37 @@ function esc(str) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+function renderPostcard(sel) {
+  const copy = POSTCARD_COPY[sel.key];
+  if (!copy) return;
+  const title = lang === "zh" ? copy.titleZh : copy.titleEn;
+  const sub = lang === "zh" ? copy.subZh : copy.subEn;
+  const passage = lang === "zh" ? copy.passZh : copy.passEn;
+  const art = lang === "en" && copy.artEn ? copy.artEn : copy.art;
+  const mp = postcardMetaParts(sel);
+  const metaHtml = esc(mp.pre) + (mp.time ? `<b>${esc(mp.time)}</b>` : "") + esc(mp.post);
+  const brand = lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有";
+  $("card-category").textContent = t().categories.postcard;
+  $("card-meta").textContent = "";
+  $("card-body").innerHTML =
+    `<div class="postcard" lang="${lang === "zh" ? "zh-CN" : "en"}">` +
+    `<div class="pc-photo"><img src="assets/special-dates/${art}.webp" alt="${esc(title)}" loading="lazy" decoding="async"></div>` +
+    `<div class="pc-text">` +
+    `<h3 class="pc-title">${esc(title)}</h3>` +
+    `<p class="pc-sub">${esc(sub)}</p>` +
+    `<p class="pc-meta">${metaHtml}</p>` +
+    `<p class="pc-passage">${esc(passage)}</p>` +
+    `<div class="pc-foot"><span class="pc-seal">时</span><span>${esc(brand)}</span></div>` +
+    `</div></div>`;
+  liveWorldTime = null;
+}
+
 function renderSelection(sel) {
   const s = t();
+  // The postcard is its own surface: the stage card's chrome (header,
+  // translucent panel) steps aside so the cream paper IS the card.
+  $("card").classList.toggle("has-postcard", sel.cat === "postcard");
+  if (sel.cat === "postcard") { renderPostcard(sel); return; }
   let meta = "";
   let body = "";
   let worldLive = null; // { prefix, tz } when this render is a world-city card
@@ -1521,11 +1710,31 @@ function renderSelection(sel) {
   }
 }
 
-function drawCard() {
-  if (gossipEndpoint() && Date.now() - gossipFetchedAt >= GOSSIP_CACHE_MS) refreshGossip();
+/* The next card to show. On a special date the postcard comes first:
+   gifted once per device per date, then — the gift opened — it joins
+   the day's rotation with a modest chance (never twice in a row). */
+const POSTCARD_POOL_CHANCE = 0.12;
+function nextSelection() {
+  const pc = todaysPostcardSelection();
+  if (pc) {
+    if (!postcardGifted()) {
+      markPostcardGifted();
+      lastCategory = "postcard";
+      return pc;
+    }
+    if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) {
+      lastCategory = "postcard";
+      return pc;
+    }
+  }
   const cat = weightedCategory();
   lastCategory = cat;
-  currentSelection = makeSelection(cat);
+  return makeSelection(cat);
+}
+
+function drawCard() {
+  if (gossipEndpoint() && Date.now() - gossipFetchedAt >= GOSSIP_CACHE_MS) refreshGossip();
+  currentSelection = nextSelection();
   encounter += 1;
   lastDrawAt = Date.now();
   const card = $("card");
@@ -1718,7 +1927,9 @@ function applyStaticStrings() {
   if (currentSelection) {
     // Language-specific categories (classics/almanac vs proverbs/word) may not
     // exist in the new language: draw a fresh card instead of rendering them.
-    if (availableCategories().some((c) => c.key === currentSelection.cat)) renderSelection(currentSelection);
+    // The postcard exists in both languages and simply re-renders.
+    if (currentSelection.cat === "postcard" ||
+        availableCategories().some((c) => c.key === currentSelection.cat)) renderSelection(currentSelection);
     else { drawCard(); return; }
   }
   lastSecond = -1; // force a clock repaint in the new language
@@ -2288,6 +2499,130 @@ function renderKeepsakeCanvas(snap, pal) {
   return cv;
 }
 
+/* ---------- Postcard keepsake ----------
+   When the card on stage is a special-date postcard, the keepsake IS
+   the postcard: the same fixed composition, drawn at 1080×1350. The
+   numbers below are the stage composition's proportions at that scale —
+   paper margin 45 (4.2% of width), inner width 990, the square painting
+   at 0.79 of the inner width (782×782, centred, mounted-print shadow),
+   and the text zone as the deterministic remainder with fixed slots. */
+const PC_PAPER = "#faf4e6";
+const PC_INK = "#2b2620";
+const PC_INK_SOFT = "#6f6656";
+const PC_ACCENT = "#b23a2a";
+
+function loadPostcardImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("postcard image failed to load"));
+    img.src = src;
+  }).then(async (img) => {
+    try { await img.decode(); } catch (e) { /* onload already proved it usable */ }
+    return img;
+  });
+}
+
+function renderPostcardKeepsake(sel, img, serif) {
+  const cv = document.createElement("canvas");
+  cv.width = KEEP_W;
+  cv.height = KEEP_H;
+  const ctx = cv.getContext("2d");
+  const copy = POSTCARD_COPY[sel.key];
+  const title = lang === "zh" ? copy.titleZh : copy.titleEn;
+  const sub = lang === "zh" ? copy.subZh : copy.subEn;
+  const passage = lang === "zh" ? copy.passZh : copy.passEn;
+  const brand = lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有";
+  const mp = postcardMetaParts(sel);
+
+  // The cream paper is the whole surface, in both themes.
+  ctx.fillStyle = PC_PAPER;
+  ctx.fillRect(0, 0, KEEP_W, KEEP_H);
+
+  // Mounted painting: 782×782 at (149, 45), soft print shadow, 6px radius.
+  const px = 149, py = 45, ps = 782;
+  ctx.save();
+  ctx.shadowColor = "rgba(43, 38, 32, 0.30)";
+  ctx.shadowBlur = 26;
+  ctx.shadowOffsetY = 9;
+  roundRectPath(ctx, px, py, ps, ps, 6);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  roundRectPath(ctx, px, py, ps, ps, 6);
+  ctx.clip();
+  ctx.drawImage(img, px, py, ps, ps);
+  ctx.restore();
+  ctx.strokeStyle = "rgba(43, 38, 32, 0.08)";
+  ctx.lineWidth = 1;
+  roundRectPath(ctx, px, py, ps, ps, 6);
+  ctx.stroke();
+
+  // Text zone: x = 45, width 990. Fixed slots, top to bottom.
+  const tx = 45, tw = 990;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+
+  ctx.fillStyle = PC_INK;
+  ctx.font = `900 54px ${serif}`;
+  setLetterSpacing(ctx, "1px");
+  ctx.fillText(title, tx, 901);
+  setLetterSpacing(ctx, "0px");
+
+  ctx.fillStyle = PC_INK_SOFT;
+  ctx.font = `400 28px ${serif}`;
+  setLetterSpacing(ctx, "4px");
+  ctx.fillText(sub, tx, 949);
+  setLetterSpacing(ctx, "0px");
+
+  // Meta: date in soft ink, the crossing time in vermillion.
+  ctx.font = `400 28px ${serif}`;
+  let mx = tx;
+  ctx.fillStyle = PC_INK_SOFT;
+  ctx.fillText(mp.pre, mx, 993);
+  mx += ctx.measureText(mp.pre).width;
+  if (mp.time) {
+    ctx.font = `600 28px ${serif}`;
+    ctx.fillStyle = PC_ACCENT;
+    ctx.fillText(mp.time, mx, 993);
+    mx += ctx.measureText(mp.time).width;
+    ctx.font = `400 28px ${serif}`;
+    ctx.fillStyle = PC_INK_SOFT;
+  }
+  if (mp.post) ctx.fillText(mp.post, mx, 993);
+
+  // Passage: 46px at 1.7 line height, up to the three lines the copy
+  // was written for (baselines 1063 / 1141 / 1219).
+  ctx.fillStyle = PC_INK;
+  ctx.font = `400 46px ${serif}`;
+  const lines = wrapText(ctx, passage, tw).slice(0, 3);
+  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1063 + i * 78));
+
+  // Footer: hairline, the 时 seal at the left, the brand at the right.
+  ctx.strokeStyle = "rgba(43, 38, 32, 0.10)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(tx, 1267);
+  ctx.lineTo(tx + tw, 1267);
+  ctx.stroke();
+  roundRectPath(ctx, tx, 1276, 34, 34, 7);
+  ctx.fillStyle = PC_ACCENT;
+  ctx.fill();
+  ctx.fillStyle = "#fff8ec";
+  ctx.font = `900 23px ${serif}`;
+  ctx.textAlign = "center";
+  ctx.fillText("时", tx + 17, 1276 + 25);
+  ctx.textAlign = "right";
+  ctx.fillStyle = PC_INK_SOFT;
+  ctx.font = `400 23px ${serif}`;
+  setLetterSpacing(ctx, "2px");
+  ctx.fillText(brand, tx + tw, 1300);
+  setLetterSpacing(ctx, "0px");
+
+  return cv;
+}
+
 async function ensureCaptureFonts() {
   try {
     const loads = [
@@ -2341,6 +2676,18 @@ async function captureKeepsake() {
   btn.disabled = true;
   try {
     const frozen = new Date();
+    // A postcard on stage captures as the postcard itself (see above).
+    if (currentSelection && currentSelection.cat === "postcard" && POSTCARD_COPY[currentSelection.key]) {
+      const copy = POSTCARD_COPY[currentSelection.key];
+      const art = lang === "en" && copy.artEn ? copy.artEn : copy.art;
+      const img = await loadPostcardImage(`assets/special-dates/${art}.webp`);
+      await ensureCaptureFonts();
+      const palPc = capturePalette();
+      const cvPc = renderPostcardKeepsake(currentSelection, img, palPc.serif);
+      const blobPc = await new Promise((res) => cvPc.toBlob((b) => res(b), "image/png"));
+      if (blobPc) showCapture(blobPc, frozen);
+      return;
+    }
     const s = t();
     const enc = encounter > 0 ? s.encounter(encounter) : "";
     const snap = {

@@ -3,15 +3,15 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v11";
+var CACHE_NAME = "nam-v12";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=11",
-  "/js/data.js?v=11",
-  "/js/app.js?v=11",
+  "/css/style.css?v=12",
+  "/js/data.js?v=12",
+  "/js/app.js?v=12",
   "/favicon.svg",
   "/manifest.webmanifest",
 ];
@@ -115,6 +115,15 @@ self.addEventListener("fetch", function (event) {
      good response as the offline fallback. */
   if (url.origin === GOSSIP_ORIGIN && url.pathname.indexOf("/gossip") === 0) {
     event.respondWith(networkFirst(request));
+    return;
+  }
+
+  /* Special-date paintings: cache-first at runtime. They are fetched
+     only on their own date, so they are deliberately NOT in the
+     precache shell above — the shell stays small, and a painting the
+     visitor has seen remains available offline afterwards. */
+  if (url.origin === self.location.origin && url.pathname.indexOf("/assets/special-dates/") === 0) {
+    event.respondWith(cacheFirst(request));
     return;
   }
 

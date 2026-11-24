@@ -458,6 +458,108 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .card-body a.gossip-link:hover { color: var(--accent); }
 
+/* ---------- Special-date postcard ----------
+   A fixed 4:5 composition, displayed scaled-to-fit like the keepsake
+   image itself. The postcard is a container and every internal measure
+   — paper margin, photo size, font sizes — is in cqw, so the whole
+   composition scales proportionally with the card's width and is
+   identical at 620px and at 359px, in both languages. The arithmetic is
+   anchored on the painting's native square: paper height = width ×
+   1.25 (aspect-ratio), the photo takes 0.79 of the paper's inner width,
+   and the text zone is the deterministic remainder with fixed slots.
+   The cream paper is constant in both themes, like a physical card. */
+.card.has-postcard {
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.card.has-postcard .card-head { display: none; }
+
+.postcard {
+  container-type: inline-size;
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  background: #faf4e6;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  color: #2b2620;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.postcard .pc-photo { padding: 4.2cqw 4.2cqw 0; text-align: center; }
+.postcard .pc-photo img {
+  width: 79%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 0.8cqw;
+  box-shadow: 0 0.5cqw 1.6cqw rgba(43, 38, 32, 0.20), 0 2.6cqw 6.8cqw rgba(43, 38, 32, 0.16);
+  outline: 1px solid rgba(43, 38, 32, 0.08);
+  outline-offset: -1px;
+}
+.postcard .pc-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 3cqw 4.2cqw 4.2cqw;
+}
+.postcard .pc-title {
+  margin: 0;
+  font-size: 5cqw;
+  font-weight: 900;
+  line-height: 1.28;
+  letter-spacing: 0.02em;
+}
+.postcard .pc-sub {
+  margin: 1.1cqw 0 0;
+  font-size: 2.6cqw;
+  color: #6f6656;
+  letter-spacing: 0.14em;
+}
+.postcard .pc-meta {
+  margin: 1.4cqw 0 0;
+  font-size: 2.6cqw;
+  color: #6f6656;
+  letter-spacing: 0.04em;
+}
+.postcard .pc-meta b { color: #b23a2a; font-weight: 600; }
+.postcard .pc-passage {
+  margin: 2.2cqw 0 0;
+  font-size: 4.3cqw;
+  line-height: 1.7;
+  /* Safeguard only: the copy is written to fit these three lines. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.postcard .pc-foot {
+  margin-top: auto;
+  padding-top: 1.6cqw;
+  border-top: 1px solid rgba(43, 38, 32, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 2.1cqw;
+  color: #6f6656;
+  letter-spacing: 0.08em;
+}
+.postcard .pc-seal {
+  width: 3.4cqw;
+  height: 3.4cqw;
+  border-radius: 0.7cqw;
+  flex: none;
+  background: #b23a2a;
+  color: #fff8ec;
+  font-size: 2.3cqw;
+  font-weight: 900;
+  line-height: 3.4cqw;
+  text-align: center;
+}
+
 /* ---------- Controls ---------- */
 .controls { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
 #draw-btn, #capture-btn {
