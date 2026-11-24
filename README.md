@@ -70,12 +70,22 @@ npx wrangler pages deploy . --project-name now-and-more
 
 ```
 .
-├── index.html        # 页面结构 / page structure
+├── index.html        # 主页面 / main page
+├── library.html      # 我的库（用户笔记）/ the notes library page
+├── privacy.html      # 隐私政策 / privacy policy
+├── about.html        # 关于 / about
 ├── css/
 │   └── style.css     # 全部样式、五种时钟外观、深色模式 / all styles
 ├── js/
 │   ├── data.js       # 内容池与双语文案 / content pools & i18n strings
+│   ├── dedup.js      # 牌局状态、迁移与事务化抽卡 / deck state & transactional draws
+│   ├── gossip.js     # 热点列表的浏览器侧处理 / client-side news handling
 │   └── app.js        # 时钟引擎、样式切换、随机轮转、日出月相计算 / engine
+├── assets/
+│   ├── fonts/        # 自托管字体切片（勿改回 CDN）/ self-hosted font slices
+│   └── special-dates/ # 明信片画作 512×512 WebP / postcard paintings
+├── gossip-service/   # 热点 Worker（Git 连接自动部署）/ the news Worker
+├── tests/            # Node 回归测试 / regression tests
 ├── wrangler.toml     # Cloudflare Pages 配置
 └── README.md
 ```
@@ -93,3 +103,22 @@ npx wrangler pages deploy . --project-name now-and-more
 - Each fixed content row in `js/data.js` has a permanent `id`; never reuse or renumber one. Additions enter the remaining cycle; deletions are pruned at the next draw; reorder and wording edits do not change identity. Keep `NAM_LEGACY_DECK_IDS` frozen. Note IDs come from IndexedDB. A dated delivery consumes its note's current-cycle slot, but the once-per-date gift remains mandatory even if previously randomly shown.
 - Same-origin D3 tabs with working localStorage and Web Locks serialize choice/render/commit and news reconciliation; each mutation rereads the latest state. The lock is never held across network I/O. Category/encounter counters remain per tab. Old-version pages cannot participate until reloaded. Browsers without Web Locks use best-effort rereads (not strict atomic exclusion); denied storage uses a page-local shadow and cannot guarantee persistence or cross-tab dedup. Note writes/deletes share the lock until IndexedDB commit and revision notification; known-stale note snapshots are excluded while reloading. If an ungifted postcard might compete with an undelivered dated note, the draw waits outside the lock for up to two 500 ms note refresh attempts, then rechecks the current date, revision and receipts under the lock. If the snapshot is still unknown, an ordinary card is shown without consuming either gift; a later draw can deliver the gifts in order. If IndexedDB is known unavailable, the postcard is still offered. A newly due note is offered on a subsequent draw once its snapshot is ready.
 - Each bag stores disjoint seen and remaining lists (one ID per current member, plus the last ID). Unchanged rerenders and unchanged news reconciliation do not write storage. Invalid bags are repaired independently; malformed outer JSON safely starts a fresh state. Note text remains in IndexedDB, not deck history.
+
+## 开发注意事项 / Development notes
+
+改这个仓库之前先读这一节——每一条都是踩过坑或明确拍板过的决定。
+
+Read this section before changing anything — every item is either a lesson learned or a deliberate decision.
+
+- **内容 ID 是永久的 / Content IDs are permanent.** 见上文 D3 一节：给内容池加条目只能追加新 `id`，绝不重编号、绝不复用；`NAM_LEGACY_DECK_IDS` 已冻结。改完内容池跑 `node --test tests/*.test.cjs`。/ See the D3 section above: append new IDs only, never renumber or reuse; keep `NAM_LEGACY_DECK_IDS` frozen. Run the tests after touching the pools.
+- **版本戳必须同步 / Version stamps move together.** 改任何静态资源，都要把 `sw.js` 的缓存名（`nam-vN`）与所有页面里的 `?v=N` 一起升版，否则 Service Worker 会让用户混用新旧文件。/ Whenever a static asset changes, bump the `sw.js` cache name (`nam-vN`) and every `?v=N` reference in the same commit, or the service worker will mix file versions.
+- **二进制文件不能走文本推送 / Binaries don't ride the text push channel.** 字体 woff2、图片等二进制文件必须由仓库所有者手动上传到 GitHub；`assets/fonts/` 与 `assets/special-dates/` 都是这样进来的。Worker 的 PNG 图标（og-image、favicon 等）以 base64 内嵌在 `gossip-service/assets.js`，原因相同。/ Binary files (font woff2, images) must be uploaded to GitHub by hand — that is how `assets/fonts/` and `assets/special-dates/` got here. The Worker's PNG icons are base64-embedded in `gossip-service/assets.js` for the same reason.
+- **部署全自动 / Deployment is fully automatic.** Pages 与 gossip Worker 都是 Git 连接，推 `main` 即部署，不要手动 deploy。Worker 在 `gossip-service/`，其 `/debug` 路径可查看各新闻源的抓取健康。/ Pages and the gossip Worker are both Git-connected; pushing to `main` deploys. Never deploy by hand. The Worker's `/debug` route reports per-source fetch health.
+- **热点源的禁区 / Dead ends for news sources — do not retry.** Google News RSS 从 Workers 出口超时/503；微博热搜 ajax 端点 Forbidden、榜单页从 Workers 解析为 0；明报 RSS 返回 403（已撤下）。Facebook 不接：Worker 用不了站长的个人连接，个人 feed 绝不接公开站。/ Google News RSS times out from Workers egress; Weibo's ajax endpoint is Forbidden and its board parses to zero from Workers; Mingpao RSS returns 403 (removed). Facebook is out: a Worker cannot use the owner's personal connection, and a personal feed must never pipe into a public site.
+- **天文与历法口径 / Astronomy conventions.** 节气用分钟级求解器（Meeus + VSOP87D 摄动 + 牛顿迭代），已对香港天文台 2026 年表验证（最大误差约 1.3 分钟）——不要换成按日查表或粗略公式。占星一律用回归黄道（tropical），不是恒星黄道。/ Solar terms use the minute-level solver (Meeus + VSOP87D perturbations + Newton iteration), verified against the Hong Kong Observatory 2026 table (max deviation ≈1.3 min) — do not replace it with day tables or coarse formulas. Astrology is tropical, never sidereal.
+- **内容纪律 / Content discipline.** 诗歌、名言的署名必须真实可核；历史事件故意避开日期有争议者；明信片文案全部原创，不伪造古文引文。热点是全品类（新闻/体育/科技/娱乐），不只是娱乐。/ Poem and quote attributions must be real and verifiable; history entries deliberately avoid disputed dates; postcard copy is all original — never fabricate classical quotations. Trending is all-category, not entertainment only.
+- **明信片是固定构图 / The postcard composition is fixed.** 整卡 3:4：画 1080×1080 满幅贴顶、纸区 360、正文 ≤3 行。文案超长就改文案，不改构图。清明节日版恒压节气版（`qingming.webp` 不露面）是有意设计，不是 bug。新画作 512×512 WebP 可用，重出建议 1024 宽。/ The card is 3:4 — painting 1080×1080 full-bleed on top, 360px paper zone, passages ≤3 lines. If copy overflows, shorten the copy, never the composition. The festival Qingming always outranks the solar-term one (`qingming.webp` never surfaces) by design. New paintings: 512×512 WebP works; 1024 wide preferred.
+- **产品红线 / Product red lines.** 类别权重是编辑配比，访客不可调：不给滑杆、不给类别开关、不给预设——这是明确决定，不要以"增强可控性"为名加回来。无账号、无统计、无追踪；个人数据（设置、我的日子、笔记库、牌局）只存本机（localStorage / IndexedDB），从不上传。/ Category weights are an editorial mix and are NOT user-adjustable: no sliders, no category toggles, no presets — a deliberate decision; do not re-add them as "user control". No accounts, no analytics, no tracking; personal data (settings, my days, the notes library, decks) lives only on the device and is never uploaded.
+- **隐私页必须与代码一致 / The privacy page must stay true to the code.** `privacy.html` 承诺本站不发出任何第三方请求（字体自托管于 `assets/fonts/`，勿改回 Google Fonts CDN）。凡改动涉及网络请求、外部资源或数据存储，先核对隐私页的每句话是否仍然属实，并同步修改。/ `privacy.html` promises zero third-party requests (fonts are self-hosted in `assets/fonts/` — do not switch back to a CDN). Any change touching network requests, external resources or data storage must re-verify every sentence of the privacy page and update it in the same commit.
+- **抽卡语义不可绕过 / Draw semantics are load-bearing.** 礼物送达优先级：定期笔记 > 特殊日明信片 > 普通抽卡。豁免清单：黄历与历史上的今天由日期决定、自选星座运势直达——不要把它们塞进牌袋。抽卡状态只能经 `deckState.transact()` 修改，不要直接写 `nam-decks-v2`。/ Gift priority: dated note > special-date postcard > ordinary draw. Exempt by design: the almanac, on-this-day (date-determined) and the user's own-sign horoscope (direct) — never put them in a deck. Deck state changes only through `deckState.transact()`; never write `nam-decks-v2` directly.
+- **iOS 表单字号 / Form controls on iOS.** 触屏下所有 `input/select/textarea` 字号必须 ≥16px（`css/style.css` 末尾的 `(pointer: coarse)` 规则），否则 iPhone Safari 聚焦时自动放大页面。新增表单控件时沿用这条规则，不要动 viewport meta 去禁用缩放。/ Under a coarse pointer every form control must render at ≥16px (the `(pointer: coarse)` block at the end of `css/style.css`), or iPhone Safari zooms the page on focus. New form controls follow the rule; never "fix" it via the viewport meta.
