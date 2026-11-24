@@ -35,11 +35,8 @@
     } catch (e) { /* storage unavailable: fall back to system preference */ }
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=16">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Noto+Sans+SC:wght@100;300;400&display=swap">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Noto+Sans+SC:wght@100;300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=19">
+<link rel="stylesheet" href="assets/fonts/fonts.css?v=19">
 </head>
 <body data-clock-style="paper">
 <div id="glow" aria-hidden="true"></div>
@@ -113,13 +110,7 @@
         </div>
       </div>
       <div class="setting-row">
-        <span id="notes-label" class="setting-label">我的库</span>
-        <span id="notes-storage-note" class="notes-storage-note">只存在这台设备上</span>
-        <div id="notes-list" class="notes-list"></div>
-        <p id="notes-empty" class="notes-empty">还没有写下什么</p>
-        <div>
-          <button id="notes-add" type="button" class="ambient-btn">＋ 写一句</button>
-        </div>
+        <a id="notes-link" class="panel-page-link" href="library.html"><span id="notes-label">我的库</span><span class="panel-page-arrow" aria-hidden="true">›</span></a>
       </div>
       <div class="panel-footer">
         <a id="privacy-link" href="privacy.html">隐私政策</a>
@@ -200,7 +191,8 @@
 
 <!-- Add-a-note: a small floating button, revealed only near the
      bottom-right corner (hover on desktop, swipe-up on touch, or focus).
-     The settings panel's 我的库 section carries a permanent entry too. -->
+     The library page (library.html, linked from the settings panel)
+     carries a permanent entry too. -->
 <button id="note-fab" type="button" aria-label="写一句">＋ 写一句</button>
 
 <!-- Write-a-note modal -->
@@ -239,7 +231,7 @@
   </div>
 </div>
 
-<script src="js/data.js?v=16"></script>
-<script src="js/app.js?v=16"></script>
+<script src="js/data.js?v=19"></script>
+<script src="js/app.js?v=19"></script>
 </body>
 </html>

@@ -18,13 +18,13 @@ A single-page clock. At the centre, a precise real clock that never moves (certa
   - 一个念头 A Thought (15)：双语认知短句。
   - 纯偶然 Pure Chance (10)：当场生成的随机整数、骰子、硬币序列、抽牌、随机颜色。
   - 你的从前 Your Past (5)：回望提示，只提问，不编造你的记忆。
-- **写一句 / Add a note** — 你可以写下一句心得或备忘（≤120 字），存进只属于这台设备的库（IndexedDB），日后像其他内容一样随机回来相遇；若选定了日期，它会在那天作为第一张卡准时送达。入口藏在右下角（悬停 / 上滑 / 聚焦时浮现），设置里的「我的库」也常驻一个。
+- **写一句 / Add a note** — 你可以写下一句心得或备忘（≤120 字），存进只属于这台设备的库（IndexedDB），日后像其他内容一样随机回来相遇；若选定了日期，它会在那天作为第一张卡准时送达。写字入口藏在右下角（悬停 / 上滑 / 聚焦时浮现），库本身是独立的一页（`library.html`，「我的库」），在设置里只有一个链接通向它；库页可看全文、删除，页上的「写一句」会回到主页并打开写字框。
 - **特殊日明信片 / Special-date postcards** — 节气与节日当天，第一张卡是一张明信片：画满幅在上，下方纸面写几行字；留影即 1080×1440 的成图。
 - **秒层随机 / Second-layer randomness** — 左下角每秒跳一个新随机数，背景微光每秒随机漂移，还有一条走完一分钟的细进度线。
 - **双语 / Bilingual** — 中文 / English 一键切换，按浏览器语言自动首选，选择保存在 localStorage。界面、城市名、诗歌、念头、历史全部双语。
 - **交互 / Interaction** — 点卡片、点「再抽一张 / Draw another」或按空格立刻抽下一张；计数器记录「第 N 次相遇 / Encounter N」。同一类别不会连续出现两次（可避免时）。
 - 浅色宣纸主题，深色模式跟随系统 (`prefers-color-scheme`)。无账号、无统计、无框架、无构建步骤。
-- **隐私与关于 / Privacy & About** — 设置面板底部链向 `privacy.html` 与 `about.html` 两页（双语、随站内语言与外观）：本站不追踪、个人数据只存本地的完整说明，以及这件作品的自述。
+- **三页独立页 / Three standalone pages** — 设置面板链向 `library.html`（我的库）、`privacy.html`（隐私政策）与 `about.html`（关于）三页（双语、随站内语言与外观）：你的库、本站不追踪且个人数据只存本地的完整说明，以及这件作品的自述。
 
 ## 本地运行 / Run locally
 
@@ -38,7 +38,7 @@ python3 -m http.server 8000
 npx serve .
 ```
 
-然后打开 http://localhost:8000 。直接双击 `index.html` 一般也可以（Google Fonts 需要联网）。
+然后打开 http://localhost:8000 。直接双击 `index.html` 一般也可以（字体已打包在仓库里，无需联网）。
 
 ## 部署到 Cloudflare Pages / Deploy to Cloudflare Pages
 
@@ -76,5 +76,5 @@ npx wrangler pages deploy . --project-name now-and-more
 
 - 日出、日落与昼长由页面内嵌的紧凑太阳位置算法现场计算（基于太阳黄经、赤纬与时角），不是查表。
 - 月相由朔望月周期现场计算：月龄、照亮比例与月相名称。
-- 字体通过 Google Fonts 加载（思源宋体/黑体），离线时自动回退到系统衬线/无衬线字体，不影响使用。
+- 字体已自托管（思源宋体/黑体，unicode-range 切片 woff2 在 `assets/fonts/`，OFL 许可同目录），随站点一同提供，不向任何第三方发出请求；用过的切片由 Service Worker 缓存，离线可用。
 - 诗歌均为公有领域作品。

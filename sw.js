@@ -3,17 +3,18 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v16";
+var CACHE_NAME = "nam-v19";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=16",
-  "/js/data.js?v=16",
-  "/js/app.js?v=16",
+  "/css/style.css?v=19",
+  "/js/data.js?v=19",
+  "/js/app.js?v=19",
   "/privacy.html",
   "/about.html",
+  "/library.html",
   "/favicon.svg",
   "/manifest.webmanifest",
 ];
@@ -53,7 +54,7 @@ self.addEventListener("activate", function (event) {
 });
 
 /* Cache a response only when it is usable: a real success, or an opaque
-   cross-origin response (Google Fonts serves those to the SW). */
+   cross-origin response. */
 function cachePut(request, response) {
   try {
     if (!response || !(response.ok || response.type === "opaque")) {
@@ -129,13 +130,23 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
+  /* Self-hosted fonts: cache-first at runtime. The unicode-range slice
+     set is far too large to precache; the browser fetches only the
+     slices a page actually renders, and each fetched slice stays
+     available offline afterwards. */
+  if (url.origin === self.location.origin && url.pathname.indexOf("/assets/fonts/") === 0) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
   /* Same-origin statics and the Worker's PNG assets: cache-first. */
   if (url.origin === self.location.origin || url.origin === GOSSIP_ORIGIN) {
     event.respondWith(cacheFirst(request));
     return;
   }
 
-  /* Everything else cross-origin (Google Fonts CSS/files): cache-first,
-     opaque responses included. */
+  /* Anything else cross-origin: cache-first, opaque responses included.
+     (The site makes no third-party requests of its own; this is only a
+     defensive fallback.) */
   event.respondWith(cacheFirst(request));
 });

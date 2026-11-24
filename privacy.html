@@ -15,6 +15,7 @@
     } catch (e) { /* storage unavailable: fall back to system preference */ }
   })();
 </script>
+<link rel="stylesheet" href="assets/fonts/fonts.css?v=19">
 <style>
   :root {
     color-scheme: light;
@@ -23,6 +24,8 @@
     --ink-soft: #6f6656;
     --accent: #b23a2a;
     --card-border: rgba(43, 38, 32, 0.14);
+    --scroll-thumb: rgba(43, 38, 32, 0.30);
+    --scroll-thumb-hover: rgba(43, 38, 32, 0.52);
     --serif: "Noto Serif SC", "Songti SC", "Songti TC", "STSong", SimSun, "宋体", Georgia, "Times New Roman", serif;
     --sans: "Noto Sans SC", -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", "Helvetica Neue", Arial, sans-serif;
   }
@@ -33,6 +36,8 @@
     --ink-soft: #a29885;
     --accent: #e0684f;
     --card-border: rgba(236, 229, 213, 0.16);
+    --scroll-thumb: rgba(236, 229, 213, 0.28);
+    --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -42,9 +47,18 @@
       --ink-soft: #a29885;
       --accent: #e0684f;
       --card-border: rgba(236, 229, 213, 0.16);
+      --scroll-thumb: rgba(236, 229, 213, 0.28);
+      --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
     }
   }
   * { box-sizing: border-box; }
+  /* Scrollbars: same quiet ink-toned bar as the main page. */
+  * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+  ::-webkit-scrollbar-corner { background: transparent; }
   [hidden] { display: none !important; }
   html, body { margin: 0; padding: 0; }
   body {
@@ -130,7 +144,7 @@
     <p>本站发出的网络请求只有下面几类，都可以说明白：</p>
     <ul>
       <li><b>页面本身</b>由 Cloudflare Pages 托管。托管平台在基础设施层面会有标准的技术日志（例如请求时间与地址），那是托管方的运维记录，不是本站在收集你的信息。</li>
-      <li><b>字体</b>通过 Google Fonts 加载。你的浏览器会为此直接联系 Google 的服务器取字体文件——这是网页字体的一次普通请求，本站看不到它，也无法追踪它。</li>
+      <li><b>字体</b>与本站打包在一起，由提供页面的同一台服务器送达。本站不向任何第三方发出请求——没有例外。</li>
       <li><b>「此刻热点」</b>的标题由本站自己的一个小服务（Worker）提供：它在服务器一侧从公开的新闻来源抓取最新标题，再交给你的页面。你的页面向它请求时，除任何网络请求都天然包含的信息（如 IP 地址）之外，不会发送任何关于你的数据——没有账号，没有标识符。分享图片与站点图标也由同一个服务提供。</li>
     </ul>
 
@@ -166,7 +180,7 @@
     <p>The page makes only the requests below, and each can be accounted for:</p>
     <ul>
       <li><b>The page itself</b> is hosted on Cloudflare Pages. Like any host, Cloudflare keeps standard technical logs at the infrastructure level (such as request times and addresses); those are the host's operational records, not this site collecting information about you.</li>
-      <li><b>Fonts</b> load through Google Fonts. Your browser contacts Google's servers directly to fetch the font files — an ordinary web-font request that this site cannot see and does not track.</li>
+      <li><b>Fonts</b> are bundled with the site itself and served by the same server that serves the pages. The site makes no third-party requests at all — no exceptions.</li>
       <li><b>“Trending Now”</b> headlines come from the site's own small service (a Worker): it fetches the latest headlines from public news sources on the server side and hands them to your page. When your page asks it for headlines, nothing about you is sent beyond what any web request inherently carries (such as an IP address) — no account, no identifier. The share image and site icons are served by the same service.</li>
     </ul>
 

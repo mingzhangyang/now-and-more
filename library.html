@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的库 · My notes — 此时，还有 · Now, and More</title>
+<meta name="description" content="我的库：你写下的心得与备忘，只存在这台设备上。My notes — the reflections and memos you wrote, stored only on this device.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script>
+  /* Apply a manually chosen theme before first paint (no flash). */
+  (function () {
+    try {
+      var t = localStorage.getItem("nam-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) { /* storage unavailable: fall back to system preference */ }
+  })();
+</script>
+<link rel="stylesheet" href="assets/fonts/fonts.css?v=19">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5efe2;
+    --ink: #2b2620;
+    --ink-soft: #6f6656;
+    --accent: #b23a2a;
+    --card-border: rgba(43, 38, 32, 0.14);
+    --scroll-thumb: rgba(43, 38, 32, 0.30);
+    --scroll-thumb-hover: rgba(43, 38, 32, 0.52);
+    --serif: "Noto Serif SC", "Songti SC", "Songti TC", "STSong", SimSun, "宋体", Georgia, "Times New Roman", serif;
+    --sans: "Noto Sans SC", -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", "Helvetica Neue", Arial, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #171512;
+    --ink: #ece5d5;
+    --ink-soft: #a29885;
+    --accent: #e0684f;
+    --card-border: rgba(236, 229, 213, 0.16);
+    --scroll-thumb: rgba(236, 229, 213, 0.28);
+    --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #171512;
+      --ink: #ece5d5;
+      --ink-soft: #a29885;
+      --accent: #e0684f;
+      --card-border: rgba(236, 229, 213, 0.16);
+      --scroll-thumb: rgba(236, 229, 213, 0.28);
+      --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
+    }
+  }
+  * { box-sizing: border-box; }
+  /* Scrollbars: same quiet ink-toned bar as the main page. */
+  * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { width: min(680px, 92vw); margin: 0 auto; padding: 26px 0 64px; }
+  .toprow { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 10px; }
+  .back {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    letter-spacing: 0.06em;
+  }
+  .back:hover, .back:focus-visible { color: var(--accent); }
+  .lang-toggle { display: inline-flex; border: 1px solid var(--card-border); border-radius: 999px; overflow: hidden; }
+  .lang-toggle button {
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 5px 15px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .lang-toggle button.active { color: var(--accent); font-weight: 600; }
+  h1 { font-size: 30px; font-weight: 900; letter-spacing: 0.05em; margin: 18px 0 4px; }
+  .seal {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px;
+    background: var(--accent); color: #fff8ee;
+    font-weight: 900; font-size: 17px;
+    border-radius: 5px; transform: rotate(-3deg);
+    vertical-align: -8px; margin-right: 10px;
+  }
+  .storage-note { color: var(--ink-soft); font-size: 15px; letter-spacing: 0.06em; margin: 0; }
+  .add-row { margin: 22px 0 4px; }
+  .add-note {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink);
+    text-decoration: none;
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    padding: 7px 22px;
+  }
+  .add-note:hover, .add-note:focus-visible { color: var(--accent); border-color: var(--accent); }
+  .lib-list { margin-top: 8px; }
+  .lib-item { padding: 18px 0 16px; border-top: 1px solid var(--card-border); }
+  .lib-item:first-child { border-top: none; }
+  .lib-item-head {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft);
+  }
+  .lib-type { color: var(--accent); letter-spacing: 0.08em; }
+  .lib-badge { color: var(--accent); }
+  .lib-del {
+    margin-left: auto;
+    border: none; background: transparent;
+    color: var(--ink-soft);
+    font-family: var(--sans); font-size: 12.5px;
+    padding: 2px 4px; cursor: pointer;
+  }
+  .lib-del:hover, .lib-del:focus-visible { color: var(--accent); }
+  .lib-text { font-size: 16.5px; line-height: 1.8; margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .lib-source { font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); margin: 8px 0 0; }
+  .lib-empty, .lib-error { color: var(--ink-soft); font-size: 15px; margin: 26px 0 0; }
+  .foot { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--card-border); color: var(--ink-soft); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="toprow">
+    <a class="back" href="index.html"><span data-lang="zh">← 返回</span><span data-lang="en">← Back</span></a>
+    <div class="lang-toggle" role="group" aria-label="Language">
+      <button type="button" data-set-lang="zh">中文</button>
+      <button type="button" data-set-lang="en">EN</button>
+    </div>
+  </div>
+
+  <h1><span class="seal" aria-hidden="true">时</span><span data-lang="zh">我的库</span><span data-lang="en">My notes</span></h1>
+  <p class="storage-note"><span data-lang="zh">只存在这台设备上</span><span data-lang="en">Stored only on this device</span></p>
+
+  <p class="add-row"><a class="add-note" href="index.html#write"><span data-lang="zh">＋ 写一句</span><span data-lang="en">+ Add a note</span></a></p>
+
+  <div id="lib-list" class="lib-list"></div>
+  <p id="lib-empty" class="lib-empty" hidden></p>
+  <p id="lib-error" class="lib-error" hidden></p>
+
+  <p class="foot"><span data-lang="zh">一件来自 orangely.xyz 的小作品 · 2026</span><span data-lang="en">A small work from orangely.xyz · 2026</span></p>
+</main>
+
+<script>
+  /* My notes — the library page. Reads (and deletes from) the same
+     IndexedDB store the main page writes to (`nam-notes` / `notes`,
+     same origin): the words never leave this device. Writing itself
+     stays on the main page — the button above lands there with
+     #write, which opens the write-a-note modal. */
+  (function () {
+    "use strict";
+
+    var STRINGS = {
+      zh: {
+        types: { reflection: "心得", memo: "备忘" },
+        empty: "还没有写下什么",
+        deleteLabel: "删除",
+        storeError: "这台设备存不下",
+      },
+      en: {
+        types: { reflection: "Reflection", memo: "Memo" },
+        empty: "Nothing written yet",
+        deleteLabel: "Delete",
+        storeError: "This device can't store notes",
+      },
+    };
+
+    /* ---------- Language (same pattern as about/privacy) ---------- */
+    var lang = "zh";
+    try {
+      var saved = localStorage.getItem("nam-lang");
+      if (saved === "en" || saved === "zh") lang = saved;
+      else if ((navigator.language || "").toLowerCase().indexOf("zh") !== 0) lang = "en";
+    } catch (e) { /* keep zh */ }
+
+    /* ---------- Date lines (mirrors the main page's wording) ---------- */
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function dateParts(str) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || "");
+      return m ? { y: +m[1], mo: +m[2], d: +m[3] } : null;
+    }
+    /* 记于 M月d日 / Written on Mon D — year only when not the current one. */
+    function writtenOn(createdAt) {
+      var d = new Date(createdAt);
+      var withYear = d.getFullYear() !== new Date().getFullYear();
+      if (lang === "zh") {
+        return "记于 " + (withYear ? d.getFullYear() + "年" : "") + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+      }
+      var base = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+      return "Written on " + base + (withYear ? ", " + d.getFullYear() : "");
+    }
+    /* 留给 M月d日 / For Mon D — the day a dated note is addressed to. */
+    function forDate(str) {
+      var p = dateParts(str);
+      if (!p) return "";
+      if (lang === "zh") return "留给 " + p.mo + "月" + p.d + "日";
+      var base = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
+        .format(new Date(p.y, p.mo - 1, p.d));
+      return "For " + base;
+    }
+    function sourceLine(source) {
+      if (!source) return "";
+      if (lang !== "zh") return "Written while reading " + source;
+      // A source that already carries 《》 (stored before the capture-side
+      // strip) is shown as-is, never wrapped a second time.
+      return source.indexOf("《") !== -1 && source.indexOf("》") !== -1
+        ? "读" + source + "时记"
+        : "读《" + source + "》时记";
+    }
+
+    /* ---------- IndexedDB (same database the main page uses) ---------- */
+    var DB_NAME = "nam-notes";
+    var entries = [];     // newest first
+    var dbFailed = false; // IndexedDB unusable (private mode etc.)
+
+    function openDb() {
+      return new Promise(function (resolve) {
+        var req;
+        try {
+          if (!("indexedDB" in window) || !window.indexedDB) throw new Error("no idb");
+          req = indexedDB.open(DB_NAME, 1);
+        } catch (e) { resolve(null); return; }
+        req.onupgradeneeded = function () {
+          var db = req.result;
+          if (!db.objectStoreNames.contains("notes")) {
+            db.createObjectStore("notes", { keyPath: "id", autoIncrement: true });
+          }
+        };
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { resolve(null); };
+        req.onblocked = function () { resolve(null); };
+      });
+    }
+    function validNote(n) {
+      return !!n && (n.type === "reflection" || n.type === "memo") &&
+        typeof n.text === "string" && n.text.trim() &&
+        typeof n.createdAt === "number";
+    }
+    function loadAll() {
+      return openDb().then(function (db) {
+        if (!db) { dbFailed = true; entries = []; return; }
+        return new Promise(function (resolve) {
+          try {
+            var rq = db.transaction("notes", "readonly").objectStore("notes").getAll();
+            rq.onsuccess = function () {
+              var rows = (rq.result || []).filter(validNote);
+              rows.sort(function (a, b) { return (b.createdAt - a.createdAt) || (b.id - a.id); });
+              entries = rows;
+              resolve();
+            };
+            rq.onerror = function () { resolve(); };
+          } catch (e) { resolve(); }
+        });
+      });
+    }
+    function deleteNote(id) {
+      return openDb().then(function (db) {
+        if (!db) return false;
+        return new Promise(function (resolve) {
+          try {
+            var rq = db.transaction("notes", "readwrite").objectStore("notes").delete(id);
+            rq.onsuccess = function () { resolve(true); };
+            rq.onerror = function () { resolve(false); };
+          } catch (e) { resolve(false); }
+        });
+      });
+    }
+
+    /* ---------- Rendering ---------- */
+    function render() {
+      var s = STRINGS[lang];
+      var wrap = document.getElementById("lib-list");
+      wrap.innerHTML = "";
+      var err = document.getElementById("lib-error");
+      err.textContent = s.storeError;
+      err.hidden = !dbFailed;
+      var empty = document.getElementById("lib-empty");
+      empty.textContent = s.empty;
+      empty.hidden = dbFailed || entries.length > 0;
+      entries.forEach(function (n) {
+        var item = document.createElement("article");
+        item.className = "lib-item";
+        var head = document.createElement("div");
+        head.className = "lib-item-head";
+        var type = document.createElement("span");
+        type.className = "lib-type";
+        type.textContent = s.types[n.type];
+        head.appendChild(type);
+        if (n.date) {
+          var badge = document.createElement("span");
+          badge.className = "lib-badge";
+          badge.textContent = forDate(n.date);
+          head.appendChild(badge);
+        }
+        var written = document.createElement("span");
+        written.textContent = writtenOn(n.createdAt);
+        head.appendChild(written);
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "lib-del";
+        del.textContent = s.deleteLabel;
+        del.dataset.id = String(n.id);
+        head.appendChild(del);
+        item.appendChild(head);
+        var text = document.createElement("p");
+        text.className = "lib-text";
+        text.textContent = n.text;
+        item.appendChild(text);
+        var src = sourceLine(n.source);
+        if (src) {
+          var srcEl = document.createElement("p");
+          srcEl.className = "lib-source";
+          srcEl.textContent = src;
+          item.appendChild(srcEl);
+        }
+        wrap.appendChild(item);
+      });
+    }
+    document.getElementById("lib-list").addEventListener("click", function (e) {
+      var btn = e.target.closest(".lib-del");
+      if (!btn) return;
+      var id = Number(btn.dataset.id);
+      if (!Number.isFinite(id)) return;
+      deleteNote(id).then(function () {
+        entries = entries.filter(function (n) { return n.id !== id; });
+        render();
+      });
+    });
+
+    /* ---------- Language toggle (writes nam-lang, like the other pages) ---------- */
+    function apply(next) {
+      lang = next;
+      document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+      document.querySelectorAll("[data-lang]").forEach(function (el) {
+        el.hidden = el.getAttribute("data-lang") !== lang;
+      });
+      document.querySelectorAll("[data-set-lang]").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-set-lang") === lang);
+      });
+      render();
+    }
+    document.querySelectorAll("[data-set-lang]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var next = btn.getAttribute("data-set-lang");
+        try { localStorage.setItem("nam-lang", next); } catch (e) { /* ignore */ }
+        apply(next);
+      });
+    });
+    apply(lang);
+    loadAll().then(render);
+  })();
+</script>
+</body>
+</html>

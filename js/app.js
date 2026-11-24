@@ -1465,8 +1465,9 @@ $("gift-notice-close").addEventListener("click", (e) => {
    in the corner hotspot or on the button itself; on touch it appears
    for ~5 s after an upward swipe that starts in the bottom ~30% of the
    viewport; keyboard focus also reveals it. Ambient mode suppresses it
-   entirely. The settings panel's library section carries a permanent
-   "写一句" button as the always-reliable path. */
+   entirely. The library itself lives on its own page (library.html,
+   linked from the settings panel); its "写一句" button lands back
+   here with #write, which opens this modal on load. */
 const NOTE_MAX_CHARS = 120;
 const NOTES_DB_NAME = "nam-notes";
 let notesList = [];        // all entries, createdAt ascending (stable pool order)
@@ -1678,65 +1679,20 @@ function currentCardLabel() {
       return t().categories[sel.cat] || null;
   }
 }
+/* Book-title marks are added by the renderers, never stored: a label
+   that already carries them (a classics source like 《荀子·劝学》) is
+   stripped at capture time, and the renderers below refuse to wrap a
+   source that still carries them (entries stored before this rule). */
+function stripBookMarks(s) {
+  return typeof s === "string" ? s.replace(/[《》]/g, "") : s;
+}
 function noteSourceLine(source) {
   if (!source) return "";
-  return lang === "zh" ? `读《${source}》时记` : `Written while reading ${source}`;
+  if (lang !== "zh") return `Written while reading ${source}`;
+  return source.includes("《") && source.includes("》")
+    ? `读${source}时记`
+    : `读《${source}》时记`;
 }
-
-/* ---------- Library (settings panel) ---------- */
-function renderNotesList() {
-  const wrap = $("notes-list");
-  if (!wrap) return;
-  const s = t().notes;
-  wrap.innerHTML = "";
-  const newestFirst = notesList.slice().reverse();
-  for (const n of newestFirst) {
-    const row = document.createElement("div");
-    row.className = "note-item";
-    const mark = document.createElement("span");
-    mark.className = "note-type-mark";
-    mark.textContent = s.types[n.type];
-    const text = document.createElement("span");
-    text.className = "note-item-text";
-    text.textContent = n.text;
-    text.title = n.text;
-    row.appendChild(mark);
-    row.appendChild(text);
-    if (n.date) {
-      const badge = document.createElement("span");
-      badge.className = "note-date-badge";
-      badge.textContent = noteForDate(n.date);
-      row.appendChild(badge);
-    }
-    const written = document.createElement("span");
-    written.className = "note-item-date";
-    written.textContent = noteWrittenOn(n.createdAt);
-    row.appendChild(written);
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "note-del";
-    del.textContent = s.deleteLabel;
-    del.dataset.id = String(n.id);
-    row.appendChild(del);
-    wrap.appendChild(row);
-  }
-  $("notes-empty").hidden = notesList.length > 0;
-}
-$("notes-list").addEventListener("click", async (e) => {
-  const btn = e.target.closest(".note-del");
-  if (!btn) return;
-  const id = Number(btn.dataset.id);
-  if (!Number.isFinite(id)) return;
-  await notesDelete(id);
-  notesList = notesList.filter((n) => n.id !== id);
-  const d = deckStore.d["mine"];
-  if (d && Array.isArray(d.r)) {
-    d.r = d.r.filter((x) => x !== id);
-    if (d.l === id) d.l = null;
-    saveDeckStore();
-  }
-  renderNotesList();
-});
 
 /* ---------- The modal ---------- */
 let noteType = "reflection";
@@ -1757,7 +1713,7 @@ function openNoteModal(opener) {
   setSettingsOpen(false);
   noteOpener = opener || null;
   noteType = "reflection";
-  noteSourceCandidate = currentCardLabel();
+  noteSourceCandidate = stripBookMarks(currentCardLabel());
   syncNoteTypeSeg();
   $("note-text").value = "";
   $("note-date").value = "";
@@ -1815,10 +1771,8 @@ $("note-save").addEventListener("click", async () => {
   entry.id = id;
   notesList.push(entry);
   notesList.sort((a, b) => (a.createdAt - b.createdAt) || (a.id - b.id));
-  renderNotesList();
   closeNoteModal();
 });
-$("notes-add").addEventListener("click", () => openNoteModal($("notes-add")));
 
 /* ---------- Floating button: contextual reveal ----------
    Desktop (fine pointer): visible only while the pointer is inside
@@ -2540,10 +2494,6 @@ function applyStaticStrings() {
   refreshMyDayEffectOptions();
   renderMyDaysList();
   $("notes-label").textContent = s.notes.libraryLabel;
-  $("notes-storage-note").textContent = s.notes.storageNote;
-  $("notes-empty").textContent = s.notes.empty;
-  $("notes-add").textContent = s.notes.addButton;
-  renderNotesList();
   $("privacy-link").textContent = s.privacyLabel;
   $("about-link").textContent = s.aboutLabel;
   $("note-fab").textContent = s.notes.addButton;
@@ -3399,11 +3349,18 @@ function initialDraw() {
   drawCard();
 }
 const notesReady = notesLoadAll();
-notesReady.then(() => renderNotesList());
 Promise.race([
   notesReady,
   new Promise((r) => setTimeout(r, 1500)),
 ]).then(initialDraw);
+/* Arriving from library.html's 写一句 button (index.html#write): open
+   the write modal once the library has loaded, then drop the hash so
+   a reload does not reopen it. */
+if (location.hash === "#write") {
+  try { history.replaceState(null, "", location.pathname + location.search); }
+  catch (e) { location.hash = ""; }
+  notesReady.then(() => openNoteModal(null));
+}
 setTimeout(initialDraw, 3000);
 setInterval(tick, 200);
 tick();
