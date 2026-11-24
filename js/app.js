@@ -2,6 +2,8 @@
    Certainty: the clock. Uncertainty: everything below it. */
 "use strict";
 
+const appStorage = NAM_DEDUP.safeStorage(() => window.localStorage);
+
 /* ================= Config ================= */
 /* The Worker serves a language-specific candidate list. The cache and
    in-flight requests are isolated by language, so a late reply cannot
@@ -22,15 +24,15 @@ function refreshGossip() {
   const endpoint = gossipEndpoint();
   // Persist legacy conversion even when the pool is empty or cooling down.
   // Refresh observations enrich seen identities but never consume a draw.
-  deckState.updateGossip(requestLang, raw => NAM_GOSSIP.reconcile([], raw));
-  return gossipClient.refresh(requestLang, endpoint).then(items => {
-    // A reply for a replaced endpoint must not change history. Language
-    // switches are safe because each reply retains its original language.
-    if (endpoint === gossipEndpoint()) {
-      deckState.updateGossip(requestLang, raw => NAM_GOSSIP.reconcile(items, raw));
-    }
-    return items;
-  });
+  return Promise.resolve()
+    .then(() => deckState.updateGossip(requestLang, raw => NAM_GOSSIP.reconcile([], raw)))
+    .then(() => gossipClient.refresh(requestLang, endpoint))
+    .then(async items => {
+      // Recheck the endpoint inside the serialized maintenance operation.
+      await deckState.updateGossip(requestLang, raw =>
+        endpoint === gossipEndpoint() ? NAM_GOSSIP.reconcile(items, raw) : raw);
+      return items;
+    }).catch(() => []);
 }
 
 /* ================= State ================= */
@@ -41,22 +43,22 @@ const LS_THEME = "nam-theme";
 const THEMES = ["auto", "light", "dark"];
 const CLOCK_STYLES = ["paper", "minimal", "analog", "flip", "vertical"];
 
-let lang = localStorage.getItem(LS_LANG);
-if (!lang) {
+let lang = appStorage.getItem(LS_LANG);
+if (lang !== "zh" && lang !== "en") {
   lang = (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
 }
-let clockStyle = localStorage.getItem(LS_STYLE) || "paper";
+let clockStyle = appStorage.getItem(LS_STYLE) || "paper";
 if (!CLOCK_STYLES.includes(clockStyle)) clockStyle = "paper";
 
 /* Theme: "auto" follows prefers-color-scheme; "light"/"dark" force a
    palette via data-theme on <html> (also set pre-paint by the inline
    script in index.html). */
-let theme = localStorage.getItem(LS_THEME) || "auto";
+let theme = appStorage.getItem(LS_THEME) || "auto";
 if (!THEMES.includes(theme)) theme = "auto";
 
 /* User's zodiac sign ("" = random). Set via the sign selector; the daily
    horoscope uses it 70% of the time when set. */
-let userSign = localStorage.getItem(LS_SIGN) || "";
+let userSign = appStorage.getItem(LS_SIGN) || "";
 if (userSign && !SIGNS.some((sg) => sg.key === userSign)) userSign = "";
 
 let encounter = 0;
@@ -75,8 +77,11 @@ const pick = (arr) => arr[randInt(arr.length)];
 /* ================= No-repeat decks （去重） ================= */
 /* Enumerated pools use shuffle bags. The state is published only after
    the selected card renders; a reload resumes the last committed bag. */
-const deckState = NAM_DEDUP.createDeckState(localStorage, () => Math.random());
-const deckDraw = (key, n) => deckState.draw(key, n);
+const sharedLocks = NAM_DEDUP.browserLocks();
+const deckState = NAM_DEDUP.createDeckState(appStorage, () => Math.random(), {
+  legacyIds: NAM_LEGACY_DECK_IDS, locks: sharedLocks,
+});
+const deckDraw = key => deckState.draw(key, NAM_DECK_IDS[key]);
 
 /* Dynamic news is eligible only if unseen or cooled down. Keep history
    in D1's render transaction: no fetch or failed render consumes news. */
@@ -715,7 +720,7 @@ const MYDAY_EFFECTS = ["dress", "petals", "meteors", "snow"];
 let myDays = loadMyDays();
 function loadMyDays() {
   try {
-    const s = JSON.parse(localStorage.getItem(LS_MYDAYS) || "null");
+    const s = JSON.parse(appStorage.getItem(LS_MYDAYS) || "null");
     const arr = s && s.v === 1 && Array.isArray(s.days) ? s.days : (Array.isArray(s) ? s : []);
     return arr
       .filter((d) => d && typeof d.name === "string" && d.name.trim() &&
@@ -733,7 +738,7 @@ function loadMyDays() {
 }
 function saveMyDays() {
   try {
-    localStorage.setItem(LS_MYDAYS, JSON.stringify({ v: 1, days: myDays }));
+    appStorage.setItem(LS_MYDAYS, JSON.stringify({ v: 1, days: myDays }));
   } catch (e) { /* storage unavailable: days live in memory only */ }
 }
 function matchPersonalDay(date) {
@@ -821,7 +826,7 @@ function applySpecialDay() {
    (snow / petals / leaves) share one drift system parameterized by
    size, speed and paint; meteors are lone streaks on a slow timer. */
 const LS_FX = "nam-effects";
-let fxEnabled = localStorage.getItem(LS_FX) !== "off";
+let fxEnabled = appStorage.getItem(LS_FX) !== "off";
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 let fxMode = null;
 let fxParts = [];
@@ -989,7 +994,7 @@ function fxDraw(ts, dt) {
 function setFxEnabled(on) {
   if (fxEnabled === on) { syncFxEngine(); return; }
   fxEnabled = on;
-  try { localStorage.setItem(LS_FX, on ? "on" : "off"); } catch (e) { /* ignore */ }
+  try { appStorage.setItem(LS_FX, on ? "on" : "off"); } catch (e) { /* ignore */ }
   $("fx-on").classList.toggle("active", on);
   $("fx-off").classList.toggle("active", !on);
   syncFxEngine();
@@ -1163,7 +1168,7 @@ function buildMyDaysForm() {
    length discipline is part of the design.
 
    Delivery: the postcard is the FIRST card of its day, once per device
-   (a per-date localStorage key, nam-postcard-<yyyymmdd>); afterwards it
+   (a per-date appStorage key, nam-postcard-<yyyymmdd>); afterwards it
    joins the day's rotation with a modest chance, never back-to-back.
    One postcard per day at most — collisions resolve festival first,
    then western days, then bare solar terms （清明 the festival beats
@@ -1276,12 +1281,12 @@ function todaysPostcardSelection(now, stamp) {
 let postcardGiftStamp = "";
 function postcardGifted(stamp) {
   if (postcardGiftStamp === stamp) return true;
-  try { return !!localStorage.getItem("nam-postcard-" + stamp); }
+  try { return !!appStorage.getItem("nam-postcard-" + stamp); }
   catch (e) { return false; }
 }
 function markPostcardGifted(stamp) {
   postcardGiftStamp = stamp;
-  try { localStorage.setItem("nam-postcard-" + postcardGiftStamp, "1"); }
+  try { appStorage.setItem("nam-postcard-" + postcardGiftStamp, "1"); }
   catch (e) { /* Still delivered for this page session. */ }
 }
 
@@ -1378,14 +1383,14 @@ $("gift-notice-close").addEventListener("click", (e) => {
    The one pool the visitor writes themselves: a reflection （心得） or a
    memo （备忘）, at most 120 characters, kept in IndexedDB on this
    device only (database `nam-notes`, store `notes`) — never uploaded,
-   never in localStorage. Entries join the weighted draw as the "mine"
+   never in appStorage. Entries join the weighted draw as the "mine"
    pool (weight 6) whenever the library is non-empty, drawn through a
    shuffle-bag keyed by entry id so nothing repeats until every entry
    has surfaced once.
 
    An entry may carry a date. On that date it is DELIVERED — 必达 —
    through the same gift machinery as the postcard: first card of the
-   day, gift-notice pill, once per device per date (localStorage key
+   day, gift-notice pill, once per device per date (appStorage key
    nam-note-<yyyymmdd>). Priority between the day's two gifts: the
    visitor's own dated words outrank the postcard — the note goes
    first, and an ungifted postcard is then guaranteed as the very next
@@ -1434,47 +1439,72 @@ function notesOpenDb() {
   return notesDbPromise;
 }
 function validNote(n) {
-  return !!n && (n.type === "reflection" || n.type === "memo") &&
-    typeof n.text === "string" && n.text.trim() &&
-    typeof n.createdAt === "number";
+  return !!n && Number.isSafeInteger(n.id) && n.id > 0 &&
+    (n.type === "reflection" || n.type === "memo") &&
+    typeof n.text === "string" && n.text.trim() && Number.isFinite(n.createdAt);
 }
-async function notesLoadAll() {
-  const db = await notesOpenDb();
-  if (!db) { notesList = []; return; }
-  await new Promise((resolve) => {
-    try {
-      const rq = db.transaction("notes", "readonly").objectStore("notes").getAll();
-      rq.onsuccess = () => {
-        const rows = (rq.result || []).filter(validNote);
-        rows.sort((a, b) => (a.createdAt - b.createdAt) || (a.id - b.id));
-        notesList = rows;
-        resolve();
-      };
-      rq.onerror = () => resolve();
-    } catch (e) { resolve(); }
+const NOTES_REVISION_KEY = "nam-notes-revision";
+let loadedNotesRevision = null;
+let notesLoaded = false;
+let notesLoadSequence = 0;
+let notesLoading = null;
+
+function notesLoadAll() {
+  const revision = appStorage.getItem(NOTES_REVISION_KEY);
+  if (notesLoading && notesLoading.revision === revision) return notesLoading.task;
+  const sequence = ++notesLoadSequence;
+  const task = (async () => {
+    const db = await notesOpenDb();
+    if (!db) return;
+    await new Promise(resolve => {
+      try {
+        const rq = db.transaction("notes", "readonly").objectStore("notes").getAll();
+        rq.onsuccess = () => {
+          if (sequence === notesLoadSequence && revision === appStorage.getItem(NOTES_REVISION_KEY)) {
+            const rows = (rq.result || []).filter(validNote);
+            rows.sort((a, b) => (a.createdAt - b.createdAt) || (a.id - b.id));
+            notesList = rows;
+            loadedNotesRevision = revision;
+            notesLoaded = true;
+          }
+          resolve();
+        };
+        rq.onerror = () => resolve();
+      } catch (e) { resolve(); }
+    });
+  })().finally(() => {
+    if (notesLoading && notesLoading.sequence === sequence) notesLoading = null;
   });
+  notesLoading = { revision, sequence, task };
+  return task;
+}
+
+function notesCurrent() {
+  if (notesLoaded && loadedNotesRevision === appStorage.getItem(NOTES_REVISION_KEY)) return true;
+  // Do not draw from a known-stale snapshot while a refresh is pending.
+  if (!notesDbFailed) notesLoadAll();
+  return false;
+}
+
+function signalNotesChanged() {
+  appStorage.setItem(NOTES_REVISION_KEY, Date.now() + ":" + Math.random());
 }
 async function notesAdd(entry) {
   const db = await notesOpenDb();
   if (!db) return null;
-  return new Promise((resolve) => {
+  return NAM_DEDUP.runShared(sharedLocks, () => new Promise(resolve => {
     try {
-      const rq = db.transaction("notes", "readwrite").objectStore("notes").add(entry);
-      rq.onsuccess = () => resolve(rq.result); // the new auto-increment id
-      rq.onerror = () => resolve(null);
+      const tx = db.transaction("notes", "readwrite");
+      const rq = tx.objectStore("notes").add(entry);
+      let id = null;
+      rq.onsuccess = () => { id = rq.result; };
+      tx.oncomplete = () => {
+        if (id !== null) signalNotesChanged();
+        resolve(id);
+      };
+      tx.onabort = () => resolve(null);
     } catch (e) { resolve(null); }
-  });
-}
-async function notesDelete(id) {
-  const db = await notesOpenDb();
-  if (!db) return false;
-  return new Promise((resolve) => {
-    try {
-      const rq = db.transaction("notes", "readwrite").objectStore("notes").delete(id);
-      rq.onsuccess = () => resolve(true);
-      rq.onerror = () => resolve(false);
-    } catch (e) { resolve(false); }
-  });
+  }));
 }
 
 /* ---------- Dates ---------- */
@@ -1508,35 +1538,11 @@ function noteForDate(str) {
   return `For ${base}`;
 }
 
-/* ---------- Shuffle-bag over entry ids ----------
-   Mirrors deckDraw, but the bag holds entry ids rather than pool
-   indices: deleting an entry prunes it from the bag at once, and new
-   entries join at the next reshuffle. Stored in the same deck store
-   under "mine" (a shape deckDraw never reads — it is only ever drawn
-   here). */
+/* Notes share the stable-ID deck implementation. */
 function drawNoteEntry() {
   if (!notesList.length) return null;
-  let d = deckState.state.d["mine"];
-  if (!d || !Array.isArray(d.r)) d = { r: [], l: null };
-  const alive = new Set(notesList.map((n) => n.id));
-  d.r = d.r.filter((id) => alive.has(id));
-  if (d.l !== null && d.l !== undefined && !alive.has(d.l)) d.l = null;
-  if (!d.r.length) {
-    d.r = Array.from(alive);
-    for (let i = d.r.length - 1; i > 0; i--) {
-      const j = randInt(i + 1);
-      [d.r[i], d.r[j]] = [d.r[j], d.r[i]];
-    }
-    // Seam rule, as with the index decks: a fresh bag does not open
-    // with the previous bag's final draw.
-    if (d.r.length > 1 && d.l !== null && d.l !== undefined && d.r[d.r.length - 1] === d.l) {
-      [d.r[0], d.r[d.r.length - 1]] = [d.r[d.r.length - 1], d.r[0]];
-    }
-  }
-  const id = d.r.pop();
-  d.l = id;
-  deckState.state.d["mine"] = d;
-  return notesList.find((n) => n.id === id) || null;
+  const ids = notesList.map(n => "note:" + n.id);
+  return notesList[deckState.draw("mine", ids)] || null;
 }
 
 /* ---------- Dated delivery （必达） ---------- */
@@ -1545,19 +1551,19 @@ let deliveredNoteKey = "";
 function noteDeliveredToday(stamp) {
   const key = noteGiftKey(stamp);
   if (deliveredNoteKey === key) return true;
-  try { return !!localStorage.getItem(key); }
+  try { return !!appStorage.getItem(key); }
   catch (e) { return false; }
 }
 function markNoteDelivered(id, stamp) {
   deliveredNoteKey = noteGiftKey(stamp);
-  try { localStorage.setItem(deliveredNoteKey, String(id)); }
+  try { appStorage.setItem(deliveredNoteKey, String(id)); }
   catch (e) { /* Still delivered for this page session. */ }
 }
 /* Today's dated note as a gift selection — the earliest-created entry
    addressed to today, and only until the day's one delivery has
    happened (the key above is the record). */
 function todaysDatedNoteSelection(now, stamp) {
-  if (!notesList.length || noteDeliveredToday(stamp)) return null;
+  if (!notesCurrent() || !notesList.length || noteDeliveredToday(stamp)) return null;
   const today = noteDayStr(now);
   const due = notesList.find((n) => n.date === today);
   return due ? { cat: "mine", note: due, gifted: true, giftStamp: stamp } : null;
@@ -1700,9 +1706,8 @@ $("note-save").addEventListener("click", async () => {
     $("note-error").hidden = false;
     return;
   }
-  entry.id = id;
-  notesList.push(entry);
-  notesList.sort((a, b) => (a.createdAt - b.createdAt) || (a.id - b.id));
+  // Reload the committed database, rather than appending to a stale snapshot.
+  notesLoadAll();
   closeNoteModal();
 });
 
@@ -1819,7 +1824,7 @@ function availableCategories() {
   }
   // The visitor's own notes join only when the library is non-empty;
   // with an empty library the pool — and its weight — simply isn't there.
-  if (notesList.length) {
+  if (notesCurrent() && notesList.length) {
     const m = CATEGORY_WEIGHTS.find((c) => c.key === "mine");
     if (m) list.push(m);
   }
@@ -1839,14 +1844,14 @@ function selectionForLanguage(sel) {
   const key = poem ? (zh ? "poemZh" : "poemEn") : (zh ? "quoteZh" : "quoteEn");
   if (sel[key]) return sel;
   const pool = poem ? (zh ? POEMS_ZH : POEMS_EN) : (zh ? QUOTES_ZH : QUOTES_EN);
-  return { ...sel, [key]: pool[deckDraw(sel.cat + ":" + lang, pool.length)] };
+  return { ...sel, [key]: pool[deckDraw(sel.cat + ":" + lang)] };
 }
 
 function makeSelection(cat) {
   switch (cat) {
     case "world": {
       // The moon is one extra "place" in the world pool (slot == CITIES.length).
-      const slot = deckDraw("world", CITIES.length + 1);
+      const slot = deckDraw("world");
       if (slot === CITIES.length) return { cat, moon: true };
       return { cat, city: CITIES[slot] };
     }
@@ -1859,21 +1864,21 @@ function makeSelection(cat) {
       // the deck governs only the random-day fallback pool.
       if (HISTORY[key]) return { cat, key, entry: HISTORY[key], today: true };
       const keys = Object.keys(HISTORY);
-      const rk = keys[deckDraw("history", keys.length)];
+      const rk = keys[deckDraw("history")];
       return { cat, key: rk, entry: HISTORY[rk], today: false };
     }
     case "thought":
-      return { cat, item: THOUGHTS[deckDraw("thought", THOUGHTS.length)] };
+      return { cat, item: THOUGHTS[deckDraw("thought")] };
     case "science":
-      return { cat, item: SCIENCE[deckDraw("science", SCIENCE.length)] };
+      return { cat, item: SCIENCE[deckDraw("science")] };
     case "quotes":
       return selectionForLanguage({ cat });
     case "classics":
-      return { cat, item: CLASSICS[deckDraw("classics", CLASSICS.length)] };
+      return { cat, item: CLASSICS[deckDraw("classics")] };
     case "almanac":
       return { cat, data: computeAlmanac(new Date()) };
     case "astro": {
-      const subtype = ["horoscope", "positions", "profile"][deckDraw("astro:sub", 3)];
+      const subtype = NAM_DECK_IDS["astro:sub"][deckDraw("astro:sub")];
       if (subtype === "horoscope") {
         let signIdx = -1;
         if (userSign && Math.random() < 0.7) {
@@ -1881,18 +1886,18 @@ function makeSelection(cat) {
         }
         // The user's own sign (above) is a deliberate feature and stays
         // random-access; every other horoscope sign comes from the deck.
-        if (signIdx < 0) signIdx = deckDraw("astro:horo", SIGNS.length);
+        if (signIdx < 0) signIdx = deckDraw("astro:horo");
         return { cat, subtype, horo: makeHoroscope(new Date(), signIdx) };
       }
       // Positions are computed from the date — one card per day by
       // construction; the subtype deck above spaces their appearances.
       if (subtype === "positions") return { cat, subtype, positions: planetPositions(new Date()) };
-      return { cat, subtype, signIdx: deckDraw("astro:prof", SIGNS.length) };
+      return { cat, subtype, signIdx: deckDraw("astro:prof") };
     }
     case "proverbs":
-      return { cat, item: PROVERBS[deckDraw("proverbs", PROVERBS.length)] };
+      return { cat, item: PROVERBS[deckDraw("proverbs")] };
     case "word":
-      return { cat, item: WORDS[deckDraw("word", WORDS.length)] };
+      return { cat, item: WORDS[deckDraw("word")] };
     case "gossip": {
       const item = drawGossipItem();
       if (item) return { cat, item, newsLang: lang };
@@ -1904,16 +1909,17 @@ function makeSelection(cat) {
       return makeSelection(fallback);
     }
     case "memory":
-      return { cat, item: MEMORY_PROMPTS[deckDraw("memory", MEMORY_PROMPTS.length)] };
+      return { cat, item: MEMORY_PROMPTS[deckDraw("memory")] };
     case "mine": {
-      const entry = drawNoteEntry();
+      const entry = notesCurrent() ? drawNoteEntry() : null;
       if (entry) return { cat, note: entry };
-      // The library emptied between category choice and draw: fall back.
-      return { cat: "thought", item: THOUGHTS[deckDraw("thought", THOUGHTS.length)] };
+      const fallback = NAM_DEDUP.weightedCategory(
+        availableCategories().filter(c => c.key !== "mine"), lastCategory, Math.random);
+      return makeSelection(fallback);
     }
     case "chance": {
-      const kinds = ["integer", "dice", "coins", "card", "color"];
-      const kind = kinds[deckDraw("chance:kind", kinds.length)];
+      const kinds = NAM_DECK_IDS["chance:kind"];
+      const kind = kinds[deckDraw("chance:kind")];
       let value = rollChanceValue(kind);
       for (let attempt = 0; attempt < 3 && deckState.state.fp.includes(chanceFingerprint(kind, value)); attempt++) {
         value = rollChanceValue(kind);
@@ -1923,7 +1929,7 @@ function makeSelection(cat) {
       return { cat, kind, value };
     }
     default:
-      return { cat: "thought", item: THOUGHTS[deckDraw("thought", THOUGHTS.length)] };
+      return { cat: "thought", item: THOUGHTS[deckDraw("thought")] };
   }
 }
 
@@ -2199,37 +2205,49 @@ let drawsReady = false;
 const drawGate = NAM_DEDUP.createDrawGate((task) => setTimeout(task, 180));
 
 function drawCard() {
-  // During startup wait for the library (or its existing timeout), so a
-  // manual click cannot race the initial dated-note/postcard delivery.
   if (!drawsReady || drawGate.pending) return false;
   const card = $("card");
   card.classList.add("leaving");
   return drawGate.request(() => {
+    if (gossipEndpoint()) refreshGossip();
+    const finish = () => card.classList.remove("leaving");
     try {
-      if (gossipEndpoint()) refreshGossip();
-      // Select at the end of the transition using the current language.
-      // The old selection remains the displayed card until this commits.
-      const selected = deckState.transact(() => {
-        const sel = nextSelection();
-        renderSelection(sel);
-        return sel;
+      // Serialize choice, synchronous render, commit and daily receipt.
+      const result = deckState.withLock(() => {
+        const selected = deckState.transact(() => {
+          const sel = nextSelection();
+          if (sel.cat === "mine" && sel.gifted) {
+            deckState.markSeen("mine", notesList.map(n => "note:" + n.id), "note:" + sel.note.id);
+          }
+          renderSelection(sel);
+          return sel;
+        });
+        currentSelection = selected;
+        lastCategory = selected.cat;
+        encounter += 1;
+        lastDrawAt = Date.now();
+        $("encounter").textContent = t().encounter(encounter);
+        if (selected.gifted) {
+          if (selected.cat === "mine") markNoteDelivered(selected.note.id, selected.giftStamp);
+          if (selected.cat === "postcard") markPostcardGifted(selected.giftStamp);
+          showGiftNotice(selected);
+        } else {
+          dismissGiftNotice();
+        }
       });
-      currentSelection = selected;
-      lastCategory = selected.cat;
-      encounter += 1;
-      lastDrawAt = Date.now();
-      $("encounter").textContent = t().encounter(encounter);
-      if (selected.gifted) {
-        if (selected.cat === "mine") markNoteDelivered(selected.note.id, selected.giftStamp);
-        if (selected.cat === "postcard") markPostcardGifted(selected.giftStamp);
-        showGiftNotice(selected);
-      } else {
-        dismissGiftNotice();
-      }
-    } finally {
-      card.classList.remove("leaving");
+      if (result && typeof result.then === "function") return result.finally(finish);
+      finish();
+    } catch (e) {
+      finish();
+      throw e;
     }
   });
+}
+
+function canRepaintSelection(sel) {
+  if (sel.cat === "postcard") return true;
+  if (sel.cat === "gossip") return sel.newsLang === lang;
+  return availableCategories().some(c => c.key === sel.cat);
 }
 
 /* ================= Clock engine ================= */
@@ -2361,7 +2379,7 @@ function applyTheme() {
 function setTheme(next) {
   if (next === theme) return;
   theme = next;
-  localStorage.setItem(LS_THEME, theme);
+  appStorage.setItem(LS_THEME, theme);
   applyTheme();
 }
 
@@ -2428,19 +2446,22 @@ function applyStaticStrings() {
   });
   refreshSignOptions();
   if (currentSelection && !drawGate.pending) {
-    // If a draw is in flight it will select in the latest language, so do
-    // not consume an extra variant of the card that is leaving.
-    const sameNewsLanguage = currentSelection.cat === "gossip" && currentSelection.newsLang === lang;
-    if (currentSelection.cat === "postcard" || sameNewsLanguage ||
-        (currentSelection.cat !== "gossip" &&
-         availableCategories().some((c) => c.key === currentSelection.cat))) {
-      currentSelection = deckState.transact(() => {
-        const sel = selectionForLanguage(currentSelection);
-        renderSelection(sel);
-        return sel;
-      });
-    } else {
+    if (!canRepaintSelection(currentSelection)) {
       drawCard();
+    } else {
+      // Resolve the latest language after acquiring the lock; the same
+      // gate prevents concurrent lazy language and ordinary draws.
+      drawGate.run(() => deckState.withLock(() => {
+        if (!canRepaintSelection(currentSelection)) {
+          setTimeout(drawCard, 0);
+          return;
+        }
+        currentSelection = deckState.transact(() => {
+          const sel = selectionForLanguage(currentSelection);
+          renderSelection(sel);
+          return sel;
+        });
+      }));
     }
   }
   // A visible gift notice follows the language like the card does.
@@ -2479,8 +2500,8 @@ function buildSignSelector() {
   if (!signSelectEl) return;
   signSelectEl.addEventListener("change", () => {
     userSign = signSelectEl.value;
-    if (userSign) localStorage.setItem(LS_SIGN, userSign);
-    else localStorage.removeItem(LS_SIGN);
+    if (userSign) appStorage.setItem(LS_SIGN, userSign);
+    else appStorage.removeItem(LS_SIGN);
   });
   refreshSignOptions();
 }
@@ -2501,7 +2522,7 @@ function buildStyleChips() {
 
 function setClockStyle(st) {
   clockStyle = st;
-  localStorage.setItem(LS_STYLE, st);
+  appStorage.setItem(LS_STYLE, st);
   document.body.dataset.clockStyle = st;
   $("clock-digital").hidden = !(st === "paper" || st === "minimal");
   $("clock-analog").hidden = st !== "analog";
@@ -2532,7 +2553,7 @@ document.addEventListener("keydown", (e) => {
 function setLang(next) {
   if (next === lang) return;
   lang = next;
-  localStorage.setItem(LS_LANG, lang);
+  appStorage.setItem(LS_LANG, lang);
   refreshGossip();
   applyStaticStrings();
 }
@@ -3270,6 +3291,14 @@ function initialDraw() {
   drawsReady = true;
   drawCard();
 }
+window.addEventListener("storage", e => {
+  if (e.key === NAM_DEDUP.KEY || e.key === null) deckState.sync();
+  if (e.key === NOTES_REVISION_KEY || e.key === null) notesLoadAll();
+});
+window.addEventListener("focus", () => { deckState.sync(); notesLoadAll(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") { deckState.sync(); notesLoadAll(); }
+});
 const notesReady = notesLoadAll();
 Promise.race([
   notesReady,

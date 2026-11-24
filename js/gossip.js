@@ -7,7 +7,7 @@ const NAM_GOSSIP = (() => {
   const COOLDOWN_MS = 30 * 60 * 1000;
   const HISTORY_LIMIT = 500;
 
-  // Retain the D1 outer nam-decks-v1 format; upgrade only g[lang].
+  // News history schema is independent of the outer deck-store version.
   function history(raw, now = Date.now()) {
     let rows = [];
     if (raw && raw.v === 2 && Array.isArray(raw.entries)) {
