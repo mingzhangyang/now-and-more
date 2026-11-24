@@ -716,7 +716,7 @@ function lunarFestivalOn(date) {
    solar→lunar conversion the almanac uses (leap months don't host
    festivals or birthdays here — the regular month wins). */
 const LS_MYDAYS = "nam-my-days";
-const MYDAY_EFFECTS = ["dress", "petals", "meteors", "snow"];
+const MYDAY_EFFECTS = ["dress", "petals", "meteors", "snow", "confetti"];
 let myDays = loadMyDays();
 function loadMyDays() {
   try {
@@ -823,7 +823,7 @@ function applySpecialDay() {
 
 /* ---------- Micro-animation engine ----------
    One fixed canvas, one rAF loop, slow and faint. Falling particles
-   (snow / petals / leaves) share one drift system parameterized by
+   (snow / petals / leaves / confetti) share one drift system parameterized by
    size, speed and paint; meteors are lone streaks on a slow timer. */
 const LS_FX = "nam-effects";
 let fxEnabled = appStorage.getItem(LS_FX) !== "off";
@@ -839,7 +839,13 @@ const FALL_CONF = {
   snow:   { count: 70, vyMin: 13, vyMax: 32, sizeMin: 1.1, sizeMax: 2.7 },
   petals: { count: 24, vyMin: 10, vyMax: 22, sizeMin: 5.0, sizeMax: 9.0 },
   leaves: { count: 20, vyMin: 12, vyMax: 26, sizeMin: 5.0, sizeMax: 9.0 },
+  confetti: { count: 26, vyMin: 8, vyMax: 18, sizeMin: 4.5, sizeMax: 8.0 },
 };
+/* Birthday-confetti palette: festive, but in the site's own register —
+   vermillion and gold first, then teal, plum, apricot and a muted
+   indigo. No neon. Stored as "r, g, b" so the per-piece alpha rides
+   along at paint time. */
+const CONFETTI_COLORS = ["198, 58, 40", "206, 152, 52", "43, 122, 112", "126, 70, 108", "230, 144, 84", "82, 98, 152"];
 function fxIsDark() {
   const dt = document.documentElement.dataset.theme;
   if (dt === "dark") return true;
@@ -871,6 +877,15 @@ function fxSpawnFalling(mode) {
     rot: Math.random() * Math.PI * 2,
     vr: (Math.random() - 0.5) * 0.7,
     a: 0.4 + Math.random() * 0.4,
+    // Confetti pieces carry a color and a private flutter tempo, and
+    // swing and spin harder than petals do; other modes ignore these.
+    ...(mode === "confetti" ? {
+      col: CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0],
+      fl: 2.0 + Math.random() * 2.6,
+      sway: 14 + Math.random() * 20,
+      vr: (Math.random() - 0.5) * 1.6,
+      a: 0.55 + Math.random() * 0.35,
+    } : {}),
   }));
 }
 function fxClear() {
@@ -976,6 +991,18 @@ function fxDraw(ts, dt) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
       ctx.fill();
+    } else if (fxMode === "confetti") {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      // Fake the 3D tumble of a paper scrap: it flips edge-on and back
+      // (vertical squash through zero) while its width breathes a
+      // little out of phase, so no two pieces turn alike.
+      const flip = Math.cos(ts * 0.001 * p.fl + p.ph * 2.3);
+      ctx.scale(0.7 + 0.3 * Math.sin(ts * 0.001 * p.fl * 0.9 + p.ph), flip);
+      ctx.fillStyle = `rgba(${p.col}, ${p.a.toFixed(3)})`;
+      ctx.fillRect(-p.s * 0.8, -p.s * 0.45, p.s * 1.6, p.s * 0.9);
+      ctx.restore();
     } else {
       ctx.save();
       ctx.translate(p.x, p.y);
