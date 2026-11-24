@@ -459,21 +459,22 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .card-body a.gossip-link:hover { color: var(--accent); }
 
 /* ---------- Special-date postcard ----------
-   A fixed 4:5 composition, displayed scaled-to-fit like the keepsake
+   A fixed 3:4 composition, displayed scaled-to-fit like the keepsake
    image itself. The painting sits full-bleed at the top — the whole
    card width, square and uncropped, no paper around it — and the cream
    paper exists only below the painting, as the text zone. The
    arithmetic is anchored on the painting's native square: paper
-   height = width × 1.25 (aspect-ratio), the photo takes the first
-   100cqw of height, and the remaining 25cqw is the text zone with
-   fixed slots (a title row with the meta line at its right / a passage
-   of at most two lines / a slim footer row). Every internal measure is
-   in cqw (the postcard is a container), so the composition scales
-   proportionally with the card's width, is identical at 620px and at
-   359px in both languages, and the keepsake draws the same numbers at
-   1080×1350. The cream is constant in both themes, like a physical
-   card. The card's own radius rounds the photo's top corners and the
-   paper's bottom corners; where they meet, both are square. */
+   height = width × 4/3 (aspect-ratio), the photo takes the first
+   100cqw of height, and the remaining 33.3cqw is the text zone with
+   fixed slots (a title row with the meta line at its right / a
+   subtitle line / a passage of at most three lines / a slim footer
+   row). Every internal measure is in cqw (the postcard is a
+   container), so the composition scales proportionally with the
+   card's width, is identical at 620px and at 359px in both languages,
+   and the keepsake draws the same numbers at 1080×1440. The cream is
+   constant in both themes, like a physical card. The card's own
+   radius rounds the photo's top corners and the paper's bottom
+   corners; where they meet, both are square. */
 .card.has-postcard {
   padding: 0;
   background: transparent;
@@ -484,7 +485,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 
 .postcard {
   container-type: inline-size;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 3 / 4;
   width: 100%;
   background: #faf4e6;
   border-radius: 14px;
@@ -507,7 +508,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 1.55cqw 5.2cqw 1.35cqw;
+  padding: 1.2cqw 5.2cqw;
 }
 .postcard .pc-head {
   display: flex;
@@ -536,19 +537,29 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
    its gloss follows smaller, so a long gloss never pushes the meta
    off the card. */
 .postcard .pc-title-gloss { font-size: 0.66em; }
+.postcard .pc-sub {
+  margin: 0.35cqw 0 0;
+  font-size: 2.35cqw;
+  line-height: 1.35;
+  color: #6f6656;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .postcard .pc-passage {
-  margin: 0.85cqw 0 0;
+  margin: 0.6cqw 0 0;
   font-size: 3.65cqw;
-  line-height: 1.52;
-  /* Safeguard only: the copy is written to fit these two lines. */
+  line-height: 1.49;
+  /* Safeguard only: the copy is written to fit these three lines. */
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .postcard .pc-foot {
   margin-top: auto;
-  padding-top: 0.55cqw;
+  padding-top: 0.4cqw;
   border-top: 1px solid rgba(43, 38, 32, 0.10);
   display: flex;
   align-items: center;

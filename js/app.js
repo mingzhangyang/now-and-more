@@ -1218,12 +1218,13 @@ function buildMyDaysForm() {
    painting full-bleed across the top of the card, and below it a strip
    of cream paper carrying a few lines. The geometry is pure proportion,
    anchored on the painting's native square: paper height = paper width
-   × 1.25, the photo takes the first full width of height, and the text
-   zone is the deterministic remainder (25% of the height) with fixed
-   slots (title row with the meta at its right / a passage of at most
-   two lines / a slim footer row). The stage renders it with
-   container-query units so the composition is identical at any width;
-   the keepsake draws the same numbers at 1080×1350. Copy lives in
+   × 4/3, the photo takes the first full width of height, and the text
+   zone is the deterministic remainder (a third of the width) with fixed
+   slots (title row with the meta at its right / a subtitle line / a
+   passage of at most three lines / a slim footer row). The stage
+   renders it with container-query units so the composition is identical
+   at any width; the keepsake draws the same numbers at 1080×1440. Copy
+   lives in
    POSTCARD_COPY (data.js) and is written to fit the passage slot —
    length discipline is part of the design.
 
@@ -1554,6 +1555,7 @@ function renderPostcard(sel) {
   const copy = POSTCARD_COPY[sel.key];
   if (!copy) return;
   const title = lang === "zh" ? copy.titleZh : copy.titleEn;
+  const subtitle = lang === "zh" ? copy.subZh : copy.subEn;
   const passage = lang === "zh" ? copy.passZh : copy.passEn;
   const art = lang === "en" && copy.artEn ? copy.artEn : copy.art;
   const mp = postcardMetaParts(sel);
@@ -1574,6 +1576,7 @@ function renderPostcard(sel) {
     `<div class="pc-photo"><img src="assets/special-dates/${art}.webp" alt="${esc(title)}" loading="lazy" decoding="async"></div>` +
     `<div class="pc-text">` +
     `<div class="pc-head"><h3 class="pc-title">${titleHtml}</h3><p class="pc-meta">${metaHtml}</p></div>` +
+    (subtitle ? `<p class="pc-sub">${esc(subtitle)}</p>` : "") +
     `<p class="pc-passage">${esc(passage)}</p>` +
     `<div class="pc-foot"><span class="pc-seal">时</span><span>${esc(brand)}</span></div>` +
     `</div></div>`;
@@ -2583,12 +2586,14 @@ function renderKeepsakeCanvas(snap, pal) {
 
 /* ---------- Postcard keepsake ----------
    When the card on stage is a special-date postcard, the keepsake IS
-   the postcard: the same fixed composition, drawn at 1080×1350. The
-   numbers below are the stage composition's proportions at that scale —
-   the painting full-bleed at 1080×1080 across the top, and the cream
-   paper only below it: a 270px text zone with fixed slots (a title row
-   with the meta at its right / a passage of at most two lines / a slim
-   footer row), side padding 56. */
+   the postcard: the same fixed composition, drawn at 1080×1440 (3:4 —
+   ordinary keepsakes stay 1080×1350). The numbers below are the stage
+   composition's proportions at that scale — the painting full-bleed at
+   1080×1080 across the top, and the cream paper only below it: a 360px
+   text zone with fixed slots (a title row with the meta at its right /
+   a subtitle line / a passage of at most three lines / a slim footer
+   row), side padding 56. */
+const PC_KEEP_H = 1440;
 const PC_PAPER = "#faf4e6";
 const PC_INK = "#2b2620";
 const PC_INK_SOFT = "#6f6656";
@@ -2609,10 +2614,11 @@ function loadPostcardImage(src) {
 function renderPostcardKeepsake(sel, img, serif) {
   const cv = document.createElement("canvas");
   cv.width = KEEP_W;
-  cv.height = KEEP_H;
+  cv.height = PC_KEEP_H;
   const ctx = cv.getContext("2d");
   const copy = POSTCARD_COPY[sel.key];
   const title = lang === "zh" ? copy.titleZh : copy.titleEn;
+  const subtitle = lang === "zh" ? copy.subZh : copy.subEn;
   const passage = lang === "zh" ? copy.passZh : copy.passEn;
   const brand = lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有";
   const mp = postcardMetaParts(sel);
@@ -2620,10 +2626,10 @@ function renderPostcardKeepsake(sel, img, serif) {
   // The cream paper backs the whole card (it is what the text zone is
   // made of); the painting then covers the top 1080×1080 full-bleed.
   ctx.fillStyle = PC_PAPER;
-  ctx.fillRect(0, 0, KEEP_W, KEEP_H);
+  ctx.fillRect(0, 0, KEEP_W, PC_KEEP_H);
   ctx.drawImage(img, 0, 0, KEEP_W, KEEP_W);
 
-  // Text zone: y 1080→1350, x = 56, width 968. Fixed slots, mirroring
+  // Text zone: y 1080→1440, x = 56, width 968. Fixed slots, mirroring
   // the stage composition's cqw numbers at this scale.
   const tx = 56, tw = KEEP_W - 112;
   ctx.textAlign = "left";
@@ -2672,32 +2678,41 @@ function renderPostcardKeepsake(sel, img, serif) {
   }
   if (mp.post) ctx.fillText(mp.post, mx, rowBaseline);
 
-  // Passage: 39px at ~1.5 line height, up to the two lines the copy
-  // was written for (baselines 1212 / 1271).
+  // Subtitle: one quiet line under the title row (baseline 1186).
+  if (subtitle) {
+    ctx.fillStyle = PC_INK_SOFT;
+    ctx.font = `400 25px ${serif}`;
+    setLetterSpacing(ctx, "1.5px");
+    ctx.fillText(subtitle, tx, 1186);
+    setLetterSpacing(ctx, "0px");
+  }
+
+  // Passage: 39px at ~1.5 line height, up to the three lines the copy
+  // was written for (baselines 1228 / 1287 / 1346).
   ctx.fillStyle = PC_INK;
   ctx.font = `400 39px ${serif}`;
-  const lines = wrapText(ctx, passage, tw).slice(0, 2);
-  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1212 + i * 59));
+  const lines = wrapText(ctx, passage, tw).slice(0, 3);
+  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1228 + i * 59));
 
   // Footer: hairline, the 时 seal at the left, the brand at the right.
   ctx.strokeStyle = "rgba(43, 38, 32, 0.10)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(tx, 1303);
-  ctx.lineTo(tx + tw, 1303);
+  ctx.moveTo(tx, 1393);
+  ctx.lineTo(tx + tw, 1393);
   ctx.stroke();
-  roundRectPath(ctx, tx, 1309, 25, 25, 5);
+  roundRectPath(ctx, tx, 1399, 25, 25, 5);
   ctx.fillStyle = PC_ACCENT;
   ctx.fill();
   ctx.fillStyle = "#fff8ec";
   ctx.font = `900 17px ${serif}`;
   ctx.textAlign = "center";
-  ctx.fillText("时", tx + 12.5, 1309 + 18);
+  ctx.fillText("时", tx + 12.5, 1399 + 18);
   ctx.textAlign = "right";
   ctx.fillStyle = PC_INK_SOFT;
   ctx.font = `400 22px ${serif}`;
   setLetterSpacing(ctx, "2px");
-  ctx.fillText(brand, tx + tw, 1330);
+  ctx.fillText(brand, tx + tw, 1420);
   setLetterSpacing(ctx, "0px");
 
   return cv;
