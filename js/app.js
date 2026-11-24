@@ -83,80 +83,10 @@ const randInt = (max) => Math.floor(Math.random() * max);
 const pick = (arr) => arr[randInt(arr.length)];
 
 /* ================= No-repeat decks （去重） ================= */
-/* Every enumerated pool is drawn as a shuffle-bag: the pool is shuffled,
-   drawn without replacement, and reshuffled only when the bag is empty —
-   so within a category nothing repeats until the whole pool has been
-   shown once. The first draw of a fresh bag never equals the last draw
-   of the previous bag (pool size > 1). The weighted category choice is
-   untouched; decks govern only which item inside the category appears.
-   Decks persist in localStorage under one versioned key, so a reload
-   resumes mid-bag instead of re-showing recent cards. Each deck records
-   its pool size and is rebuilt (alone) when its pool has grown or shrunk
-   since — pools here are expanded often, and a stale index must never
-   surface. Deck keys are per language where the pool is (poem:zh vs
-   poem:en, quotes:zh vs quotes:en); bilingual single pools (thought,
-   science…) share one deck because both languages render the same item. */
-const LS_DECKS = "nam-decks-v1";
-const deckStore = loadDeckStore();
-
-function loadDeckStore() {
-  const fresh = { v: 1, d: {}, g: {}, fp: [] };
-  try {
-    const raw = localStorage.getItem(LS_DECKS);
-    if (!raw) return fresh;
-    const s = JSON.parse(raw);
-    if (!s || s.v !== 1 || typeof s.d !== "object" || s.d === null) return fresh;
-    if (typeof s.g !== "object" || s.g === null) s.g = {};
-    if (!Array.isArray(s.fp)) s.fp = [];
-    return s;
-  } catch (e) { return fresh; }
-}
-function saveDeckStore() {
-  try {
-    localStorage.setItem(LS_DECKS, JSON.stringify(deckStore));
-  } catch (e) { /* storage unavailable (private mode): decks live in memory only */ }
-}
-function shuffledIndices(n) {
-  const a = Array.from({ length: n }, (_, i) => i);
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = randInt(i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-function deckValid(d, n) {
-  if (!d || d.n !== n || !Array.isArray(d.r)) return false;
-  const seen = new Set();
-  for (const i of d.r) {
-    if (!Number.isInteger(i) || i < 0 || i >= n || seen.has(i)) return false;
-    seen.add(i);
-  }
-  return d.l === null || d.l === undefined ||
-    (Number.isInteger(d.l) && d.l >= 0 && d.l < n);
-}
-/* Draw the next index from deck `key` for a pool of size n. The bag is
-   the array r, drawn from its end; l is the most recent draw. */
-function deckDraw(key, n) {
-  if (n <= 0) return -1;
-  let d = deckStore.d[key];
-  if (!deckValid(d, n)) {
-    const lastOk = d && Number.isInteger(d.l) && d.l >= 0 && d.l < n ? d.l : null;
-    d = { n, r: shuffledIndices(n), l: lastOk };
-    deckStore.d[key] = d;
-  }
-  if (d.r.length === 0) {
-    d.r = shuffledIndices(n);
-    // Seam rule: the first draw of the new bag (the last slot, which
-    // pop() takes) must differ from the previous bag's final draw.
-    if (n > 1 && d.l !== null && d.l !== undefined && d.r[d.r.length - 1] === d.l) {
-      [d.r[0], d.r[d.r.length - 1]] = [d.r[d.r.length - 1], d.r[0]];
-    }
-  }
-  const idx = d.r.pop();
-  d.l = idx;
-  saveDeckStore();
-  return idx;
-}
+/* Enumerated pools use shuffle bags. The state is published only after
+   the selected card renders; a reload resumes the last committed bag. */
+const deckState = NAM_DEDUP.createDeckState(localStorage, () => Math.random());
+const deckDraw = (key, n) => deckState.draw(key, n);
 
 /* Gossip has no fixed pool: headlines arrive from the feed and change
    over time. Dedupe by headline — the stable identity — kept per
@@ -166,10 +96,10 @@ function deckDraw(key, n) {
    previous cycle's last headline held back for one draw, so it cannot
    repeat back-to-back (list size > 1). */
 function drawGossipItem() {
-  let g = deckStore.g[lang];
+  let g = deckState.state.g[lang];
   if (!g || !Array.isArray(g.seen)) {
     g = { seen: [], last: null };
-    deckStore.g[lang] = g;
+    deckState.state.g[lang] = g;
   }
   const alive = new Set(gossipCache.map((i) => i.title));
   g.seen = g.seen.filter((title) => alive.has(title));
@@ -183,7 +113,6 @@ function drawGossipItem() {
   g.seen.push(item.title);
   if (g.seen.length > 500) g.seen = g.seen.slice(-500);
   g.last = item.title;
-  saveDeckStore();
   return item;
 }
 
@@ -1359,9 +1288,7 @@ function postcardDayKey(date) {
 /* Today's postcard as a renderable selection, resolved once per local
    day (the solar-term solver is not re-run on every draw). */
 let postcardCache = { stamp: "", sel: null };
-function todaysPostcardSelection() {
-  const now = new Date();
-  const stamp = postcardDayKey(now);
+function todaysPostcardSelection(now, stamp) {
   if (postcardCache.stamp !== stamp) {
     const found = postcardForDate(now);
     postcardCache = {
@@ -1371,13 +1298,16 @@ function todaysPostcardSelection() {
   }
   return postcardCache.sel;
 }
-function postcardGifted() {
-  try { return !!localStorage.getItem("nam-postcard-" + postcardDayKey(new Date())); }
+let postcardGiftStamp = "";
+function postcardGifted(stamp) {
+  if (postcardGiftStamp === stamp) return true;
+  try { return !!localStorage.getItem("nam-postcard-" + stamp); }
   catch (e) { return false; }
 }
-function markPostcardGifted() {
-  try { localStorage.setItem("nam-postcard-" + postcardDayKey(new Date()), "1"); }
-  catch (e) { /* private mode: the gift simply re-offers next load */ }
+function markPostcardGifted(stamp) {
+  postcardGiftStamp = stamp;
+  try { localStorage.setItem("nam-postcard-" + postcardGiftStamp, "1"); }
+  catch (e) { /* Still delivered for this page session. */ }
 }
 
 /* The meta line inside the composition, as segments so the term's exact
@@ -1418,7 +1348,6 @@ function postcardMetaText(sel) {
    the card. In ambient mode it does not appear at all: the card still
    gifts, silently. */
 const GIFT_NOTICE_MS = 10000;
-let pendingGiftNotice = null; // selection gifted by the in-flight draw
 let giftNoticeSel = null;     // selection the visible notice belongs to
 let giftNoticeTimer = null;
 let giftNoticeHideTimer = null;
@@ -1612,7 +1541,7 @@ function noteForDate(str) {
    here). */
 function drawNoteEntry() {
   if (!notesList.length) return null;
-  let d = deckStore.d["mine"];
+  let d = deckState.state.d["mine"];
   if (!d || !Array.isArray(d.r)) d = { r: [], l: null };
   const alive = new Set(notesList.map((n) => n.id));
   d.r = d.r.filter((id) => alive.has(id));
@@ -1631,35 +1560,33 @@ function drawNoteEntry() {
   }
   const id = d.r.pop();
   d.l = id;
-  deckStore.d["mine"] = d;
-  saveDeckStore();
+  deckState.state.d["mine"] = d;
   return notesList.find((n) => n.id === id) || null;
 }
 
 /* ---------- Dated delivery （必达） ---------- */
-function noteGiftKey() { return "nam-note-" + postcardDayKey(new Date()); }
-function noteDeliveredToday() {
-  try { return !!localStorage.getItem(noteGiftKey()); }
+function noteGiftKey(stamp) { return "nam-note-" + stamp; }
+let deliveredNoteKey = "";
+function noteDeliveredToday(stamp) {
+  const key = noteGiftKey(stamp);
+  if (deliveredNoteKey === key) return true;
+  try { return !!localStorage.getItem(key); }
   catch (e) { return false; }
 }
-function markNoteDelivered(id) {
-  try { localStorage.setItem(noteGiftKey(), String(id)); }
-  catch (e) { /* private mode: the delivery simply re-offers next load */ }
+function markNoteDelivered(id, stamp) {
+  deliveredNoteKey = noteGiftKey(stamp);
+  try { localStorage.setItem(deliveredNoteKey, String(id)); }
+  catch (e) { /* Still delivered for this page session. */ }
 }
 /* Today's dated note as a gift selection — the earliest-created entry
    addressed to today, and only until the day's one delivery has
    happened (the key above is the record). */
-function todaysDatedNoteSelection() {
-  if (!notesList.length || noteDeliveredToday()) return null;
-  const today = noteDayStr(new Date());
+function todaysDatedNoteSelection(now, stamp) {
+  if (!notesList.length || noteDeliveredToday(stamp)) return null;
+  const today = noteDayStr(now);
   const due = notesList.find((n) => n.date === today);
-  return due ? { cat: "mine", note: due, gifted: true } : null;
+  return due ? { cat: "mine", note: due, gifted: true, giftStamp: stamp } : null;
 }
-/* An ungifted postcard queued behind a delivered note is guaranteed as
-   the next draw (see nextSelection). Stamped with its day so a stale
-   queue can never fire into a new day. */
-let pendingPostcardGiftStamp = "";
-
 /* ---------- Source context ---------- */
 /* The short label of the card currently on stage, captured when the
    modal opens and attached to a reflection: a poem's title, a city's
@@ -1925,18 +1852,19 @@ function availableCategories() {
 }
 
 function weightedCategory() {
-  const avail = availableCategories();
-  const total = avail.reduce((s, c) => s + c.weight, 0); // normalized by available sum
-  for (let attempt = 0; attempt < 4; attempt++) {
-    let r = Math.random() * total;
-    let chosen = avail[0].key;
-    for (const c of avail) {
-      if (r < c.weight) { chosen = c.key; break; }
-      r -= c.weight;
-    }
-    if (chosen !== lastCategory || attempt === 3) return chosen;
-  }
-  return "world";
+  return NAM_DEDUP.weightedCategory(availableCategories(), lastCategory, Math.random);
+}
+
+/* Only consume the language actually rendered. Keep the rendered variant
+   on this encounter so toggling back and forth does not consume it again. */
+function selectionForLanguage(sel) {
+  if (sel.cat !== "poem" && sel.cat !== "quotes") return sel;
+  const zh = lang === "zh";
+  const poem = sel.cat === "poem";
+  const key = poem ? (zh ? "poemZh" : "poemEn") : (zh ? "quoteZh" : "quoteEn");
+  if (sel[key]) return sel;
+  const pool = poem ? (zh ? POEMS_ZH : POEMS_EN) : (zh ? QUOTES_ZH : QUOTES_EN);
+  return { ...sel, [key]: pool[deckDraw(sel.cat + ":" + lang, pool.length)] };
 }
 
 function makeSelection(cat) {
@@ -1948,11 +1876,7 @@ function makeSelection(cat) {
       return { cat, city: CITIES[slot] };
     }
     case "poem":
-      return {
-        cat,
-        poemZh: POEMS_ZH[deckDraw("poem:zh", POEMS_ZH.length)],
-        poemEn: POEMS_EN[deckDraw("poem:en", POEMS_EN.length)],
-      };
+      return selectionForLanguage({ cat });
     case "history": {
       const now = new Date();
       const key = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
@@ -1968,11 +1892,7 @@ function makeSelection(cat) {
     case "science":
       return { cat, item: SCIENCE[deckDraw("science", SCIENCE.length)] };
     case "quotes":
-      return {
-        cat,
-        quoteZh: QUOTES_ZH[deckDraw("quotes:zh", QUOTES_ZH.length)],
-        quoteEn: QUOTES_EN[deckDraw("quotes:en", QUOTES_EN.length)],
-      };
+      return selectionForLanguage({ cat });
     case "classics":
       return { cat, item: CLASSICS[deckDraw("classics", CLASSICS.length)] };
     case "almanac":
@@ -2012,12 +1932,11 @@ function makeSelection(cat) {
       const kinds = ["integer", "dice", "coins", "card", "color"];
       const kind = kinds[deckDraw("chance:kind", kinds.length)];
       let value = rollChanceValue(kind);
-      for (let attempt = 0; attempt < 3 && deckStore.fp.includes(chanceFingerprint(kind, value)); attempt++) {
+      for (let attempt = 0; attempt < 3 && deckState.state.fp.includes(chanceFingerprint(kind, value)); attempt++) {
         value = rollChanceValue(kind);
       }
-      deckStore.fp.push(chanceFingerprint(kind, value));
-      if (deckStore.fp.length > 16) deckStore.fp = deckStore.fp.slice(-16);
-      saveDeckStore();
+      deckState.state.fp.push(chanceFingerprint(kind, value));
+      if (deckState.state.fp.length > 16) deckState.state.fp = deckState.state.fp.slice(-16);
       return { cat, kind, value };
     }
     default:
@@ -2275,79 +2194,59 @@ function renderSelection(sel) {
   }
 }
 
-/* The next card to show. Two gifts can fall on the same day, and the
-   order between them is settled: the visitor's own dated note is
-   delivered first （必达）, and an ungifted postcard is then guaranteed
-   as the very next draw. Otherwise, on a special date the postcard
-   comes first: gifted once per device per date, then — the gift
-   opened — it joins the day's rotation with a modest chance (never
-   twice in a row). */
+/* Dated note first, then the day's ungifted postcard. Neither is marked
+   delivered until it has rendered. After the gifts, the postcard joins
+   the rotation with its original 12% chance (never twice in a row). */
 const POSTCARD_POOL_CHANCE = 0.12;
 function nextSelection() {
-  // Gift 1: a note addressed to today outranks everything.
-  const dn = todaysDatedNoteSelection();
-  if (dn) {
-    markNoteDelivered(dn.note.id);
-    lastCategory = "mine";
-    pendingGiftNotice = dn;
-    // Queue the day's postcard gift directly behind the note.
-    const pc0 = todaysPostcardSelection();
-    if (pc0 && !postcardGifted()) pendingPostcardGiftStamp = postcardDayKey(new Date());
-    return dn;
-  }
-  // Gift 2: the postcard queued behind a just-delivered note.
-  if (pendingPostcardGiftStamp) {
-    const stamp = pendingPostcardGiftStamp;
-    pendingPostcardGiftStamp = "";
-    if (stamp === postcardDayKey(new Date())) {
-      const pcq = todaysPostcardSelection();
-      if (pcq && !postcardGifted()) {
-        markPostcardGifted();
-        lastCategory = "postcard";
-        pendingGiftNotice = pcq;
-        return pcq;
-      }
-    }
-  }
-  const pc = todaysPostcardSelection();
+  // Use one local-day snapshot for gift lookup, receipt check and commit.
+  const now = new Date();
+  const stamp = postcardDayKey(now);
+  const dn = todaysDatedNoteSelection(now, stamp);
+  if (dn) return dn;
+  const pc = todaysPostcardSelection(now, stamp);
   if (pc) {
-    if (!postcardGifted()) {
-      markPostcardGifted();
-      lastCategory = "postcard";
-      pendingGiftNotice = pc; // the draw that renders this gift announces it
-      return pc;
-    }
-    if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) {
-      lastCategory = "postcard";
-      return pc;
-    }
+    if (!postcardGifted(stamp)) return { ...pc, gifted: true, giftStamp: stamp };
+    if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) return pc;
   }
-  const cat = weightedCategory();
-  lastCategory = cat;
-  return makeSelection(cat);
+  return makeSelection(weightedCategory());
 }
 
+let drawsReady = false;
+const drawGate = NAM_DEDUP.createDrawGate((task) => setTimeout(task, 180));
+
 function drawCard() {
-  if (gossipEndpoint() && Date.now() - gossipFetchedAt >= GOSSIP_CACHE_MS) refreshGossip();
-  currentSelection = nextSelection();
-  encounter += 1;
-  lastDrawAt = Date.now();
+  // During startup wait for the library (or its existing timeout), so a
+  // manual click cannot race the initial dated-note/postcard delivery.
+  if (!drawsReady || drawGate.pending) return false;
   const card = $("card");
   card.classList.add("leaving");
-  setTimeout(() => {
-    renderSelection(currentSelection);
-    $("encounter").textContent = t().encounter(encounter);
-    card.classList.remove("leaving");
-    // The gift notice rides the gift's own render; any other card
-    // change takes the notice away with the postcard it belonged to.
-    if (pendingGiftNotice) {
-      const giftSel = pendingGiftNotice;
-      pendingGiftNotice = null;
-      showGiftNotice(giftSel);
-    } else {
-      dismissGiftNotice();
+  return drawGate.request(() => {
+    try {
+      if (gossipEndpoint() && Date.now() - gossipFetchedAt >= GOSSIP_CACHE_MS) refreshGossip();
+      // Select at the end of the transition using the current language.
+      // The old selection remains the displayed card until this commits.
+      const selected = deckState.transact(() => {
+        const sel = nextSelection();
+        renderSelection(sel);
+        return sel;
+      });
+      currentSelection = selected;
+      lastCategory = selected.cat;
+      encounter += 1;
+      lastDrawAt = Date.now();
+      $("encounter").textContent = t().encounter(encounter);
+      if (selected.gifted) {
+        if (selected.cat === "mine") markNoteDelivered(selected.note.id, selected.giftStamp);
+        if (selected.cat === "postcard") markPostcardGifted(selected.giftStamp);
+        showGiftNotice(selected);
+      } else {
+        dismissGiftNotice();
+      }
+    } finally {
+      card.classList.remove("leaving");
     }
-  }, 180);
+  });
 }
 
 /* ================= Clock engine ================= */
@@ -2545,13 +2444,19 @@ function applyStaticStrings() {
     chip.textContent = s.clockStyles[chip.dataset.style];
   });
   refreshSignOptions();
-  if (currentSelection) {
-    // Language-specific categories (classics/almanac vs proverbs/word) may not
-    // exist in the new language: draw a fresh card instead of rendering them.
-    // The postcard exists in both languages and simply re-renders.
+  if (currentSelection && !drawGate.pending) {
+    // If a draw is in flight it will select in the latest language, so do
+    // not consume an extra variant of the card that is leaving.
     if (currentSelection.cat === "postcard" ||
-        availableCategories().some((c) => c.key === currentSelection.cat)) renderSelection(currentSelection);
-    else { drawCard(); return; }
+        availableCategories().some((c) => c.key === currentSelection.cat)) {
+      currentSelection = deckState.transact(() => {
+        const sel = selectionForLanguage(currentSelection);
+        renderSelection(sel);
+        return sel;
+      });
+    } else {
+      drawCard();
+    }
   }
   // A visible gift notice follows the language like the card does.
   if (giftNoticeSel) {
@@ -3379,6 +3284,7 @@ let initialDrawDone = false;
 function initialDraw() {
   if (initialDrawDone) return;
   initialDrawDone = true;
+  drawsReady = true;
   drawCard();
 }
 const notesReady = notesLoadAll();

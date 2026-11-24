@@ -26,6 +26,14 @@ A single-page clock. At the centre, a precise real clock that never moves (certa
 - 浅色宣纸主题，深色模式跟随系统 (`prefers-color-scheme`)。无账号、无统计、无框架、无构建步骤。
 - **三页独立页 / Three standalone pages** — 设置面板链向 `library.html`（我的库）、`privacy.html`（隐私政策）与 `about.html`（关于）三页（双语、随站内语言与外观）：你的库、本站不追踪且个人数据只存本地的完整说明，以及这件作品的自述。
 
+## 抽卡去重 / Draw deduplication
+
+固定内容池使用无放回洗牌袋，正常循环边界不重复；仅在成功渲染后提交进度，并使用 `nam-decks-v1` 在同一浏览器重载时恢复。诗词和名言独立记录中英文进度，切换语言时才抽取需要展示的版本。同一相遇内切回已展示的语言不会再消耗牌组。手动、定时和键盘抽卡共用一个过渡锁；特殊日期赠礼优先，日期确定内容和纯随机值仍允许设计上的重复。动态新闻协议、稳定内容 ID 与多标签页协调留给后续批次。
+
+Fixed pools draw without replacement and avoid repeats across normal bag boundaries. Progress commits after rendering and survives reload in the same browser via `nam-decks-v1`. Poems and quotes consume only the language rendered; revisiting an already displayed variant of the same encounter consumes nothing. Manual, keyboard and timed draws share a transition lock. Date-specific gifts retain priority; deterministic daily cards and chance values may repeat by design. Dynamic-news protocol, stable content IDs and cross-tab coordination are follow-up work.
+
+Regression tests (Node 22+, no dependencies): `node --test tests/dedup.test.cjs`.
+
 ## 本地运行 / Run locally
 
 纯静态文件，用任何静态服务器即可，例如：
