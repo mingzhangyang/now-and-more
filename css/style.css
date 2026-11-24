@@ -905,6 +905,7 @@ body.ambient .footer,
 body.ambient .controls,
 body.ambient .hint,
 body.ambient .gift-notice,
+body.ambient #card-foot,
 body.ambient #note-fab { display: none; }
 body.ambient .stage { justify-content: center; padding: 0 0 10px; }
 body.ambient .clock { transform: scale(1.18); }
@@ -983,6 +984,66 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
 }
 .capture-action:hover, .capture-action:focus-visible { color: var(--accent); border-color: var(--accent); }
 #capture-download { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+/* ---------- Card foot & full-text reading ---------- */
+.card-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+.card-foot[hidden] { display: none; }
+.full-text-btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+}
+.full-text-btn:hover, .full-text-btn:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.full-overlay { backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.full-dialog {
+  position: relative;
+  width: min(620px, 94vw);
+  max-height: 82vh;
+  align-items: stretch;
+  gap: 16px;
+  padding: 26px 30px 22px;
+}
+.full-close {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+}
+.full-close:hover, .full-close:focus-visible { color: var(--accent); }
+.full-cat {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: var(--accent);
+  text-align: center;
+}
+.full-body {
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.95;
+  color: var(--ink);
+}
+.full-body p { margin: 0 0 1em; }
+.full-body p:last-child { margin-bottom: 0; }
+.full-source {
+  font-family: var(--serif);
+  font-size: 14px;
+  color: var(--ink-soft);
+  text-align: right;
+}
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {

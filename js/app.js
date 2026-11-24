@@ -1710,6 +1710,47 @@ $("note-overlay").addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("note-overlay").hidden) closeNoteModal();
 });
+
+/* ---------- Full-text reading modal ---------- */
+/* The complete passage behind a classics excerpt. Pure reading:
+   opening or closing consumes no draw, touches no deck state, and
+   never auto-opens — only the card's quiet 全文 door leads here. */
+let fullOpener = null; // element to refocus on close
+
+function openFullText(item, opener) {
+  if (ambientOn) return; // no reading modal in ambient mode
+  if (!item || !item.full) return;
+  fullOpener = opener || null;
+  $("full-cat").textContent = t().categories.classics;
+  $("full-close").setAttribute("aria-label", lang === "zh" ? "关闭" : "Close");
+  $("full-body").innerHTML = item.full
+    .split(/\n\n+/)
+    .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  $("full-source").textContent = item.source || "";
+  $("full-overlay").hidden = false;
+  document.querySelector(".full-dialog").scrollTop = 0;
+  $("full-close").focus();
+}
+function closeFullText() {
+  if ($("full-overlay").hidden) return;
+  $("full-overlay").hidden = true;
+  if (fullOpener && fullOpener.isConnected) fullOpener.focus();
+  fullOpener = null;
+}
+$("full-text-btn").addEventListener("click", (e) => {
+  e.stopPropagation(); // the card itself advances the draw on click
+  if (currentSelection && currentSelection.cat === "classics") {
+    openFullText(currentSelection.item, e.currentTarget);
+  }
+});
+$("full-close").addEventListener("click", closeFullText);
+$("full-overlay").addEventListener("click", (e) => {
+  if (e.target === $("full-overlay")) closeFullText();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("full-overlay").hidden) closeFullText();
+});
 $("note-save").addEventListener("click", async () => {
   const text = $("note-text").value.trim();
   if (!text) return;
@@ -2003,6 +2044,7 @@ function renderSelection(sel) {
   // The postcard is its own surface: the stage card's chrome (header,
   // translucent panel) steps aside so the cream paper IS the card.
   $("card").classList.toggle("has-postcard", sel.cat === "postcard");
+  $("card-foot").hidden = true; // re-enabled below for classics with a full text
   if (sel.cat === "postcard") { renderPostcard(sel); return; }
   let meta = "";
   let body = "";
@@ -2191,6 +2233,14 @@ function renderSelection(sel) {
     : s.categories[sel.cat];
   $("card-meta").textContent = meta;
   $("card-body").innerHTML = body;
+
+  // A classics excerpt whose complete passage is on file gets a quiet
+  // door to the full text at the card's foot (outside #card-body, so
+  // the keepsake keeps capturing the excerpt only).
+  if (sel.cat === "classics" && sel.item && typeof sel.item.full === "string" && sel.item.full) {
+    $("full-text-btn").textContent = `${s.fullText} ›`;
+    $("card-foot").hidden = false;
+  }
 
   // A world-city card's local time is live text, not a snapshot: give it
   // its own span so tick() can advance it every second, in step with the
@@ -2603,7 +2653,9 @@ $("card").addEventListener("click", (e) => {
   drawCard();
 });
 $("card").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") drawCard();
+  // Enter on the card draws; Enter on the 全文 button must only open
+  // the reading modal (the button's own click), never draw first.
+  if (e.key === "Enter" && !e.target.closest("#card-foot")) drawCard();
 });
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && !e.repeat && e.target === document.body) {

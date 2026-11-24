@@ -35,8 +35,8 @@
     } catch (e) { /* storage unavailable: fall back to system preference */ }
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=23">
-<link rel="stylesheet" href="assets/fonts/fonts.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=27">
+<link rel="stylesheet" href="assets/fonts/fonts.css?v=27">
 </head>
 <body data-clock-style="paper">
 <div id="glow" aria-hidden="true"></div>
@@ -158,6 +158,12 @@
       <span id="card-meta" class="card-meta"></span>
     </div>
     <div id="card-body" class="card-body"></div>
+    <!-- A classics excerpt whose complete passage is on file gets a
+         quiet door to the full text here. The button lives outside
+         #card-body, so the keepsake keeps capturing the excerpt only. -->
+    <div id="card-foot" class="card-foot" hidden>
+      <button id="full-text-btn" type="button" class="full-text-btn">全文 ›</button>
+    </div>
   </section>
 
   <div class="controls">
@@ -230,6 +236,17 @@
   </div>
 </div>
 
+<!-- Full-text reading modal: the complete passage behind a classics
+     card's excerpt. Pure reading — opening it touches no draw state. -->
+<div id="full-overlay" class="capture-overlay full-overlay" hidden>
+  <div class="capture-dialog full-dialog" role="dialog" aria-modal="true" aria-labelledby="full-cat">
+    <button id="full-close" type="button" class="full-close" aria-label="关闭">×</button>
+    <div id="full-cat" class="full-cat">国学经典</div>
+    <div id="full-body" class="full-body"></div>
+    <div id="full-source" class="full-source"></div>
+  </div>
+</div>
+
 <!-- Keepsake capture result: the frozen moment as a shareable PNG -->
 <div id="capture-overlay" class="capture-overlay" hidden>
   <div class="capture-dialog" role="dialog" aria-modal="true" aria-labelledby="capture-title">
@@ -243,10 +260,10 @@
   </div>
 </div>
 
-<script src="js/data.js?v=23"></script>
-<script src="js/dedup.js?v=23"></script>
-<script src="gossip-service/news-id.js?v=23"></script>
-<script src="js/gossip.js?v=23"></script>
-<script src="js/app.js?v=23"></script>
+<script src="js/data.js?v=27"></script>
+<script src="js/dedup.js?v=27"></script>
+<script src="gossip-service/news-id.js?v=27"></script>
+<script src="js/gossip.js?v=27"></script>
+<script src="js/app.js?v=27"></script>
 </body>
 </html>
