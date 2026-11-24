@@ -26,6 +26,7 @@ const I18N = {
       proverbs: "英文谚语",
       word: "每日一词",
       gossip: "此刻热点",
+      mine: "我的字句",
     },
     world: {
       localTime: "当地时间",
@@ -117,6 +118,24 @@ const I18N = {
     captureDownload: "保存图片",
     captureShare: "分享",
     captureClose: "关闭",
+    notes: {
+      addButton: "＋ 写一句",
+      modalTitle: "写一句",
+      types: { reflection: "心得", memo: "备忘" },
+      placeholder: "写下此刻的一句话…",
+      dateLabel: "选个日子（可选）",
+      dateHint: "选了日子，这句话会在那天送达",
+      save: "保存",
+      cancel: "取消",
+      storeError: "这台设备存不下",
+      giftNotice: "你给今天的自己留了一句话",
+      libraryLabel: "我的库",
+      storageNote: "只存在这台设备上",
+      empty: "还没有写下什么",
+      deleteLabel: "删除",
+    },
+    privacyLabel: "隐私政策",
+    aboutLabel: "关于",
   },
   en: {
     title: "Now, and More",
@@ -141,6 +160,7 @@ const I18N = {
       proverbs: "A Proverb",
       word: "Word of the Day",
       gossip: "Trending Now",
+      mine: "My Words",
     },
     world: {
       localTime: "local time",
@@ -232,6 +252,24 @@ const I18N = {
     captureDownload: "Save image",
     captureShare: "Share",
     captureClose: "Close",
+    notes: {
+      addButton: "+ Add a note",
+      modalTitle: "Add a note",
+      types: { reflection: "Reflection", memo: "Memo" },
+      placeholder: "A line for this moment…",
+      dateLabel: "Pick a date (optional)",
+      dateHint: "With a date, this note is delivered that day",
+      save: "Save",
+      cancel: "Cancel",
+      storeError: "This device can't store notes",
+      giftNotice: "A note you left for today",
+      libraryLabel: "My notes",
+      storageNote: "Stored only on this device",
+      empty: "Nothing written yet",
+      deleteLabel: "Delete",
+    },
+    privacyLabel: "Privacy",
+    aboutLabel: "About",
   },
 };
 
@@ -1691,8 +1729,9 @@ const POSTCARD_COPY = {
 
 /* ---------- Category weights ---------- */
 /* Weights are relative: the draw normalizes by the sum of the weights of the
-   categories available in the current language (and gossip only counts when
-   its feed has loaded). */
+   categories available in the current language (gossip only counts when
+   its feed has loaded, and "mine" — the visitor's own notes — only when
+   their library is non-empty). */
 const CATEGORY_WEIGHTS = [
   { key: "world", weight: 20 },
   { key: "poem", weight: 16 },
@@ -1707,5 +1746,6 @@ const CATEGORY_WEIGHTS = [
   { key: "word", weight: 5 },
   { key: "chance", weight: 8 },
   { key: "memory", weight: 4 },
+  { key: "mine", weight: 6 },
   { key: "gossip", weight: 2 },
 ];

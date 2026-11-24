@@ -18,10 +18,13 @@ A single-page clock. At the centre, a precise real clock that never moves (certa
   - 一个念头 A Thought (15)：双语认知短句。
   - 纯偶然 Pure Chance (10)：当场生成的随机整数、骰子、硬币序列、抽牌、随机颜色。
   - 你的从前 Your Past (5)：回望提示，只提问，不编造你的记忆。
+- **写一句 / Add a note** — 你可以写下一句心得或备忘（≤120 字），存进只属于这台设备的库（IndexedDB），日后像其他内容一样随机回来相遇；若选定了日期，它会在那天作为第一张卡准时送达。入口藏在右下角（悬停 / 上滑 / 聚焦时浮现），设置里的「我的库」也常驻一个。
+- **特殊日明信片 / Special-date postcards** — 节气与节日当天，第一张卡是一张明信片：画满幅在上，下方纸面写几行字；留影即 1080×1440 的成图。
 - **秒层随机 / Second-layer randomness** — 左下角每秒跳一个新随机数，背景微光每秒随机漂移，还有一条走完一分钟的细进度线。
 - **双语 / Bilingual** — 中文 / English 一键切换，按浏览器语言自动首选，选择保存在 localStorage。界面、城市名、诗歌、念头、历史全部双语。
 - **交互 / Interaction** — 点卡片、点「再抽一张 / Draw another」或按空格立刻抽下一张；计数器记录「第 N 次相遇 / Encounter N」。同一类别不会连续出现两次（可避免时）。
 - 浅色宣纸主题，深色模式跟随系统 (`prefers-color-scheme`)。无账号、无统计、无框架、无构建步骤。
+- **隐私与关于 / Privacy & About** — 设置面板底部链向 `privacy.html` 与 `about.html` 两页（双语、随站内语言与外观）：本站不追踪、个人数据只存本地的完整说明，以及这件作品的自述。
 
 ## 本地运行 / Run locally
 

@@ -1378,13 +1378,15 @@ function postcardMetaText(sel) {
 /* ================= Gift notice （赠送提示） =================
    The gift moment gets one quiet announcement: a slim pill under the
    brand row that names the day and the gesture （今日大雪 · 送你一张明信
-   片 / "Daxue today · a postcard for you"). It belongs to the gift
-   only — never to pool re-entries, never to ordinary days — and it is
-   page chrome, not part of the card, so it never enters a keepsake.
-   It dismisses itself after ~10 s, when the stage card changes away
-   from the postcard, or when the visitor closes it; closing it never
-   touches the card. In ambient mode it does not appear at all: the
-   card still gifts, silently. */
+   片 / "Daxue today · a postcard for you"). A dated note delivered on
+   its day (see the notes module below) borrows the same pill with its
+   own line （你给今天的自己留了一句话）. It belongs to the gift only —
+   never to pool re-entries, never to ordinary days — and it is page
+   chrome, not part of the card, so it never enters a keepsake. It
+   dismisses itself after ~10 s, when the stage card changes away from
+   the gift, or when the visitor closes it; closing it never touches
+   the card. In ambient mode it does not appear at all: the card still
+   gifts, silently. */
 const GIFT_NOTICE_MS = 10000;
 let pendingGiftNotice = null; // selection gifted by the in-flight draw
 let giftNoticeSel = null;     // selection the visible notice belongs to
@@ -1392,6 +1394,8 @@ let giftNoticeTimer = null;
 let giftNoticeHideTimer = null;
 
 function giftNoticeText(sel) {
+  // A delivered note has its own line; the postcard names its day.
+  if (sel.cat === "mine") return t().notes.giftNotice;
   const copy = POSTCARD_COPY[sel.key];
   if (!copy) return "";
   if (lang === "zh") return `今日${copy.titleZh} · 送你一张明信片`;
@@ -1404,7 +1408,9 @@ function giftNoticeText(sel) {
 function showGiftNotice(sel) {
   if (ambientOn) return; // ambient hides all chrome: gift stays silent
   const bar = $("gift-notice");
-  if (!bar || !POSTCARD_COPY[sel.key]) return;
+  if (!bar) return;
+  if (sel.cat === "postcard" && !POSTCARD_COPY[sel.key]) return;
+  if (sel.cat !== "postcard" && sel.cat !== "mine") return;
   giftNoticeSel = sel;
   $("gift-notice-text").textContent = giftNoticeText(sel);
   $("gift-notice-close").setAttribute("aria-label", t().captureClose);
@@ -1434,6 +1440,484 @@ $("gift-notice-close").addEventListener("click", (e) => {
   dismissGiftNotice();
 });
 
+/* ================= Notes （写一句） — the visitor's own words =================
+   The one pool the visitor writes themselves: a reflection （心得） or a
+   memo （备忘）, at most 120 characters, kept in IndexedDB on this
+   device only (database `nam-notes`, store `notes`) — never uploaded,
+   never in localStorage. Entries join the weighted draw as the "mine"
+   pool (weight 6) whenever the library is non-empty, drawn through a
+   shuffle-bag keyed by entry id so nothing repeats until every entry
+   has surfaced once.
+
+   An entry may carry a date. On that date it is DELIVERED — 必达 —
+   through the same gift machinery as the postcard: first card of the
+   day, gift-notice pill, once per device per date (localStorage key
+   nam-note-<yyyymmdd>). Priority between the day's two gifts: the
+   visitor's own dated words outrank the postcard — the note goes
+   first, and an ungifted postcard is then guaranteed as the very next
+   draw. Only the earliest-created of several same-day notes is
+   gift-delivered; the rest simply stay in that day's rotation.
+   Delivery is not consumption: a delivered note remains in the library
+   and in the random rotation afterwards.
+
+   Entry points: a small floating button in the bottom-right corner,
+   hidden by default — on desktop it fades in only while the pointer is
+   in the corner hotspot or on the button itself; on touch it appears
+   for ~5 s after an upward swipe that starts in the bottom ~30% of the
+   viewport; keyboard focus also reveals it. Ambient mode suppresses it
+   entirely. The settings panel's library section carries a permanent
+   "写一句" button as the always-reliable path. */
+const NOTE_MAX_CHARS = 120;
+const NOTES_DB_NAME = "nam-notes";
+let notesList = [];        // all entries, createdAt ascending (stable pool order)
+let notesDbPromise = null; // Promise<IDBDatabase|null>
+let notesDbFailed = false; // IndexedDB unusable (private mode etc.)
+
+/* ---------- IndexedDB wrapper ---------- */
+function notesOpenDb() {
+  if (notesDbPromise) return notesDbPromise;
+  notesDbPromise = new Promise((resolve) => {
+    let req;
+    try {
+      if (!("indexedDB" in window) || !window.indexedDB) throw new Error("no idb");
+      req = indexedDB.open(NOTES_DB_NAME, 1);
+    } catch (e) {
+      notesDbFailed = true;
+      resolve(null);
+      return;
+    }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("notes")) {
+        db.createObjectStore("notes", { keyPath: "id", autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => { notesDbFailed = true; resolve(null); };
+    req.onblocked = () => { notesDbFailed = true; resolve(null); };
+  });
+  return notesDbPromise;
+}
+function validNote(n) {
+  return !!n && (n.type === "reflection" || n.type === "memo") &&
+    typeof n.text === "string" && n.text.trim() &&
+    typeof n.createdAt === "number";
+}
+async function notesLoadAll() {
+  const db = await notesOpenDb();
+  if (!db) { notesList = []; return; }
+  await new Promise((resolve) => {
+    try {
+      const rq = db.transaction("notes", "readonly").objectStore("notes").getAll();
+      rq.onsuccess = () => {
+        const rows = (rq.result || []).filter(validNote);
+        rows.sort((a, b) => (a.createdAt - b.createdAt) || (a.id - b.id));
+        notesList = rows;
+        resolve();
+      };
+      rq.onerror = () => resolve();
+    } catch (e) { resolve(); }
+  });
+}
+async function notesAdd(entry) {
+  const db = await notesOpenDb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const rq = db.transaction("notes", "readwrite").objectStore("notes").add(entry);
+      rq.onsuccess = () => resolve(rq.result); // the new auto-increment id
+      rq.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+async function notesDelete(id) {
+  const db = await notesOpenDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const rq = db.transaction("notes", "readwrite").objectStore("notes").delete(id);
+      rq.onsuccess = () => resolve(true);
+      rq.onerror = () => resolve(false);
+    } catch (e) { resolve(false); }
+  });
+}
+
+/* ---------- Dates ---------- */
+/* Local YYYY-MM-DD for a Date — the same shape <input type="date">
+   produces, so stored dates compare as plain strings. */
+function noteDayStr(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function noteDateParts(str) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || "");
+  return m ? { y: +m[1], mo: +m[2], d: +m[3] } : null;
+}
+/* 记于 M月d日 / Written on Mon D — the year joins only when it is not
+   the current one, so an old note never masquerades as a recent one. */
+function noteWrittenOn(createdAt) {
+  const d = new Date(createdAt);
+  const withYear = d.getFullYear() !== new Date().getFullYear();
+  if (lang === "zh") {
+    return `记于 ${withYear ? d.getFullYear() + "年" : ""}${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+  const base = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+  return `Written on ${base}${withYear ? ", " + d.getFullYear() : ""}`;
+}
+/* 留给 M月d日 / For Mon D — the day a dated note is addressed to. */
+function noteForDate(str) {
+  const p = noteDateParts(str);
+  if (!p) return "";
+  if (lang === "zh") return `留给 ${p.mo}月${p.d}日`;
+  const base = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
+    .format(new Date(p.y, p.mo - 1, p.d));
+  return `For ${base}`;
+}
+
+/* ---------- Shuffle-bag over entry ids ----------
+   Mirrors deckDraw, but the bag holds entry ids rather than pool
+   indices: deleting an entry prunes it from the bag at once, and new
+   entries join at the next reshuffle. Stored in the same deck store
+   under "mine" (a shape deckDraw never reads — it is only ever drawn
+   here). */
+function drawNoteEntry() {
+  if (!notesList.length) return null;
+  let d = deckStore.d["mine"];
+  if (!d || !Array.isArray(d.r)) d = { r: [], l: null };
+  const alive = new Set(notesList.map((n) => n.id));
+  d.r = d.r.filter((id) => alive.has(id));
+  if (d.l !== null && d.l !== undefined && !alive.has(d.l)) d.l = null;
+  if (!d.r.length) {
+    d.r = Array.from(alive);
+    for (let i = d.r.length - 1; i > 0; i--) {
+      const j = randInt(i + 1);
+      [d.r[i], d.r[j]] = [d.r[j], d.r[i]];
+    }
+    // Seam rule, as with the index decks: a fresh bag does not open
+    // with the previous bag's final draw.
+    if (d.r.length > 1 && d.l !== null && d.l !== undefined && d.r[d.r.length - 1] === d.l) {
+      [d.r[0], d.r[d.r.length - 1]] = [d.r[d.r.length - 1], d.r[0]];
+    }
+  }
+  const id = d.r.pop();
+  d.l = id;
+  deckStore.d["mine"] = d;
+  saveDeckStore();
+  return notesList.find((n) => n.id === id) || null;
+}
+
+/* ---------- Dated delivery （必达） ---------- */
+function noteGiftKey() { return "nam-note-" + postcardDayKey(new Date()); }
+function noteDeliveredToday() {
+  try { return !!localStorage.getItem(noteGiftKey()); }
+  catch (e) { return false; }
+}
+function markNoteDelivered(id) {
+  try { localStorage.setItem(noteGiftKey(), String(id)); }
+  catch (e) { /* private mode: the delivery simply re-offers next load */ }
+}
+/* Today's dated note as a gift selection — the earliest-created entry
+   addressed to today, and only until the day's one delivery has
+   happened (the key above is the record). */
+function todaysDatedNoteSelection() {
+  if (!notesList.length || noteDeliveredToday()) return null;
+  const today = noteDayStr(new Date());
+  const due = notesList.find((n) => n.date === today);
+  return due ? { cat: "mine", note: due, gifted: true } : null;
+}
+/* An ungifted postcard queued behind a delivered note is guaranteed as
+   the next draw (see nextSelection). Stamped with its day so a stale
+   queue can never fire into a new day. */
+let pendingPostcardGiftStamp = "";
+
+/* ---------- Source context ---------- */
+/* The short label of the card currently on stage, captured when the
+   modal opens and attached to a reflection: a poem's title, a city's
+   name, a quote's author… falling back to the category's name. */
+function currentCardLabel() {
+  const sel = currentSelection;
+  if (!sel) return null;
+  const zh = lang === "zh";
+  switch (sel.cat) {
+    case "poem": {
+      const p = zh ? sel.poemZh : sel.poemEn;
+      return p && p.title ? p.title : null;
+    }
+    case "world":
+      if (sel.moon) return t().world.moonTitle;
+      return sel.city ? (zh ? sel.city.zh : sel.city.en) : null;
+    case "history":
+      return sel.entry ? String(sel.entry.year) : null;
+    case "quotes": {
+      const q = zh ? sel.quoteZh : sel.quoteEn;
+      return q && q.author ? q.author : null;
+    }
+    case "classics":
+      return sel.item && sel.item.source ? sel.item.source : null;
+    case "word":
+      return sel.item && sel.item.word ? sel.item.word : null;
+    case "postcard": {
+      const c = POSTCARD_COPY[sel.key];
+      return c ? (zh ? c.titleZh : c.titleEn) : null;
+    }
+    case "astro": {
+      if (sel.subtype === "horoscope" && sel.horo) {
+        const sg = SIGNS[sel.horo.signIdx];
+        return sg ? (zh ? sg.zh : sg.en) : null;
+      }
+      if (sel.subtype === "profile") {
+        const sg = SIGNS[sel.signIdx];
+        return sg ? (zh ? sg.zh : sg.en) : null;
+      }
+      return t().categories.astro;
+    }
+    case "gossip":
+      return sel.item && sel.item.source ? sel.item.source : null;
+    case "mine":
+      return t().categories.mine;
+    default:
+      return t().categories[sel.cat] || null;
+  }
+}
+function noteSourceLine(source) {
+  if (!source) return "";
+  return lang === "zh" ? `读《${source}》时记` : `Written while reading ${source}`;
+}
+
+/* ---------- Library (settings panel) ---------- */
+function renderNotesList() {
+  const wrap = $("notes-list");
+  if (!wrap) return;
+  const s = t().notes;
+  wrap.innerHTML = "";
+  const newestFirst = notesList.slice().reverse();
+  for (const n of newestFirst) {
+    const row = document.createElement("div");
+    row.className = "note-item";
+    const mark = document.createElement("span");
+    mark.className = "note-type-mark";
+    mark.textContent = s.types[n.type];
+    const text = document.createElement("span");
+    text.className = "note-item-text";
+    text.textContent = n.text;
+    text.title = n.text;
+    row.appendChild(mark);
+    row.appendChild(text);
+    if (n.date) {
+      const badge = document.createElement("span");
+      badge.className = "note-date-badge";
+      badge.textContent = noteForDate(n.date);
+      row.appendChild(badge);
+    }
+    const written = document.createElement("span");
+    written.className = "note-item-date";
+    written.textContent = noteWrittenOn(n.createdAt);
+    row.appendChild(written);
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "note-del";
+    del.textContent = s.deleteLabel;
+    del.dataset.id = String(n.id);
+    row.appendChild(del);
+    wrap.appendChild(row);
+  }
+  $("notes-empty").hidden = notesList.length > 0;
+}
+$("notes-list").addEventListener("click", async (e) => {
+  const btn = e.target.closest(".note-del");
+  if (!btn) return;
+  const id = Number(btn.dataset.id);
+  if (!Number.isFinite(id)) return;
+  await notesDelete(id);
+  notesList = notesList.filter((n) => n.id !== id);
+  const d = deckStore.d["mine"];
+  if (d && Array.isArray(d.r)) {
+    d.r = d.r.filter((x) => x !== id);
+    if (d.l === id) d.l = null;
+    saveDeckStore();
+  }
+  renderNotesList();
+});
+
+/* ---------- The modal ---------- */
+let noteType = "reflection";
+let noteSourceCandidate = null; // stage card's label, captured at open
+let noteOpener = null;          // element to refocus on close
+
+function syncNoteTypeSeg() {
+  $("note-type-reflection").classList.toggle("active", noteType === "reflection");
+  $("note-type-memo").classList.toggle("active", noteType === "memo");
+}
+function updateNoteCount() {
+  const len = [...$("note-text").value].length;
+  $("note-count-num").textContent = String(len);
+  $("note-save").disabled = len === 0;
+}
+function openNoteModal(opener) {
+  if (ambientOn) return; // no writing in ambient mode
+  setSettingsOpen(false);
+  noteOpener = opener || null;
+  noteType = "reflection";
+  noteSourceCandidate = currentCardLabel();
+  syncNoteTypeSeg();
+  $("note-text").value = "";
+  $("note-date").value = "";
+  $("note-date").min = noteDayStr(new Date());
+  $("note-error").hidden = true;
+  updateNoteCount();
+  hideFabNow();
+  $("note-overlay").hidden = false;
+  $("note-text").focus();
+}
+function closeNoteModal() {
+  if ($("note-overlay").hidden) return;
+  $("note-overlay").hidden = true;
+  if (noteOpener && noteOpener.isConnected) noteOpener.focus();
+  noteOpener = null;
+}
+$("note-type-reflection").addEventListener("click", () => { noteType = "reflection"; syncNoteTypeSeg(); });
+$("note-type-memo").addEventListener("click", () => { noteType = "memo"; syncNoteTypeSeg(); });
+$("note-text").addEventListener("input", () => {
+  const el = $("note-text");
+  const chars = [...el.value];
+  if (chars.length > NOTE_MAX_CHARS) el.value = chars.slice(0, NOTE_MAX_CHARS).join("");
+  updateNoteCount();
+});
+$("note-cancel").addEventListener("click", closeNoteModal);
+$("note-overlay").addEventListener("click", (e) => {
+  if (e.target === $("note-overlay")) closeNoteModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("note-overlay").hidden) closeNoteModal();
+});
+$("note-save").addEventListener("click", async () => {
+  const text = $("note-text").value.trim();
+  if (!text) return;
+  // A past date can still be typed in some browsers despite min=:
+  // it simply means "no particular day" — the note joins the random
+  // rotation undated rather than scolding its writer.
+  let date = $("note-date").value || null;
+  if (date && !noteDateParts(date)) date = null;
+  if (date && date < noteDayStr(new Date())) date = null;
+  const entry = {
+    type: noteType,
+    text: [...text].slice(0, NOTE_MAX_CHARS).join(""),
+    date,
+    source: noteType === "reflection" ? noteSourceCandidate : null,
+    lang,
+    createdAt: Date.now(),
+  };
+  const id = await notesAdd(entry);
+  if (id === null || id === undefined) {
+    // IndexedDB refused (private mode…): say so quietly, keep the text.
+    $("note-error").hidden = false;
+    return;
+  }
+  entry.id = id;
+  notesList.push(entry);
+  notesList.sort((a, b) => (a.createdAt - b.createdAt) || (a.id - b.id));
+  renderNotesList();
+  closeNoteModal();
+});
+$("notes-add").addEventListener("click", () => openNoteModal($("notes-add")));
+
+/* ---------- Floating button: contextual reveal ----------
+   Desktop (fine pointer): visible only while the pointer is inside
+   the bottom-right ~140×140 corner, or on the button itself; it fades
+   ~600 ms after the pointer leaves both. Tracked from pointer
+   position (no overlay hotspot), so the corner never swallows a
+   click meant for the page. Touch (coarse pointer): an upward swipe
+   (≥40 px) that starts in the bottom ~30% of the viewport reveals it
+   for ~5 s. The listeners are passive and never preventDefault, so
+   tapping, scrolling and every existing gesture are untouched.
+   Keyboard focus reveals it too. Ambient mode suppresses it fully. */
+const FAB_HIDE_MS = 600;
+const FAB_TOUCH_SHOW_MS = 5000;
+let fabInCorner = false;
+let fabHovered = false;
+let fabFocused = false;
+let fabStickyUntil = 0;
+let fabSyncTimer = null;
+
+function fabShouldShow() {
+  if (ambientOn) return false;
+  if (!$("note-overlay").hidden) return false;
+  return fabInCorner || fabHovered || fabFocused || Date.now() < fabStickyUntil;
+}
+function syncFab() {
+  $("note-fab").classList.toggle("show", fabShouldShow());
+}
+function scheduleFabSync(ms) {
+  clearTimeout(fabSyncTimer);
+  fabSyncTimer = setTimeout(syncFab, ms);
+}
+function hideFabNow() {
+  fabInCorner = false;
+  fabStickyUntil = 0;
+  clearTimeout(fabSyncTimer);
+  syncFab();
+}
+/* Called by enterAmbient: a visible button leaves with the chrome. */
+function resetFab() {
+  fabInCorner = false;
+  fabHovered = false;
+  fabFocused = false;
+  fabStickyUntil = 0;
+  clearTimeout(fabSyncTimer);
+  syncFab();
+}
+/* The mousemove stream itself is the gate: it only flows when a
+   pointer is actually moving, so no media-query check is needed (and
+   headless or unusual pointers that report neither fine nor coarse
+   still reveal the button the way a mouse would). */
+document.addEventListener("mousemove", (e) => {
+  const inCorner = e.clientX >= window.innerWidth - 140 && e.clientY >= window.innerHeight - 140;
+  if (inCorner === fabInCorner) return;
+  fabInCorner = inCorner;
+  if (inCorner) { clearTimeout(fabSyncTimer); syncFab(); }
+  else scheduleFabSync(FAB_HIDE_MS);
+}, { passive: true });
+$("note-fab").addEventListener("mouseenter", () => {
+  fabHovered = true;
+  clearTimeout(fabSyncTimer);
+  syncFab();
+});
+$("note-fab").addEventListener("mouseleave", () => {
+  fabHovered = false;
+  scheduleFabSync(FAB_HIDE_MS);
+});
+$("note-fab").addEventListener("focus", () => {
+  fabFocused = true;
+  clearTimeout(fabSyncTimer);
+  syncFab();
+});
+$("note-fab").addEventListener("blur", () => {
+  fabFocused = false;
+  scheduleFabSync(FAB_HIDE_MS);
+});
+let fabTouchStart = null;
+document.addEventListener("touchstart", (e) => {
+  const tch = e.changedTouches && e.changedTouches[0];
+  if (!tch) { fabTouchStart = null; return; }
+  fabTouchStart = {
+    y: tch.clientY,
+    inBottom: tch.clientY >= window.innerHeight * 0.7,
+  };
+}, { passive: true });
+document.addEventListener("touchend", (e) => {
+  const start = fabTouchStart;
+  fabTouchStart = null;
+  if (!start || !start.inBottom) return;
+  const tch = e.changedTouches && e.changedTouches[0];
+  if (!tch) return;
+  if (tch.clientY - start.y <= -40) {
+    fabStickyUntil = Date.now() + FAB_TOUCH_SHOW_MS;
+    clearTimeout(fabSyncTimer);
+    syncFab();
+    scheduleFabSync(FAB_TOUCH_SHOW_MS);
+  }
+}, { passive: true });
+$("note-fab").addEventListener("click", () => openNoteModal($("note-fab")));
+
 /* ================= Card selection & rendering ================= */
 /* Categories available in the current language. almanac + classics are
    zh-only; proverbs + word are en-only; gossip joins only when its feed
@@ -1446,6 +1930,12 @@ function availableCategories() {
   if (gossipCache.length) {
     const g = CATEGORY_WEIGHTS.find((c) => c.key === "gossip");
     if (g) list.push(g);
+  }
+  // The visitor's own notes join only when the library is non-empty;
+  // with an empty library the pool — and its weight — simply isn't there.
+  if (notesList.length) {
+    const m = CATEGORY_WEIGHTS.find((c) => c.key === "mine");
+    if (m) list.push(m);
   }
   return list;
 }
@@ -1528,6 +2018,12 @@ function makeSelection(cat) {
       return { cat, item: drawGossipItem() };
     case "memory":
       return { cat, item: MEMORY_PROMPTS[deckDraw("memory", MEMORY_PROMPTS.length)] };
+    case "mine": {
+      const entry = drawNoteEntry();
+      if (entry) return { cat, note: entry };
+      // The library emptied between category choice and draw: fall back.
+      return { cat: "thought", item: THOUGHTS[deckDraw("thought", THOUGHTS.length)] };
+    }
     case "chance": {
       const kinds = ["integer", "dice", "coins", "card", "color"];
       const kind = kinds[deckDraw("chance:kind", kinds.length)];
@@ -1631,6 +2127,19 @@ function renderSelection(sel) {
 
   if (sel.cat === "thought" || sel.cat === "memory" || sel.cat === "science") {
     body = lang === "zh" ? sel.item.zh : sel.item.en;
+  }
+
+  if (sel.cat === "mine") {
+    // The visitor's own words, in the language they were written in —
+    // only the chrome around them (eyebrow, dates) follows the UI.
+    const n = sel.note;
+    if (n.date) meta = noteForDate(n.date);
+    const foot = [];
+    const srcLine = noteSourceLine(n.source);
+    if (srcLine) foot.push(`<span>${esc(srcLine)}</span>`);
+    foot.push(`<span>${esc(noteWrittenOn(n.createdAt))}</span>`);
+    body = `<span class="note-text">${esc(n.text)}</span>` +
+      `<div class="fact-row">${foot.join("")}</div>`;
   }
 
   if (sel.cat === "quotes") {
@@ -1757,7 +2266,10 @@ function renderSelection(sel) {
     }
   }
 
-  $("card-category").textContent = s.categories[sel.cat];
+  // A note's eyebrow is its kind （心得 / 备忘）, not the pool's name.
+  $("card-category").textContent = sel.cat === "mine"
+    ? s.notes.types[sel.note.type]
+    : s.categories[sel.cat];
   $("card-meta").textContent = meta;
   $("card-body").innerHTML = body;
 
@@ -1779,11 +2291,40 @@ function renderSelection(sel) {
   }
 }
 
-/* The next card to show. On a special date the postcard comes first:
-   gifted once per device per date, then — the gift opened — it joins
-   the day's rotation with a modest chance (never twice in a row). */
+/* The next card to show. Two gifts can fall on the same day, and the
+   order between them is settled: the visitor's own dated note is
+   delivered first （必达）, and an ungifted postcard is then guaranteed
+   as the very next draw. Otherwise, on a special date the postcard
+   comes first: gifted once per device per date, then — the gift
+   opened — it joins the day's rotation with a modest chance (never
+   twice in a row). */
 const POSTCARD_POOL_CHANCE = 0.12;
 function nextSelection() {
+  // Gift 1: a note addressed to today outranks everything.
+  const dn = todaysDatedNoteSelection();
+  if (dn) {
+    markNoteDelivered(dn.note.id);
+    lastCategory = "mine";
+    pendingGiftNotice = dn;
+    // Queue the day's postcard gift directly behind the note.
+    const pc0 = todaysPostcardSelection();
+    if (pc0 && !postcardGifted()) pendingPostcardGiftStamp = postcardDayKey(new Date());
+    return dn;
+  }
+  // Gift 2: the postcard queued behind a just-delivered note.
+  if (pendingPostcardGiftStamp) {
+    const stamp = pendingPostcardGiftStamp;
+    pendingPostcardGiftStamp = "";
+    if (stamp === postcardDayKey(new Date())) {
+      const pcq = todaysPostcardSelection();
+      if (pcq && !postcardGifted()) {
+        markPostcardGifted();
+        lastCategory = "postcard";
+        pendingGiftNotice = pcq;
+        return pcq;
+      }
+    }
+  }
   const pc = todaysPostcardSelection();
   if (pc) {
     if (!postcardGifted()) {
@@ -1998,6 +2539,24 @@ function applyStaticStrings() {
   $("myday-add").textContent = s.myDays.add;
   refreshMyDayEffectOptions();
   renderMyDaysList();
+  $("notes-label").textContent = s.notes.libraryLabel;
+  $("notes-storage-note").textContent = s.notes.storageNote;
+  $("notes-empty").textContent = s.notes.empty;
+  $("notes-add").textContent = s.notes.addButton;
+  renderNotesList();
+  $("privacy-link").textContent = s.privacyLabel;
+  $("about-link").textContent = s.aboutLabel;
+  $("note-fab").textContent = s.notes.addButton;
+  $("note-fab").setAttribute("aria-label", s.notes.modalTitle);
+  $("note-title").textContent = s.notes.modalTitle;
+  $("note-type-reflection").textContent = s.notes.types.reflection;
+  $("note-type-memo").textContent = s.notes.types.memo;
+  $("note-text").placeholder = s.notes.placeholder;
+  $("note-date-label").textContent = s.notes.dateLabel;
+  $("note-date-hint").textContent = s.notes.dateHint;
+  $("note-error").textContent = s.notes.storeError;
+  $("note-save").textContent = s.notes.save;
+  $("note-cancel").textContent = s.notes.cancel;
   $("encounter").textContent = encounter > 0 ? s.encounter(encounter) : "";
   document.querySelectorAll(".style-chip").forEach((chip) => {
     chip.textContent = s.clockStyles[chip.dataset.style];
@@ -2175,6 +2734,7 @@ function enterAmbient() {
   document.body.classList.add("ambient");
   setSettingsOpen(false);
   dismissGiftNotice();
+  resetFab();
   try {
     const p = document.documentElement.requestFullscreen
       ? document.documentElement.requestFullscreen()
@@ -2828,7 +3388,23 @@ setClockStyle(clockStyle);
 applyStaticStrings();
 applySpecialDay();
 refreshGossip();
-drawCard();
+/* The first card of the day may be a gift — a dated note or the
+   postcard — so the opening draw waits for the notes library to load.
+   IndexedDB answers in milliseconds; the timeouts are only a promise
+   that a wedged database can never leave the stage empty. */
+let initialDrawDone = false;
+function initialDraw() {
+  if (initialDrawDone) return;
+  initialDrawDone = true;
+  drawCard();
+}
+const notesReady = notesLoadAll();
+notesReady.then(() => renderNotesList());
+Promise.race([
+  notesReady,
+  new Promise((r) => setTimeout(r, 1500)),
+]).then(initialDraw);
+setTimeout(initialDraw, 3000);
 setInterval(tick, 200);
 tick();
 

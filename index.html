@@ -35,7 +35,7 @@
     } catch (e) { /* storage unavailable: fall back to system preference */ }
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=15">
+<link rel="stylesheet" href="css/style.css?v=16">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Noto+Sans+SC:wght@100;300;400&display=swap">
@@ -112,6 +112,20 @@
           </div>
         </div>
       </div>
+      <div class="setting-row">
+        <span id="notes-label" class="setting-label">我的库</span>
+        <span id="notes-storage-note" class="notes-storage-note">只存在这台设备上</span>
+        <div id="notes-list" class="notes-list"></div>
+        <p id="notes-empty" class="notes-empty">还没有写下什么</p>
+        <div>
+          <button id="notes-add" type="button" class="ambient-btn">＋ 写一句</button>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <a id="privacy-link" href="privacy.html">隐私政策</a>
+        <span class="panel-footer-sep" aria-hidden="true">·</span>
+        <a id="about-link" href="about.html">关于</a>
+      </div>
     </div>
   </div>
 </header>
@@ -184,6 +198,34 @@
   <span class="footer-note">Now, and More · 此时，还有</span>
 </footer>
 
+<!-- Add-a-note: a small floating button, revealed only near the
+     bottom-right corner (hover on desktop, swipe-up on touch, or focus).
+     The settings panel's 我的库 section carries a permanent entry too. -->
+<button id="note-fab" type="button" aria-label="写一句">＋ 写一句</button>
+
+<!-- Write-a-note modal -->
+<div id="note-overlay" class="capture-overlay" hidden>
+  <div class="capture-dialog note-dialog" role="dialog" aria-modal="true" aria-labelledby="note-title">
+    <div id="note-title" class="capture-title">写一句</div>
+    <div class="lang-segment" role="group" aria-label="Type">
+      <button id="note-type-reflection" type="button" class="seg-btn active">心得</button>
+      <button id="note-type-memo" type="button" class="seg-btn">备忘</button>
+    </div>
+    <textarea id="note-text" class="note-text-input" rows="4" placeholder="写下此刻的一句话…"></textarea>
+    <div class="note-count"><span id="note-count-num">0</span>/120</div>
+    <label class="note-date-row">
+      <span id="note-date-label">选个日子（可选）</span>
+      <input id="note-date" type="date">
+    </label>
+    <p id="note-date-hint" class="note-hint">选了日子，这句话会在那天送达</p>
+    <p id="note-error" class="note-error" hidden>这台设备存不下</p>
+    <div class="capture-actions">
+      <button id="note-save" type="button" class="capture-action" disabled>保存</button>
+      <button id="note-cancel" type="button" class="capture-action">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- Keepsake capture result: the frozen moment as a shareable PNG -->
 <div id="capture-overlay" class="capture-overlay" hidden>
   <div class="capture-dialog" role="dialog" aria-modal="true" aria-labelledby="capture-title">
@@ -197,7 +239,7 @@
   </div>
 </div>
 
-<script src="js/data.js?v=15"></script>
-<script src="js/app.js?v=15"></script>
+<script src="js/data.js?v=16"></script>
+<script src="js/app.js?v=16"></script>
 </body>
 </html>

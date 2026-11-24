@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隐私政策 · Privacy — 此时，还有 · Now, and More</title>
+<meta name="description" content="此时，还有的隐私政策：没有账号，没有追踪，你写下的一切只存在你自己的设备上。Privacy policy for Now, and More.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script>
+  /* Apply a manually chosen theme before first paint (no flash). */
+  (function () {
+    try {
+      var t = localStorage.getItem("nam-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) { /* storage unavailable: fall back to system preference */ }
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5efe2;
+    --ink: #2b2620;
+    --ink-soft: #6f6656;
+    --accent: #b23a2a;
+    --card-border: rgba(43, 38, 32, 0.14);
+    --serif: "Noto Serif SC", "Songti SC", "Songti TC", "STSong", SimSun, "宋体", Georgia, "Times New Roman", serif;
+    --sans: "Noto Sans SC", -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", "Helvetica Neue", Arial, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #171512;
+    --ink: #ece5d5;
+    --ink-soft: #a29885;
+    --accent: #e0684f;
+    --card-border: rgba(236, 229, 213, 0.16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #171512;
+      --ink: #ece5d5;
+      --ink-soft: #a29885;
+      --accent: #e0684f;
+      --card-border: rgba(236, 229, 213, 0.16);
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { width: min(680px, 92vw); margin: 0 auto; padding: 26px 0 64px; }
+  .toprow { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 10px; }
+  .back {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    letter-spacing: 0.06em;
+  }
+  .back:hover, .back:focus-visible { color: var(--accent); }
+  .lang-toggle { display: inline-flex; border: 1px solid var(--card-border); border-radius: 999px; overflow: hidden; }
+  .lang-toggle button {
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 5px 15px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .lang-toggle button.active { color: var(--accent); font-weight: 600; }
+  h1 { font-size: 30px; font-weight: 900; letter-spacing: 0.05em; margin: 18px 0 4px; }
+  .dated { color: var(--ink-soft); font-size: 14px; margin: 0 0 8px; }
+  h2 { font-size: 18px; font-weight: 900; letter-spacing: 0.04em; margin: 30px 0 6px; }
+  p, li { font-size: 16px; }
+  p { margin: 8px 0; }
+  ul { margin: 8px 0; padding-left: 1.4em; }
+  li { margin: 4px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent); }
+  .seal {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px;
+    background: var(--accent); color: #fff8ee;
+    font-weight: 900; font-size: 17px;
+    border-radius: 5px; transform: rotate(-3deg);
+    vertical-align: -8px; margin-right: 10px;
+  }
+  .foot { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--card-border); color: var(--ink-soft); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="toprow">
+    <a class="back" href="index.html"><span data-lang="zh">← 返回</span><span data-lang="en">← Back</span></a>
+    <div class="lang-toggle" role="group" aria-label="Language">
+      <button type="button" data-set-lang="zh">中文</button>
+      <button type="button" data-set-lang="en">EN</button>
+    </div>
+  </div>
+
+  <div data-lang="zh">
+    <h1><span class="seal" aria-hidden="true">时</span>隐私政策</h1>
+    <p class="dated">最后更新：2026 年 11 月 23 日</p>
+
+    <p>「此时，还有」是一个不需要你留下任何东西的网站。这一页把话说全：它存什么、不存什么、会向哪里发出请求。</p>
+
+    <h2>没有账号</h2>
+    <p>本站没有注册、没有登录、没有个人资料。你不需要提供姓名、邮箱或任何身份信息，就能使用全部功能。</p>
+
+    <h2>没有分析、广告与追踪</h2>
+    <p>本站自身不运行任何访问统计、广告或行为追踪：没有分析脚本，没有广告网络，没有第三方追踪器，也没有给任何人看的报表。</p>
+
+    <h2>你的东西只存在你的设备上</h2>
+    <p>为了让页面记得你的选择，少数数据保存在你自己的浏览器里，从不上传到任何服务器：</p>
+    <ul>
+      <li>偏好设置：语言、外观、时钟样式、你的星座、特效开关；</li>
+      <li>「我的日子」里你添的纪念日；</li>
+      <li>「写一句」的库——你写下的心得与备忘，存在浏览器的 IndexedDB 里；</li>
+      <li>抽卡的去重进度与「第 N 次相遇」计数。</li>
+    </ul>
+    <p>这些数据只属于这台设备、这个浏览器。在浏览器的设置里清除本站的网站数据，它们会被一并删除，干干净净。</p>
+
+    <h2>页面会发出的请求</h2>
+    <p>本站发出的网络请求只有下面几类，都可以说明白：</p>
+    <ul>
+      <li><b>页面本身</b>由 Cloudflare Pages 托管。托管平台在基础设施层面会有标准的技术日志（例如请求时间与地址），那是托管方的运维记录，不是本站在收集你的信息。</li>
+      <li><b>字体</b>通过 Google Fonts 加载。你的浏览器会为此直接联系 Google 的服务器取字体文件——这是网页字体的一次普通请求，本站看不到它，也无法追踪它。</li>
+      <li><b>「此刻热点」</b>的标题由本站自己的一个小服务（Worker）提供：它在服务器一侧从公开的新闻来源抓取最新标题，再交给你的页面。你的页面向它请求时，除任何网络请求都天然包含的信息（如 IP 地址）之外，不会发送任何关于你的数据——没有账号，没有标识符。分享图片与站点图标也由同一个服务提供。</li>
+    </ul>
+
+    <h2>联系</h2>
+    <p>关于这份政策或本站的任何问题，写信到 <a href="mailto:contact@orangely.xyz">contact@orangely.xyz</a>。</p>
+
+    <p class="foot">此时，还有 · Now, and More — 一件来自 orangely.xyz 的小作品。</p>
+  </div>
+
+  <div data-lang="en">
+    <h1><span class="seal" aria-hidden="true">时</span>Privacy Policy</h1>
+    <p class="dated">Last updated: November 23, 2026</p>
+
+    <p>Now, and More asks nothing of you. This page says the whole of it: what the site stores, what it does not, and where its requests go.</p>
+
+    <h2>No account</h2>
+    <p>There is no sign-up, no sign-in, and no profile. You never need to give a name, an email address, or any identifying information to use anything here.</p>
+
+    <h2>No analytics, advertising, or tracking</h2>
+    <p>The site itself runs no analytics, no advertising, and no behavioural tracking: no analytics scripts, no ad networks, no third-party trackers, and no reports for anyone.</p>
+
+    <h2>Your things stay on your device</h2>
+    <p>So the page can remember your choices, a few things are kept in your own browser and are never uploaded to any server:</p>
+    <ul>
+      <li>Preferences: language, appearance, clock style, your zodiac sign, the effects switch;</li>
+      <li>The personal days you add under “My days”;</li>
+      <li>Your “Add a note” library — the reflections and memos you write, held in your browser's IndexedDB;</li>
+      <li>The no-repeat draw progress and the encounter counter.</li>
+    </ul>
+    <p>All of it belongs to this device and this browser only. Clear this site's data in your browser settings and everything goes with it, completely.</p>
+
+    <h2>The requests the page makes</h2>
+    <p>The page makes only the requests below, and each can be accounted for:</p>
+    <ul>
+      <li><b>The page itself</b> is hosted on Cloudflare Pages. Like any host, Cloudflare keeps standard technical logs at the infrastructure level (such as request times and addresses); those are the host's operational records, not this site collecting information about you.</li>
+      <li><b>Fonts</b> load through Google Fonts. Your browser contacts Google's servers directly to fetch the font files — an ordinary web-font request that this site cannot see and does not track.</li>
+      <li><b>“Trending Now”</b> headlines come from the site's own small service (a Worker): it fetches the latest headlines from public news sources on the server side and hands them to your page. When your page asks it for headlines, nothing about you is sent beyond what any web request inherently carries (such as an IP address) — no account, no identifier. The share image and site icons are served by the same service.</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy or the site: <a href="mailto:contact@orangely.xyz">contact@orangely.xyz</a>.</p>
+
+    <p class="foot">Now, and More · 此时，还有 — a small work from orangely.xyz.</p>
+  </div>
+</main>
+
+<script>
+  /* Show the language the main page remembers (nam-lang), with a
+     manual toggle. Without JavaScript both languages stay stacked,
+     Chinese first. The toggle also remembers the choice for the
+     main page, so the two never disagree. */
+  (function () {
+    var lang = "zh";
+    try {
+      var saved = localStorage.getItem("nam-lang");
+      if (saved === "en" || saved === "zh") lang = saved;
+      else if ((navigator.language || "").toLowerCase().indexOf("zh") !== 0) lang = "en";
+    } catch (e) { /* keep zh */ }
+    function apply(next) {
+      lang = next;
+      document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+      document.querySelectorAll("[data-lang]").forEach(function (el) {
+        el.hidden = el.getAttribute("data-lang") !== lang;
+      });
+      document.querySelectorAll("[data-set-lang]").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-set-lang") === lang);
+      });
+    }
+    document.querySelectorAll("[data-set-lang]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var next = btn.getAttribute("data-set-lang");
+        try { localStorage.setItem("nam-lang", next); } catch (e) { /* ignore */ }
+        apply(next);
+      });
+    });
+    apply(lang);
+  })();
+</script>
+</body>
+</html>
