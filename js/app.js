@@ -72,6 +72,7 @@ if (userSign && !SIGNS.some((sg) => sg.key === userSign)) userSign = "";
 let encounter = 0;
 let lastCategory = null;
 let currentSelection = null; // { cat, ...payload } — re-renderable on language switch
+let liveWorldTime = null; // { tz, el } while a world-city card is on stage — its local time ticks
 let lastDrawAt = Date.now();
 let lastSecond = -1;
 
@@ -1169,6 +1170,7 @@ function renderSelection(sel) {
   const s = t();
   let meta = "";
   let body = "";
+  let worldLive = null; // { prefix, tz } when this render is a world-city card
   const now = new Date();
 
   if (sel.cat === "world") {
@@ -1182,6 +1184,7 @@ function renderSelection(sel) {
       const name = lang === "zh" ? city.zh : city.en;
       const st = sunTimes(now, city.lat, city.lon);
       meta = `${name} · ${s.world.localTime} ${timeInZone(now, city.tz)}`;
+      worldLive = { prefix: `${name} · ${s.world.localTime} `, tz: city.tz };
       let facts;
       if (st.polar === "day") facts = `<span><b>${s.world.polarDay}</b></span>`;
       else if (st.polar === "night") facts = `<span><b>${s.world.polarNight}</b></span>`;
@@ -1327,6 +1330,23 @@ function renderSelection(sel) {
   $("card-category").textContent = s.categories[sel.cat];
   $("card-meta").textContent = meta;
   $("card-body").innerHTML = body;
+
+  // A world-city card's local time is live text, not a snapshot: give it
+  // its own span so tick() can advance it every second, in step with the
+  // main clock. (Sunrise / sunset / day length on the same card are
+  // per-day values and stay static.) Any other card clears the hook, so
+  // the ticker never touches a stale element.
+  liveWorldTime = null;
+  if (worldLive) {
+    const span = document.createElement("span");
+    span.id = "world-live-time";
+    span.dataset.tz = worldLive.tz;
+    span.textContent = timeInZone(new Date(), worldLive.tz);
+    const metaEl = $("card-meta");
+    metaEl.textContent = "";
+    metaEl.append(document.createTextNode(worldLive.prefix), span);
+    liveWorldTime = { tz: worldLive.tz, el: span };
+  }
 }
 
 function drawCard() {
@@ -1401,6 +1421,16 @@ function tick() {
   const sec = now.getSeconds();
   if (sec === lastSecond) return;
   lastSecond = sec;
+
+  // World-city card on stage: its local time advances with the main clock.
+  if (liveWorldTime) {
+    if (!liveWorldTime.el.isConnected) {
+      liveWorldTime = null;
+    } else {
+      const txt = timeInZone(now, liveWorldTime.tz);
+      if (liveWorldTime.el.textContent !== txt) liveWorldTime.el.textContent = txt;
+    }
+  }
 
   const h = pad(now.getHours()), m = pad(now.getMinutes()), s = pad(sec);
 
