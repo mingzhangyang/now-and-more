@@ -1,0 +1,636 @@
+{
+  "console": [],
+  "pages": [],
+  "scenes": [
+    {
+      "name": "gaithersburg-night",
+      "form": "chart",
+      "ms": 268,
+      "result": {
+        "form": "chart",
+        "error": null,
+        "sig": {
+          "key": "cassiopeia",
+          "az": 359.20549135166243,
+          "alt": 68.22772037018169,
+          "dir": 0
+        },
+        "sun": {
+          "alt": -47.87261645897965,
+          "az": 283.40287495470034
+        },
+        "moon": {
+          "alt": 56.309792146267526,
+          "az": 107.3903389470427,
+          "phase": "full",
+          "illum": 0.9945629850330322,
+          "visible": true
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Tonight's highlight: Cassiopeia, in the north sky\nFive stars drawn as a W\nEstimated from your time zone · positions approximate",
+        "approx": true
+      },
+      "pix": {
+        "w": 880,
+        "h": 880,
+        "mean": 16.8942736911206,
+        "variance": 588.647878870885,
+        "bright": 793,
+        "gold": 186,
+        "pale": 364,
+        "n": 193600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": null,
+      "error": null
+    },
+    {
+      "name": "gaithersburg-night",
+      "form": "illustration",
+      "ms": 244,
+      "result": {
+        "form": "illustration",
+        "error": null,
+        "sig": {
+          "key": "cassiopeia",
+          "az": 359.20549135166243,
+          "alt": 68.22772037018169,
+          "dir": 0
+        },
+        "sun": {
+          "alt": -47.87261645897965,
+          "az": 283.40287495470034
+        },
+        "moon": {
+          "alt": 56.309792146267526,
+          "az": 107.3903389470427,
+          "phase": "full",
+          "illum": 0.9945629850330322,
+          "visible": true
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Gaithersburg\n\nTonight's sky\n\nTonight's highlight: Cassiopeia, in the north sky\n\nFive stars drawn as a W",
+        "approx": false
+      },
+      "pix": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 53.177118354050734,
+        "variance": 2812.5987744364293,
+        "bright": 22439,
+        "gold": 2,
+        "pale": 176,
+        "n": 318600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "cassiopeia",
+        "az": [
+          8,
+          13,
+          342,
+          350,
+          358
+        ],
+        "crossesNorth": true
+      },
+      "error": null
+    },
+    {
+      "name": "Gaithersburg noon",
+      "form": "illustration",
+      "ms": 85,
+      "result": {
+        "form": "illustration",
+        "error": null,
+        "sig": {
+          "key": "cassiopeia",
+          "az": 21.762490198065166,
+          "alt": 16.57036868184686,
+          "dir": 0
+        },
+        "sun": {
+          "alt": 30.230104580481253,
+          "az": 181.2075937976491
+        },
+        "moon": {
+          "alt": -25.564395865609853,
+          "az": 0.8518537610658642,
+          "phase": "full",
+          "illum": 0.9986740529902443,
+          "visible": false
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Gaithersburg noon\n\nTonight's sky\n\nTonight's highlight: Cassiopeia, in the north sky\n\nFive stars drawn as a W",
+        "approx": false
+      },
+      "pix": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 173.9841300784782,
+        "variance": 1742.486791474228,
+        "bright": 105633,
+        "gold": 574,
+        "pale": 65153,
+        "n": 318600
+      },
+      "astro": null,
+      "wrap": {
+        "key": "cassiopeia",
+        "az": [
+          14,
+          19,
+          22,
+          26,
+          28
+        ],
+        "crossesNorth": false
+      },
+      "error": null
+    },
+    {
+      "name": "reykjavik-summer",
+      "form": "illustration",
+      "ms": 45,
+      "result": {
+        "form": "illustration",
+        "error": null,
+        "sig": {
+          "key": "triangle",
+          "az": 174.65884187551137,
+          "alt": 55.63078024313117,
+          "dir": 4
+        },
+        "sun": {
+          "alt": -0.06629180989918382,
+          "az": 20.66936338068503
+        },
+        "moon": {
+          "alt": -11.51474526456282,
+          "az": 300.16947802343475,
+          "phase": "first-quarter",
+          "illum": 0.41934766760475195,
+          "visible": false
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Reykjavik\n\nTonight's sky\n\nTonight's highlight: the Summer Triangle, in the south sky\n\nVega, Altair and Deneb, across the Milky Way",
+        "approx": false
+      },
+      "pix": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 163.95565211131387,
+        "variance": 838.483485454497,
+        "bright": 22745,
+        "gold": 14356,
+        "pale": 209,
+        "n": 318600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "triangle",
+        "az": [
+          143,
+          173,
+          203
+        ],
+        "crossesNorth": false
+      },
+      "error": null
+    },
+    {
+      "name": "sydney-winter-evening",
+      "form": "illustration",
+      "ms": 201,
+      "result": {
+        "form": "illustration",
+        "error": null,
+        "sig": {
+          "key": "crux",
+          "az": 203.0349291433226,
+          "alt": 59.96553416590552,
+          "dir": 5
+        },
+        "sun": {
+          "alt": -37.30418716349104,
+          "az": 274.98486667667567
+        },
+        "moon": {
+          "alt": 40.440341715584395,
+          "az": 307.0017088804582,
+          "phase": "first-quarter",
+          "illum": 0.44399913031676,
+          "visible": true
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Sydney\n\nTonight's sky\n\nTonight's highlight: the Southern Cross, in the southwest sky\n\nIts long axis points to the south celestial pole",
+        "approx": false
+      },
+      "pix": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 64.69569020777126,
+        "variance": 2564.490911367613,
+        "bright": 22452,
+        "gold": 1,
+        "pale": 608,
+        "n": 318600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "crux",
+        "az": [
+          199,
+          200,
+          206,
+          207
+        ],
+        "crossesNorth": false
+      },
+      "error": null
+    },
+    {
+      "name": "quito-midnight",
+      "form": "illustration",
+      "ms": 209,
+      "result": {
+        "form": "illustration",
+        "error": null,
+        "sig": {
+          "key": "triangle",
+          "az": 343.52491503821705,
+          "alt": 55.286228426151524,
+          "dir": 0
+        },
+        "sun": {
+          "alt": -71.3557070123521,
+          "az": 344.67505119330644
+        },
+        "moon": {
+          "alt": 55.04796116038652,
+          "az": 103.09373579054277,
+          "phase": "waning-gibbous",
+          "illum": 0.9321726635192498,
+          "visible": true
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Quito\n\nTonight's sky\n\nTonight's highlight: the Summer Triangle, in the north sky\n\nVega, Altair and Deneb, across the Milky Way",
+        "approx": false
+      },
+      "pix": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 54.390599193341636,
+        "variance": 2785.4661584536657,
+        "bright": 22124,
+        "gold": 2,
+        "pale": 331,
+        "n": 318600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "triangle",
+        "az": [
+          4,
+          318,
+          331
+        ],
+        "crossesNorth": true
+      },
+      "error": null
+    },
+    {
+      "name": "anchorage-solstice",
+      "form": "illustration",
+      "ms": 206,
+      "result": {
+        "form": "illustration",
+        "error": null,
+        "sig": {
+          "key": "cassiopeia",
+          "az": 280.2916006299046,
+          "alt": 75.52998235980559,
+          "dir": 6
+        },
+        "sun": {
+          "alt": -41.276698162744395,
+          "az": 300.8351355004255
+        },
+        "moon": {
+          "alt": 50.945986980487596,
+          "az": 177.58386753319522,
+          "phase": "waxing-gibbous",
+          "illum": 0.8875195002098984,
+          "visible": true
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Anchorage\n\nTonight's sky\n\nTonight's highlight: Cassiopeia, in the west sky\n\nFive stars drawn as a W",
+        "approx": false
+      },
+      "pix": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 51.43947783930055,
+        "variance": 2867.3715999774718,
+        "bright": 21913,
+        "gold": 1,
+        "pale": 205,
+        "n": 318600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "cassiopeia",
+        "az": [
+          271,
+          276,
+          282,
+          284,
+          296
+        ],
+        "crossesNorth": false
+      },
+      "error": null
+    },
+    {
+      "name": "johannesburg-equinox",
+      "form": "chart",
+      "ms": 18,
+      "result": {
+        "form": "chart",
+        "error": null,
+        "sig": {
+          "key": "orion",
+          "az": 304.0114678572296,
+          "alt": 49.96660974321664,
+          "dir": 7
+        },
+        "sun": {
+          "alt": -22.885760963042955,
+          "az": 257.78923919249434
+        },
+        "moon": {
+          "alt": -11.853842506910325,
+          "az": 277.9565426646721,
+          "phase": "new",
+          "illum": 0.03676473649439327,
+          "visible": false
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Tonight's highlight: Orion, in the northwest sky\nThree stars in a row make the Hunter's belt\nEstimated from your time zone · positions approximate",
+        "approx": true
+      },
+      "pix": {
+        "w": 880,
+        "h": 880,
+        "mean": 17.026385185955363,
+        "variance": 562.0007335805292,
+        "bright": 458,
+        "gold": 179,
+        "pale": 642,
+        "n": 193600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "orion",
+        "az": [
+          290,
+          296,
+          304,
+          309,
+          318
+        ],
+        "crossesNorth": false
+      },
+      "error": null
+    },
+    {
+      "name": "singapore-evening",
+      "form": "illustration",
+      "ms": 202,
+      "result": {
+        "form": "illustration",
+        "error": null,
+        "sig": {
+          "key": "orion",
+          "az": 92.81873996837038,
+          "alt": 44.106595223726536,
+          "dir": 2
+        },
+        "sun": {
+          "alt": -10.617297021198866,
+          "az": 248.78445920102544
+        },
+        "moon": {
+          "alt": -45.48833530569513,
+          "az": 230.09663497849078,
+          "phase": "waning-crescent",
+          "illum": 0.10708443136802642,
+          "visible": false
+        },
+        "stars": 5070,
+        "provenance": "clear",
+        "text": "Singapore\n\nTonight's sky\n\nTonight's highlight: Orion, in the east sky\n\nThree stars in a row make the Hunter's belt",
+        "approx": false
+      },
+      "pix": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 98.65651358938618,
+        "variance": 2153.1624777874276,
+        "bright": 22321,
+        "gold": 30,
+        "pale": 528,
+        "n": 318600
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "orion",
+        "az": [
+          82,
+          92,
+          93,
+          94,
+          104
+        ],
+        "crossesNorth": false
+      },
+      "error": null
+    }
+  ],
+  "pixels": [
+    {
+      "landscape": {
+        "w": 1080,
+        "h": 1180,
+        "mean": 64.69569020777126,
+        "variance": 2564.490911367613,
+        "bright": 22452,
+        "gold": 1,
+        "pale": 608,
+        "n": 318600
+      }
+    }
+  ],
+  "timings": {
+    "startup": {
+      "dcl": 439.9000000001397,
+      "load": 440.80000000004657,
+      "sdk": [
+        {
+          "name": "/js/sky-engine-adapter.js?v=29",
+          "start": 31.100000000093132,
+          "dur": 37.60000000009313
+        }
+      ],
+      "heap": 3436006
+    },
+    "repeat": {
+      "firstScene": 11.199999999953434,
+      "firstPaint": 156.30000000004657,
+      "repeatScene": 0,
+      "repeatPaint": 153.60000000009313,
+      "sameScene": true,
+      "heap": 27122532
+    }
+  },
+  "offline": {
+    "primed": {
+      "scope": "http://127.0.0.1:8099/",
+      "keys": [
+        "nam-v29"
+      ],
+      "cached": [
+        "/js/sky-engine-adapter.js",
+        "/vendor/sky-engine/0.1.0/sky-engine.mjs",
+        "/vendor/sky-engine/0.1.0/stars.json",
+        "/vendor/sky-engine/0.1.0/manifest.json"
+      ]
+    },
+    "offline": {
+      "form": "illustration",
+      "error": null,
+      "sig": {
+        "key": "cassiopeia",
+        "az": 359.20549135166243,
+        "alt": 68.22772037018169,
+        "dir": 0
+      },
+      "sun": {
+        "alt": -47.87261645897965,
+        "az": 283.40287495470034
+      },
+      "moon": {
+        "alt": 56.309792146267526,
+        "az": 107.3903389470427,
+        "phase": "full",
+        "illum": 0.9945629850330322,
+        "visible": true
+      },
+      "stars": 5070,
+      "provenance": "clear",
+      "text": "Gaithersburg\n\nTonight's sky\n\nTonight's highlight: Cassiopeia, in the north sky\n\nFive stars drawn as a W",
+      "approx": false
+    },
+    "pix": {
+      "w": 1080,
+      "h": 1180,
+      "mean": 53.177118354050734,
+      "variance": 2812.5987744364293,
+      "bright": 22439,
+      "gold": 2,
+      "pale": 176,
+      "n": 318600
+    },
+    "errors": [
+      "console: Failed to load resource: net::ERR_FAILED",
+      "console: Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+    ]
+  },
+  "retry": {
+    "failed": {
+      "form": "illustration",
+      "error": "Failed to fetch dynamically imported module: http://127.0.0.1:8099/vendor/sky-engine/0.1.0/sky-engine.mjs",
+      "sig": null,
+      "sun": null,
+      "moon": null,
+      "stars": 0,
+      "provenance": null,
+      "text": "Gaithersburg\n\nTonight's sky\n\nThe sky did not load this time.\n\nTry again",
+      "approx": false
+    },
+    "retried": {
+      "clicked": false,
+      "text": "时\nNow, and More\n⚙\nPress Esc to exit ambient mode\n\nThe time is certain. What comes next is not.\n\nTuesday, November 24, 2026\n\n21:48:35\nScience\nIce floats because, as water freezes, its molecules lock in"
+    },
+    "errors": [
+      "console: Failed to load resource: net::ERR_FAILED",
+      "console: Failed to load resource: net::ERR_FAILED"
+    ]
+  },
+  "product": [
+    {
+      "moon": "🌕Full Moon\n100% illuminated\nMoon age 14 days",
+      "hasCanvas": false
+    },
+    {
+      "world": "Beijing\nSunrise 07:11\nSunset 16:54\nDay length 9h 43m"
+    },
+    {
+      "almanac": "己巳日\n节气 冬至 · 今日交节 20:50\n值神 执\n冲猪煞西北\nGood for 开光 · 开池 · 栽种 · 赴任 · 治病\nAvoid 破土 · 作灶 · 造船 · 置产\n吉神 民日（主安民宜事） · 月德（主和顺吉祥） · 母仓（主积蓄丰盈）\n凶神 玄武（主盗失暗昧） · 天牢（主束缚困顿）\n彭祖百忌 己不破券，二比并亡；巳不远行，财物伏藏\nA playful almanac, for reference only"
+    },
+    {
+      "keepsake": {
+        "w": 1080,
+        "h": 1700
+      }
+    }
+  ]
+}

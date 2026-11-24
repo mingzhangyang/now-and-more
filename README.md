@@ -80,7 +80,10 @@ npx wrangler pages deploy . --project-name now-and-more
 │   ├── data.js       # 内容池与双语文案 / content pools & i18n strings
 │   ├── dedup.js      # 牌局状态、迁移与事务化抽卡 / deck state & transactional draws
 │   ├── gossip.js     # 热点列表的浏览器侧处理 / client-side news handling
-│   └── app.js        # 时钟引擎、样式切换、随机轮转、日出月相计算 / engine
+│   ├── sky-engine-adapter.js  # 版本化 Sky Engine 加载与场景缓存 / pinned SDK loader
+│   └── app.js        # 时钟引擎、样式切换、随机轮转、产品星空规则 / engine
+├── vendor/sky-engine/0.1.0/  # 正式发布的 SDK 与星表（勿手改）/ published SDK, do not edit
+├── docs/sky-engine.md
 ├── assets/
 │   ├── fonts/        # 自托管字体切片（勿改回 CDN）/ self-hosted font slices
 │   └── special-dates/ # 明信片画作 512×512 WebP / postcard paintings
@@ -92,8 +95,8 @@ npx wrangler pages deploy . --project-name now-and-more
 
 ## 说明 / Notes
 
-- 日出、日落与昼长由页面内嵌的紧凑太阳位置算法现场计算（基于太阳黄经、赤纬与时角），不是查表。
-- 月相由朔望月周期现场计算：月龄、照亮比例与月相名称。
+- 日出、日落与昼长由页面内嵌的紧凑太阳位置算法现场计算（基于太阳黄经、赤纬与时角），不是查表。世界卡片与节气历法仍用这套，不走 Sky Engine。
+- 月相卡片的月龄、照亮比例与月相名称仍由朔望月周期现场计算。星图和星空插画里的太阳、月亮、行星与恒星则来自 Sky Engine SDK，见 `docs/sky-engine.md`。
 - 字体已自托管（思源宋体/黑体，unicode-range 切片 woff2 在 `assets/fonts/`，OFL 许可同目录），随站点一同提供，不向任何第三方发出请求；用过的切片由 Service Worker 缓存，离线可用。
 - 诗歌均为公有领域作品。
 
@@ -116,6 +119,7 @@ Read this section before changing anything — every item is either a lesson lea
 - **部署全自动 / Deployment is fully automatic.** Pages 与 gossip Worker 都是 Git 连接，推 `main` 即部署，不要手动 deploy。Worker 在 `gossip-service/`，其 `/debug` 路径可查看各新闻源的抓取健康。/ Pages and the gossip Worker are both Git-connected; pushing to `main` deploys. Never deploy by hand. The Worker's `/debug` route reports per-source fetch health.
 - **热点源的禁区 / Dead ends for news sources — do not retry.** Google News RSS 从 Workers 出口超时/503；微博热搜 ajax 端点 Forbidden、榜单页从 Workers 解析为 0；明报 RSS 返回 403（已撤下）。Facebook 不接：Worker 用不了站长的个人连接，个人 feed 绝不接公开站。/ Google News RSS times out from Workers egress; Weibo's ajax endpoint is Forbidden and its board parses to zero from Workers; Mingpao RSS returns 403 (removed). Facebook is out: a Worker cannot use the owner's personal connection, and a personal feed must never pipe into a public site.
 - **天文与历法口径 / Astronomy conventions.** 节气用分钟级求解器（Meeus + VSOP87D 摄动 + 牛顿迭代），已对香港天文台 2026 年表验证（最大误差约 1.3 分钟）——不要换成按日查表或粗略公式。占星一律用回归黄道（tropical），不是恒星黄道。/ Solar terms use the minute-level solver (Meeus + VSOP87D perturbations + Newton iteration), verified against the Hong Kong Observatory 2026 table (max deviation ≈1.3 min) — do not replace it with day tables or coarse formulas. Astrology is tropical, never sidereal.
+- **星空引擎只在 Elsewhere 改 / Sky drawing has one source.** 星图与插画的位置和画法来自 `vendor/sky-engine/` 里固定版本的 Sky Engine SDK，不要把算法再抄回 `js/app.js`。升级步骤在 `docs/sky-engine.md`。特色星群（`SKY_PATTERNS`）留在本仓库。/ Star-chart positions and the illustration are the pinned Sky Engine SDK under `vendor/sky-engine/`. Do not copy the algorithms back into `js/app.js`. Upgrade steps are in `docs/sky-engine.md`. Signature asterisms (`SKY_PATTERNS`) stay in this repo.
 - **内容纪律 / Content discipline.** 诗歌、名言的署名必须真实可核；历史事件故意避开日期有争议者；明信片文案全部原创，不伪造古文引文。热点是全品类（新闻/体育/科技/娱乐），不只是娱乐。/ Poem and quote attributions must be real and verifiable; history entries deliberately avoid disputed dates; postcard copy is all original — never fabricate classical quotations. Trending is all-category, not entertainment only.
 - **明信片是固定构图 / The postcard composition is fixed.** 整卡 3:4：画 1080×1080 满幅贴顶、纸区 360、正文 ≤3 行。文案超长就改文案，不改构图。清明节日版恒压节气版（`qingming.webp` 不露面）是有意设计，不是 bug。新画作 512×512 WebP 可用，重出建议 1024 宽。/ The card is 3:4 — painting 1080×1080 full-bleed on top, 360px paper zone, passages ≤3 lines. If copy overflows, shorten the copy, never the composition. The festival Qingming always outranks the solar-term one (`qingming.webp` never surfaces) by design. New paintings: 512×512 WebP works; 1024 wide preferred.
 - **产品红线 / Product red lines.** 类别权重是编辑配比，访客不可调：不给滑杆、不给类别开关、不给预设——这是明确决定，不要以"增强可控性"为名加回来。无账号、无统计、无追踪；个人数据（设置、我的日子、笔记库、牌局）只存本机（localStorage / IndexedDB），从不上传。/ Category weights are an editorial mix and are NOT user-adjustable: no sliders, no category toggles, no presets — a deliberate decision; do not re-add them as "user control". No accounts, no analytics, no tracking; personal data (settings, my days, the notes library, decks) lives only on the device and is never uploaded.

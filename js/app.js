@@ -174,143 +174,46 @@ function moonPhase(date) {
 }
 
 /* ================= Night sky （星空） =================
-   A computed category in the spirit of Elsewhere (the Interactive Sky
-   Simulator): the bright stars of its HYG subset (SKY_STARS in
-   data.js) placed by real equatorial→horizontal math — Julian date,
-   GMST/LST and the alt-az conversion ported from Elsewhere's
-   astronomy core, its Schlyter lunar ephemeris for the Moon's
-   position, and its B-V star colours. No location is ever requested:
-   the observer is estimated from the IANA time zone (the matching
-   world city when the zone is one of the 42, else the zone's own
-   longitude and a 35° latitude), and the card says so — 按时区粗算.
-   The scene is computed for tonight at 21:00 local (or for now, once
-   21:00 has passed) and shared by all three forms and the keepsake. */
-const SKY_DEG = 180 / Math.PI;
+   Positions and the watercolour illustration come from the pinned
+   Sky Engine SDK (vendor/sky-engine/0.1.0, see docs/sky-engine.md).
+   This file keeps the product rules: which evening to show, where the
+   observer is, the approximation label, and which of NAM's own
+   asterisms is tonight's highlight. The circular chart is a product
+   planisphere drawn from those SDK positions — it is not a second
+   ephemeris. The moon-phase glyph card and the almanac/sunrise math
+   above stay as they are; they are not the illustration engine. */
+const SKY_SIG_MONTHS = {
+  dipper: [2, 3, 4], cassiopeia: [8, 9, 10, 11, 0], orion: [10, 11, 0, 1, 2],
+  triangle: [5, 6, 7, 8, 9], scorpius: [4, 5, 6, 7], crux: [1, 2, 3, 4, 5],
+};
+const SKY_PHASE_INDEX = {
+  new: 0, "waxing-crescent": 1, "first-quarter": 2, "waxing-gibbous": 3,
+  full: 4, "waning-gibbous": 5, "last-quarter": 6, "waning-crescent": 7,
+};
+const SKY_CHART_MAG = 3.5;
 
-function skyJulianDay(ms) { return ms / DAY_MS + 2440587.5; }
-function skyGmstDeg(jd) {
-  const T = (jd - 2451545.0) / 36525;
-  return norm360(280.46061837 + 360.98564736629 * (jd - 2451545)
-    + 0.000387933 * T * T - (T * T * T) / 38710000);
+function skyLocalTz() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }
+  catch (e) { return "UTC"; }
 }
-function skyAltAz(ra, dec, lat, lst) {
-  const ha = norm360(lst - ra + 180) - 180;
-  const har = ha * RAD, dr = dec * RAD, lr = lat * RAD;
-  const alt = Math.asin(Math.max(-1, Math.min(1,
-    Math.sin(dr) * Math.sin(lr) + Math.cos(dr) * Math.cos(lr) * Math.cos(har))));
-  const cosA = (Math.sin(dr) - Math.sin(alt) * Math.sin(lr)) / (Math.cos(alt) * Math.cos(lr) + 1e-12);
-  let az = Math.acos(Math.max(-1, Math.min(1, cosA))) * SKY_DEG;
-  if (Math.sin(har) > 0) az = 360 - az;
-  return { alt: alt * SKY_DEG, az };
+function skyMonthInZone(date, tz) {
+  try {
+    return Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "numeric" }).format(date)) - 1;
+  } catch (e) { return date.getMonth(); }
 }
-/* The Sun's ecliptic longitude (Schlyter, ~0.01°) — the lunar
-   perturbations below are reckoned from it. */
-function skySunLon(jd) {
-  const d = jd - 2451543.5;
-  const w = 282.9404 + 4.70935e-5 * d;
-  const e = 0.016709 - 1.151e-9 * d;
-  const M = norm360(356.0470 + 0.9856002585 * d);
-  const Mr = M * RAD;
-  const E = M + e * SKY_DEG * Math.sin(Mr) * (1 + e * Math.cos(Mr));
-  const Er = E * RAD;
-  const xv = Math.cos(Er) - e, yv = Math.sqrt(1 - e * e) * Math.sin(Er);
-  return norm360(Math.atan2(yv, xv) * SKY_DEG + w);
-}
-/* The Moon's RA/Dec — Schlyter's lunar algorithm with its main
-   perturbation terms, as used by Elsewhere (arcminute-class). */
-function skyMoonRaDec(jd) {
-  const d = jd - 2451543.5;
-  const N = norm360(125.1228 - 0.0529538083 * d);
-  const inc = 5.1454;
-  const w = norm360(318.0634 + 0.1643573223 * d);
-  const a = 60.2666, e = 0.0549;
-  const M = norm360(115.3654 + 13.0649929509 * d);
-  const Mr = M * RAD;
-  let E = M + e * SKY_DEG * Math.sin(Mr) * (1 + e * Math.cos(Mr));
-  for (let i = 0; i < 3; i++) {
-    const Er = E * RAD;
-    E = E - (E - e * SKY_DEG * Math.sin(Er) - M) / (1 - e * Math.cos(Er));
-  }
-  const Er = E * RAD;
-  const xv = a * (Math.cos(Er) - e), yv = a * (Math.sqrt(1 - e * e) * Math.sin(Er));
-  const v = Math.atan2(yv, xv) * SKY_DEG, r = Math.hypot(xv, yv);
-  const Nr = N * RAD, ir = inc * RAD, u = (v + w) * RAD;
-  const xh = r * (Math.cos(Nr) * Math.cos(u) - Math.sin(Nr) * Math.sin(u) * Math.cos(ir));
-  const yh = r * (Math.sin(Nr) * Math.cos(u) + Math.cos(Nr) * Math.sin(u) * Math.cos(ir));
-  const zh = r * (Math.sin(u) * Math.sin(ir));
-  let lon = norm360(Math.atan2(yh, xh) * SKY_DEG);
-  let lat = Math.atan2(zh, Math.hypot(xh, yh)) * SKY_DEG;
-  const Ms = norm360(356.0470 + 0.9856002585 * d);
-  const Mm = M, Lm = norm360(N + w + M), D = norm360(Lm - skySunLon(jd)), F = norm360(Lm - N);
-  const sD = (x) => Math.sin(x * RAD);
-  lon += -1.274 * sD(Mm - 2 * D) + 0.658 * sD(2 * D) - 0.186 * sD(Ms) - 0.059 * sD(2 * Mm - 2 * D)
-    - 0.057 * sD(Mm - 2 * D + Ms) + 0.053 * sD(Mm + 2 * D) + 0.046 * sD(2 * D - Ms)
-    + 0.041 * sD(Mm - Ms) - 0.035 * sD(D) - 0.031 * sD(Mm + Ms) - 0.015 * sD(2 * F - 2 * D)
-    + 0.011 * sD(Mm - 4 * D);
-  lat += -0.173 * sD(F - 2 * D) - 0.055 * sD(Mm - F - 2 * D) - 0.046 * sD(Mm + F - 2 * D)
-    + 0.033 * sD(F + 2 * D) + 0.017 * sD(2 * Mm + F);
-  const lonr = lon * RAD, latr = lat * RAD, eps = 23.4393 * RAD;
-  const xe = Math.cos(lonr) * Math.cos(latr);
-  const ye = Math.sin(lonr) * Math.cos(latr) * Math.cos(eps) - Math.sin(latr) * Math.sin(eps);
-  const ze = Math.sin(lonr) * Math.cos(latr) * Math.sin(eps) + Math.sin(latr) * Math.cos(eps);
-  return { ra: norm360(Math.atan2(ye, xe) * SKY_DEG), dec: Math.atan2(ze, Math.hypot(xe, ye)) * SKY_DEG };
-}
-/* Star colour from B-V, Elsewhere's ramp (blue-white → warm orange). */
-function skyStarColor(bv) {
-  const stops = [[0.62, 0.72, 1.0], [0.85, 0.89, 1.0], [1.0, 0.98, 0.94], [1.0, 0.85, 0.62], [1.0, 0.62, 0.36]];
-  const x = Math.max(0, Math.min(1, (bv + 0.35) / 2.1)) * (stops.length - 1);
-  const i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
-  return stops[i].map((v, k) => Math.round((v + (stops[i + 1][k] - v) * f) * 255));
-}
-const skyRgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
-
-/* Sky-colour grading by Sun altitude — Elsewhere's SKY_KEYS table and
-   interpolation, ported verbatim (colours are 0..1 triples). */
-const skyClamp01 = (v) => Math.max(0, Math.min(1, v));
-const skyLerp = (a, b, t) => a + (b - a) * t;
-const SKY_KEYS = [
-  { alt: -19, top: [0.004, 0.006, 0.022], hor: [0.012, 0.02, 0.05], bot: [0.004, 0.006, 0.016] },
-  { alt: -12, top: [0.008, 0.014, 0.045], hor: [0.03, 0.05, 0.12], bot: [0.006, 0.01, 0.03] },
-  { alt: -6,  top: [0.03, 0.06, 0.16], hor: [0.22, 0.2, 0.3], bot: [0.015, 0.025, 0.06] },
-  { alt: -2,  top: [0.09, 0.17, 0.38], hor: [0.72, 0.42, 0.3], bot: [0.03, 0.05, 0.1] },
-  { alt: 0,   top: [0.16, 0.32, 0.62], hor: [0.98, 0.62, 0.38], bot: [0.05, 0.08, 0.14] },
-  { alt: 3,   top: [0.22, 0.42, 0.75], hor: [0.85, 0.72, 0.6], bot: [0.07, 0.1, 0.16] },
-  { alt: 10,  top: [0.25, 0.5, 0.86], hor: [0.72, 0.83, 0.93], bot: [0.09, 0.12, 0.18] },
-  { alt: 25,  top: [0.2, 0.46, 0.88], hor: [0.66, 0.8, 0.94], bot: [0.1, 0.13, 0.19] },
-  { alt: 60,  top: [0.16, 0.42, 0.87], hor: [0.62, 0.78, 0.94], bot: [0.1, 0.13, 0.19] },
-];
-function skyColors(alt) {
-  let i = 0;
-  while (i < SKY_KEYS.length - 2 && alt > SKY_KEYS[i + 1].alt) i++;
-  const a = SKY_KEYS[i], b = SKY_KEYS[i + 1];
-  const t = skyClamp01((alt - a.alt) / (b.alt - a.alt));
-  const mixK = (k) => [skyLerp(a[k][0], b[k][0], t), skyLerp(a[k][1], b[k][1], t), skyLerp(a[k][2], b[k][2], t)];
-  return { top: mixK("top"), hor: mixK("hor"), bot: mixK("bot") };
-}
-const skyCss = (c, a) => `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${a})`;
-/* GLSL smoothstep, as used by Elsewhere's dome and point shaders. */
-function skySmoothstep(e0, e1, v) {
-  const t = skyClamp01((v - e0) / (e1 - e0));
-  return t * t * (3 - 2 * t);
-}
-
 function skyLocation() {
-  let tz = "";
-  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { /* fall through */ }
+  const tz = skyLocalTz();
   const city = CITIES.find((c) => c.tz === tz);
-  if (city) return { lat: city.lat, lon: city.lon };
-  // No matching city: the zone's own longitude from its UTC offset and
-  // a mid-northern latitude. The card labels this 按时区粗算.
-  return { lat: 35, lon: -new Date().getTimezoneOffset() / 4 };
+  if (city) return { lat: city.lat, lon: city.lon, tz };
+  // No matching city: the zone's longitude from its UTC offset and a
+  // mid-northern latitude. The chart card still says 按时区粗算.
+  return { lat: 35, lon: -new Date().getTimezoneOffset() / 4, tz };
 }
 function skyInstant(now) {
   const t = new Date(now);
   t.setHours(21, 0, 0, 0);
   return now.getTime() >= t.getTime() ? now : t;
 }
-/* The UTC offset (ms) of an IANA zone at an instant, via Intl: the
-   zone's wall clock at that instant, read as if it were UTC, minus
-   the instant itself. */
 function skyZoneOffsetMs(tz, ms) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: tz, hour12: false,
@@ -322,9 +225,7 @@ function skyZoneOffsetMs(tz, ms) {
   const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, (+p.hour) % 24, +p.minute, +p.second);
   return asUtc - Math.floor(ms / 1000) * 1000;
 }
-/* Tonight's 21:00 in an IANA zone (or `now`, once it has passed
-   there) — the scene instant for a place in that zone, the same
-   rule skyInstant applies to the visitor's own zone. */
+/* Tonight's 21:00 in an IANA zone (or `now`, once it has passed there). */
 function skyInstantInZone(now, tz) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
@@ -338,25 +239,13 @@ function skyInstantInZone(now, tz) {
   return now.getTime() >= guess ? now : new Date(guess);
 }
 
-/* ---------- Where the illustration looks from ----------
-   Elsewhere's postcard prints a place on its paper; so does this
-   card. The viewpoint is chosen per draw, in this order:
-   1. The visitor's own sky, when the browser has granted
-      geolocation: exact coordinates, computed on this device and
-      never sent anywhere. The paper names the nearest of the 42
-      cities when it is within ~150 km, and otherwise simply
-      你所在的地方 / "Where you are" — never coordinates.
-   2. Otherwise, a city drawn at random from the 42: its own sky at
-      its own 21:00, and its name on the paper.
-   The request is lazy and never blocks a card: it fires only when
-   an illustration is first drawn, and a position that arrives after
-   the card was painted changes nothing on stage — it applies from
-   the next illustration draw onward. A granted position is cached
-   in sessionStorage, on this device only, for the browsing session.
-   The chart and moon forms never come here: theirs is the
-   visitor's sky by time-zone estimate, as before. */
+/* Illustration viewpoint, chosen once per draw:
+   1. The visitor's sky, if geolocation was already granted this session.
+   2. Otherwise a city drawn from the 42, at that city's own 21:00.
+   The request is lazy, never blocks the card, and never sends the
+   position anywhere. A fix that arrives after this draw applies next time. */
 const SKY_GEO_KEY = "nam-sky-geo";
-let skyGeoState = null; // null until first asked this page load
+let skyGeoState = null;
 function skyStoredPosition() {
   try {
     const raw = sessionStorage.getItem(SKY_GEO_KEY);
@@ -367,7 +256,7 @@ function skyStoredPosition() {
   return null;
 }
 function skyRequestPosition() {
-  if (skyGeoState) return; // asked already this page load
+  if (skyGeoState) return;
   if (!("geolocation" in navigator)) { skyGeoState = { status: "unsupported" }; return; }
   skyGeoState = { status: "pending" };
   try {
@@ -382,7 +271,6 @@ function skyRequestPosition() {
     );
   } catch (e) { skyGeoState = { status: "denied" }; }
 }
-/* The nearest of the 42 cities to a point, and its distance. */
 function skyNearestCity(lat, lon) {
   let city = null, km = Infinity;
   for (const c of CITIES) {
@@ -394,11 +282,6 @@ function skyNearestCity(lat, lon) {
   }
   return { city, km };
 }
-/* The illustration's place for one draw: { lat, lon, when, city,
-   here }. `city` is the name the paper carries (null → the neutral
-   here-label); `here` marks the geolocation case. The place rides
-   on the selection, so re-renders and the keepsake keep the same
-   view — the random draw happens only when a card is drawn. */
 function illustrationPlace(now) {
   const granted = skyGeoState && skyGeoState.status === "granted"
     ? skyGeoState : skyStoredPosition();
@@ -416,174 +299,99 @@ function illustrationPlace(now) {
     city, here: false,
   };
 }
-/* The name the paper prints for a place: the city's own name in the
-   current language, or the neutral label for the visitor's spot. */
 function skyPlaceName(place) {
   if (place && place.city) return lang === "zh" ? place.city.zh : place.city.en;
   return t().sky.hereLabel;
 }
-
-/* The five naked-eye planets — Schlyter's elements and method, the
-   same family as the Moon's ephemeris above (elsewhere gets these
-   from Astronomy Engine; the painting needs arcminute-class places,
-   which this gives). Elements: [N0, Ndot, i0, idot, w0, wdot, a (AU),
-   e0, edot, M0, Mdot] with d = days since 2000 Jan 0.0 (JD−2451543.5).
-   Magnitudes use the standard Almanac V(1,0) + 5·log10(r·Δ) + phase
-   term; Saturn's rings are ignored, as is Jupiter's oblateness. */
-const SKY_PLANET_ELEMENTS = {
-  mercury: [48.3313, 3.24587e-5, 7.0047, 5.00e-8, 29.1241, 1.01444e-5, 0.387098, 0.205635, 5.59e-10, 168.6562, 4.0923344368, -0.42, 0.0380, -0.000273, 0.000002],
-  venus: [76.6799, 2.46590e-5, 3.3946, 2.75e-8, 54.8910, 1.38374e-5, 0.723330, 0.006773, -1.302e-9, 48.0052, 1.6021302244, -4.40, 0.0009, 0.000239, -0.00000065],
-  mars: [49.5574, 2.11081e-5, 1.8497, 1.78e-8, 286.5016, 2.92961e-5, 1.523688, 0.093405, 2.516e-9, 18.6021, 0.5240207766, -1.52, 0.016, 0, 0],
-  jupiter: [100.4542, 2.76854e-5, 1.3030, -1.557e-7, 273.8777, 1.64505e-5, 5.20256, 0.048498, 4.469e-9, 19.8950, 0.0830853001, -9.40, 0.005, 0, 0],
-  saturn: [113.6634, 2.38980e-5, 2.4886, -1.081e-7, 339.3939, 2.97661e-5, 9.55475, 0.055546, -9.499e-9, 316.9670, 0.0334442282, -8.88, 0.044, 0, 0],
-};
-function skyPlanets(jd, lat, lst) {
-  const d = jd - 2451543.5;
-  // The Sun's geocentric ecliptic position (Schlyter), for the Earth's
-  // heliocentric place and each planet's phase angle.
-  const sw = 282.9404 + 4.70935e-5 * d, se = 0.016709 - 1.151e-9 * d;
-  const sM = norm360(356.0470 + 0.9856002585 * d), sMr = sM * RAD;
-  const sE = sM + se * SKY_DEG * Math.sin(sMr) * (1 + se * Math.cos(sMr));
-  const sxv = Math.cos(sE * RAD) - se, syv = Math.sqrt(1 - se * se) * Math.sin(sE * RAD);
-  const sv = Math.atan2(syv, sxv) * SKY_DEG, sr = Math.hypot(sxv, syv);
-  const xs = sr * Math.cos((sv + sw) * RAD), ys = sr * Math.sin((sv + sw) * RAD);
-  const eps = (23.4393 - 3.563e-7 * d) * RAD;
-  const out = [];
-  for (const id of Object.keys(SKY_PLANET_ELEMENTS)) {
-    const el = SKY_PLANET_ELEMENTS[id];
-    const N = el[0] + el[1] * d, inc = el[2] + el[3] * d, w = el[4] + el[5] * d;
-    const a = el[6], e = el[7] + el[8] * d, M = norm360(el[9] + el[10] * d);
-    const Mr = M * RAD;
-    let E = M + e * SKY_DEG * Math.sin(Mr) * (1 + e * Math.cos(Mr));
-    for (let k = 0; k < 3; k++) {
-      const Er = E * RAD;
-      E = E - (E - e * SKY_DEG * Math.sin(Er) - M) / (1 - e * Math.cos(Er));
-    }
-    const Er = E * RAD;
-    const xv = a * (Math.cos(Er) - e), yv = a * (Math.sqrt(1 - e * e) * Math.sin(Er));
-    const v = Math.atan2(yv, xv) * SKY_DEG, r = Math.hypot(xv, yv);
-    const Nr = N * RAD, ir = inc * RAD, u = (v + w) * RAD;
-    const xh = r * (Math.cos(Nr) * Math.cos(u) - Math.sin(Nr) * Math.sin(u) * Math.cos(ir));
-    const yh = r * (Math.sin(Nr) * Math.cos(u) + Math.cos(Nr) * Math.sin(u) * Math.cos(ir));
-    const zh = r * (Math.sin(u) * Math.sin(ir));
-    const xg = xh + xs, yg = yh + ys, zg = zh;
-    const xe = xg;
-    const ye = yg * Math.cos(eps) - zg * Math.sin(eps);
-    const ze = yg * Math.sin(eps) + zg * Math.cos(eps);
-    const ra = norm360(Math.atan2(ye, xe) * SKY_DEG);
-    const dec = Math.atan2(ze, Math.hypot(xe, ye)) * SKY_DEG;
-    const aa = skyAltAz(ra, dec, lat, lst);
-    const dist = Math.hypot(xg, yg, zg);
-    const cosPa = Math.max(-1, Math.min(1, (r * r + dist * dist - sr * sr) / (2 * r * dist)));
-    const pa = Math.acos(cosPa) * SKY_DEG;
-    const mag = el[11] + 5 * Math.log10(r * dist) + el[12] * pa + el[13] * pa * pa + el[14] * pa * pa * pa;
-    out.push({
-      id, alt: aa.alt, az: aa.az, mag,
-      illum: (1 + cosPa) / 2, visible: aa.alt > -0.5,
-    });
+function skyObserverFor(now, place) {
+  if (place) {
+    const tz = place.here ? skyLocalTz() : (place.city ? place.city.tz : skyLocalTz());
+    return {
+      lat: place.lat, lon: place.lon, tz, when: place.when,
+      name: place.city ? place.city.en : "",
+    };
   }
-  return out;
+  const loc = skyLocation();
+  return { lat: loc.lat, lon: loc.lon, tz: loc.tz, when: skyInstant(now), name: "" };
 }
 
-/* Months (0-based) when each asterism owns the evening sky. */
-const SKY_SIG_MONTHS = {
-  dipper: [2, 3, 4], cassiopeia: [8, 9, 10, 11, 0], orion: [10, 11, 0, 1, 2],
-  triangle: [5, 6, 7, 8, 9], scorpius: [4, 5, 6, 7], crux: [1, 2, 3, 4, 5],
-};
-function computeSkyScene(now, place) {
-  const loc = place || skyLocation();
-  const when = place ? place.when : skyInstant(now);
-  const jd = skyJulianDay(when.getTime());
-  const lst = norm360(skyGmstDeg(jd) + loc.lon);
-  const stars = SKY_STARS.map((s) => {
-    const aa = skyAltAz(s[0], s[1], loc.lat, lst);
-    return { alt: aa.alt, az: aa.az, mag: s[2], bv: s[3], c: skyStarColor(s[3]) };
-  });
-  // The signature asterism: visible (most members up, centre high),
-  // in-season first, then highest centre.
+/* Tonight's highlight: in-season first, then the highest cluster that
+   is mostly above the horizon. Directions are averaged as vectors so a
+   pattern that crosses north (azimuth 0/360) does not flip to the south. */
+function chooseSignature(starsById, when, tz) {
+  const month = skyMonthInZone(when, tz);
   let sig = null;
-  for (const key of Object.keys(SKY_ASTERISMS)) {
-    const members = [...new Set(SKY_ASTERISMS[key].flat())];
-    const up = members.filter((i) => stars[i].alt > 0);
+  for (const key of Object.keys(SKY_PATTERNS)) {
+    const lines = SKY_PATTERNS[key].lines;
+    const members = [...new Set(lines.flat())];
+    const placed = [];
+    for (const id of members) {
+      const star = starsById.get(id);
+      if (star) placed.push(star);
+    }
+    const up = placed.filter((s) => s.altitude > 0);
     if (up.length < Math.ceil(members.length * 0.6)) continue;
-    let cAlt = 0, sx = 0, sy = 0;
-    for (const i of up) {
-      cAlt += stars[i].alt;
-      sx += Math.sin(stars[i].az * RAD);
-      sy += Math.cos(stars[i].az * RAD);
+    let x = 0, y = 0, z = 0, cAlt = 0;
+    for (const s of up) {
+      const a = s.altitude * RAD, az = s.azimuth * RAD;
+      x += Math.cos(a) * Math.sin(az);
+      y += Math.sin(a);
+      z += -Math.cos(a) * Math.cos(az);
+      cAlt += s.altitude;
     }
     cAlt /= up.length;
-    if (cAlt < 8) continue;
-    const score = (SKY_SIG_MONTHS[key].includes(when.getMonth()) ? 1000 : 0) + cAlt;
+    if (cAlt < 8 || Math.hypot(x, y, z) < 1e-6) continue;
+    const score = (SKY_SIG_MONTHS[key].includes(month) ? 1000 : 0) + cAlt;
     if (!sig || score > sig.score) {
-      const cAz = norm360(Math.atan2(sx, sy) * SKY_DEG);
-      sig = { key, score, az: cAz, alt: cAlt, dir: Math.round(cAz / 45) % 8 };
+      const az = norm360(Math.atan2(x, -z) / RAD);
+      sig = {
+        key, score, az, alt: cAlt, lines,
+        dir: Math.round(az / 45) % 8,
+      };
     }
   }
-  // The illustration's star field: the full mag < 5.2 catalog (SKY_FIELD)
-  // placed for the same instant — the density Elsewhere paints from.
-  const field = SKY_FIELD.map((s) => {
-    const aa = skyAltAz(s[1], s[2], loc.lat, lst);
-    return { id: "hyg-" + s[0], alt: aa.alt, az: aa.az, mag: s[3], bv: s[4] };
-  });
-  const mpos = skyMoonRaDec(jd);
-  const maa = skyAltAz(mpos.ra, mpos.dec, loc.lat, lst);
-  const mp = moonPhase(when);
-  // The Sun's altitude at the scene instant — Elsewhere grades its
-  // sky colours by it and dims the stars through twilight with it.
-  const sunLonR = skySunLon(jd) * RAD, epsR = 23.4393 * RAD;
-  const sunRa = norm360(Math.atan2(Math.cos(epsR) * Math.sin(sunLonR), Math.cos(sunLonR)) * SKY_DEG);
-  const sunDec = Math.asin(Math.sin(epsR) * Math.sin(sunLonR)) * SKY_DEG;
-  const sunAA = skyAltAz(sunRa, sunDec, loc.lat, lst);
-  return {
-    lat: loc.lat, lon: loc.lon, lst, stars, field, sig, sunAlt: sunAA.alt, sunAz: sunAA.az,
-    planets: skyPlanets(jd, loc.lat, lst),
-    month: when.getMonth() + 1,
-    moon: { alt: maa.alt, az: maa.az, illum: mp.illum, idx: mp.idx, age: mp.age },
-    seed: when.getFullYear() * 10000 + (when.getMonth() + 1) * 100 + when.getDate(),
-    seedHour: Math.floor(when.getTime() / 3600000),
-  };
+  return sig;
 }
-
-/* Synthetic Milky Way — Elsewhere's build, ported: 2,400 points along
-   the galactic plane (gaussian latitude spread), each point carrying
-   its sprite size (5 + rnd×9). Seeded by date here, so the page and
-   its keepsake agree. ONE deliberate deviation from Elsewhere's code:
-   its galactic→equatorial conversion feeds (l − L0) into the atan2,
-   which negates both arguments and so rotates the whole band 180° in
-   RA (its galactic centre lands at RA 86° — Gemini — instead of
-   266.4°). The conversion below is the standard form (lΩ − l), which
-   puts the centre at RA 266.4° / Dec −28.9° and the Cassiopeia sector
-   of the band at RA ≈24° / Dec +62°, where they belong. */
-function skyMilkyWay(seed) {
-  const rng = seededRng(seed * 7919 + 13);
-  const poleRa = 192.859508, poleDec = 27.128336 * RAD, lOmega = 122.932;
-  const pts = [];
-  for (let i = 0; i < 2400; i++) {
-    const l = rng() * 360;
-    const b = (rng() + rng() + rng() - 1.5) * 9.5;
-    const br = b * RAD, dl = (lOmega - l) * RAD;
-    const sinDec = Math.sin(br) * Math.sin(poleDec)
-      + Math.cos(br) * Math.cos(poleDec) * Math.cos(dl);
-    const dec = Math.asin(Math.max(-1, Math.min(1, sinDec)));
-    const y = Math.cos(br) * Math.sin(dl);
-    const x = Math.sin(br) * Math.cos(poleDec)
-      - Math.cos(br) * Math.sin(poleDec) * Math.cos(dl);
-    pts.push({
-      ra: norm360(poleRa + Math.atan2(y, x) * SKY_DEG),
-      dec: dec * SKY_DEG,
-      size: 5 + rng() * 9,
+function skyStarColor(bv) {
+  const stops = [[0.62, 0.72, 1.0], [0.85, 0.89, 1.0], [1.0, 0.98, 0.94], [1.0, 0.85, 0.62], [1.0, 0.62, 0.36]];
+  const x = Math.max(0, Math.min(1, ((bv == null ? 0.6 : bv) + 0.35) / 2.1)) * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
+  return stops[i].map((v, k) => Math.round((v + (stops[i + 1][k] - v) * f) * 255));
+}
+const skyRgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function skySummary(scene, observer) {
+  const sky = scene.sky;
+  const byId = new Map(sky.stars.map((s) => [s.id, s]));
+  const sig = chooseSignature(byId, observer.when, observer.tz);
+  const memberIds = new Set();
+  for (const pattern of Object.values(SKY_PATTERNS)) {
+    for (const line of pattern.lines) { memberIds.add(line[0]); memberIds.add(line[1]); }
+  }
+  const stars = [];
+  for (const s of sky.stars) {
+    if (s.magnitude > SKY_CHART_MAG && !memberIds.has(s.id)) continue;
+    stars.push({
+      id: s.id, alt: s.altitude, az: s.azimuth, mag: s.magnitude,
+      c: skyStarColor(s.colorIndex),
     });
   }
-  return pts;
+  const moon = sky.moon;
+  return {
+    sig, stars,
+    moon: {
+      alt: moon.altitude, az: moon.azimuth,
+      illum: Math.round(moon.illumination * 100),
+      idx: SKY_PHASE_INDEX[moon.phase] ?? 0,
+      waxing: moon.waxing,
+    },
+    sunAlt: sky.sunAltitude, sunAz: sky.sun.azimuth,
+  };
 }
 
 function skySans(px, weight) {
   const fam = getComputedStyle(document.body).getPropertyValue("--sans").trim() || "sans-serif";
   return `${weight || 400} ${px}px ${fam}`;
 }
-/* A small painted Moon: pale disc, the unlit part shadowed by an
-   offset disc — painterly, not a phase diagram. */
 function drawSkyMoon(ctx, cx, cy, r, moon) {
   ctx.save();
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.8);
@@ -595,7 +403,7 @@ function drawSkyMoon(ctx, cx, cy, r, moon) {
   ctx.fillStyle = "#f2ecd8";
   ctx.fill();
   ctx.clip();
-  const waxing = moon.idx <= 4;
+  const waxing = moon.waxing != null ? moon.waxing : moon.idx <= 4;
   const dx = (waxing ? -1 : 1) * 2 * r * (moon.illum / 100);
   ctx.beginPath(); ctx.arc(cx + dx, cy - r * 0.18, r * 1.02, 0, Math.PI * 2);
   ctx.fillStyle = "#232c49";
@@ -603,8 +411,7 @@ function drawSkyMoon(ctx, cx, cy, r, moon) {
   ctx.restore();
 }
 /* Chart projection: azimuthal equidistant — zenith at the centre,
-   horizon at the rim, north up and east to the LEFT, as on a
-   planisphere held over your head. */
+   horizon at the rim, north up and east to the LEFT. */
 function skyChartXY(alt, az, cx, cy, R) {
   const r = ((90 - alt) / 90) * R;
   const a = az * RAD;
@@ -628,12 +435,13 @@ function drawSkyChart(ctx, scene, x, y, w, h) {
     ctx.beginPath(); ctx.arc(cx, cy, ((90 - ringAlt) / 90) * R, 0, Math.PI * 2); ctx.stroke();
   }
   if (scene.sig) {
+    const byId = new Map(scene.stars.map((s) => [s.id, s]));
     ctx.strokeStyle = "rgba(232,184,96,0.8)";
     ctx.lineWidth = Math.max(1.2, side * 0.004);
     ctx.beginPath();
-    for (const [a, b] of SKY_ASTERISMS[scene.sig.key]) {
-      const A = scene.stars[a], B = scene.stars[b];
-      if (A.alt <= 0 || B.alt <= 0) continue;
+    for (const [a, b] of scene.sig.lines) {
+      const A = byId.get(a), B = byId.get(b);
+      if (!A || !B || A.alt <= 0 || B.alt <= 0) continue;
       const [x1, y1] = skyChartXY(A.alt, A.az, cx, cy, R);
       const [x2, y2] = skyChartXY(B.alt, B.az, cx, cy, R);
       ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
@@ -664,7 +472,7 @@ function drawSkyChart(ctx, scene, x, y, w, h) {
   ctx.strokeStyle = "rgba(150,170,220,0.5)";
   ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
-  const rim = t().sky.rim; // [N, E, S, W] — east sits left, looking up
+  const rim = t().sky.rim;
   ctx.fillStyle = "rgba(205,216,248,0.92)";
   ctx.font = skySans(Math.max(11, Math.round(side * 0.042)), 600);
   ctx.textAlign = "center";
@@ -675,1858 +483,113 @@ function drawSkyChart(ctx, scene, x, y, w, h) {
   ctx.fillText(rim[1], cx - R + inset, cy);
   ctx.fillText(rim[3], cx + R - inset, cy);
 }
-/* ================= The illustration: Elsewhere's pipeline, ported whole
-   =================
-   This is no longer a selection of borrowed paint functions. The whole
-   illustrated-keepsake pipeline of Elsewhere (the Interactive Sky
-   Simulator, ~/workspace/elsewhere) is ported here, module by module,
-   and the card runs it end to end:
-   - paint.ts: the Sun-altitude palettes and the brush marks (glowAt,
-     washAt, mark, blob, blade, noise1, hashOf).
-   - starVisibility.ts: the visibility model itself — twilight fade,
-     limiting magnitude (with the Moon's wash), atmospheric extinction,
-     weather contrast — not a home-made share curve. NAM has no weather
-     or light-pollution feed, so the model's weather inputs are the
-     clear-sky values (visibility 30 km, haze 0 → contrast 1) and the
-     brightness is Elsewhere's own default, 'dark'; everything else is
-     computed from the scene.
-   - The stars themselves: SKY_FIELD, the full mag < 5.2 HYG catalog
-     (2,045 stars), filtered and capped exactly as illustration.ts does
-     (alt > 0, mag < 5.2, first 900, share < 0.06 skipped).
-   - illustration.ts: drawIllustration's own order — sky bands, wet
-     washes, horizon haze, light glows, stars, line patterns, Sun,
-     planets, Moon, clouds, landscape — with its perspective projection
-     (projection.ts), its view (facing the signature asterism, fov 66,
-     Elsewhere's default) and its paint finish (postcard.ts's
-     paintFinish: diffusion, pigment wash, vignette, the bare-paper
-     margin inside its wandering painted edge, paper grain).
-   - clouds.ts + cloudField.ts: the watercolour clouds. NAM's weather
-     is always clear (cover 0), so they paint nothing today; they are
-     here so the pipeline is whole, not excerpted.
-   - landscape.ts + coast.ts + scenery.ts + seasons.ts: the land under
-     the horizon, in Elsewhere's default 'ridge' variant (its town and
-     valley variants are pre-rendered art images, not code — see
-     landscape.ts's own note in the port below).
-   Two NAM adaptations, both stated rather than hidden: no name labels
-   are lettered onto the painting (the card's paper zone carries the
-   words), and the only line pattern drawn is the signature asterism —
-   NAM's asterism set is its own (SKY_ASTERISMS), drawn in
-   illustration.ts's chalk-dot style and faded by the same linesShare.
-   Nothing is invented in the sky: no Milky Way, meteors or aurora. */
 
-/* paint.ts helpers, ported: colours are [r,g,b] 0..255 triples. */
-const skyHex = (v) => [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16));
-const skyClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const skyMix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * skyClamp01(t)));
-const skyCss255 = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${skyClamp01(a).toFixed(3)})`;
-/* Shadows in a painting lean toward a deep blue-violet (paint.ts). */
-const skyDeepen = (c, amt) => skyMix(c, [22, 20, 58], amt);
-/* glowAt: a soft round dab of colour that fades to nothing at radius. */
-function skyGlowAt(ctx, x, y, radius, colour, alpha) {
-  if (alpha <= 0.002 || radius <= 0) return;
-  const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  g.addColorStop(0, skyCss255(colour, alpha));
-  g.addColorStop(0.35, skyCss255(colour, alpha * 0.45));
-  g.addColorStop(1, skyCss255(colour, 0));
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
-}
-/* washAt: a soft dab stretched into a long horizontal wash. */
-function skyWashAt(ctx, x, y, radius, stretch, colour, alpha) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(stretch, 1);
-  skyGlowAt(ctx, 0, 0, radius, colour, alpha);
-  ctx.restore();
-}
-/* mark: one brush stroke added to the current path — swells in the
-   middle, tapers to both ends. */
-function skyMark(ctx, x, y, length, thickness, angle = 0, bow = 0) {
-  const c = Math.cos(angle), s = Math.sin(angle), half = length / 2;
-  const ax = x - half * c, ay = y - half * s, bx = x + half * c, by = y + half * s;
-  const tx = x - (bow - thickness) * s, ty = y + (bow - thickness) * c;
-  const ux = x - (bow + thickness) * s, uy = y + (bow + thickness) * c;
-  ctx.moveTo(ax, ay);
-  ctx.quadraticCurveTo(tx, ty, bx, by);
-  ctx.quadraticCurveTo(ux, uy, ax, ay);
-}
-/* blob: a closed, hand-drawn round shape added to the current path —
-   a ring of uneven radii joined by smooth curves (paint.ts). */
-function skyBlob(ctx, cx, cy, rx, ry, random, wobble = 0.16, points = 9) {
-  const phase = random() * Math.PI * 2;
-  const ring = [];
-  for (let i = 0; i < points; i++) {
-    const a = phase + (i / points) * Math.PI * 2;
-    const k = 1 + (random() - 0.5) * 2 * wobble;
-    ring.push({ x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * ry * k });
-  }
-  const last = ring[points - 1];
-  ctx.moveTo((last.x + ring[0].x) / 2, (last.y + ring[0].y) / 2);
-  for (let i = 0; i < points; i++) {
-    const a = ring[i], b = ring[(i + 1) % points];
-    ctx.quadraticCurveTo(a.x, a.y, (a.x + b.x) / 2, (a.y + b.y) / 2);
-  }
-  ctx.closePath();
-}
-/* blade: a grass blade added to the current path (paint.ts). */
-function skyBlade(ctx, x, y, h, lean, w) {
-  ctx.moveTo(x - w, y);
-  ctx.quadraticCurveTo(x - w * 0.6 + lean * 0.35, y - h * 0.6, x + lean, y - h);
-  ctx.quadraticCurveTo(x + w * 0.9 + lean * 0.3, y - h * 0.5, x + w, y);
-  ctx.closePath();
-}
-/* hashOf: a repeatable number in [0,1) from a string (FNV-1a) — a
-   star's own quirk, so its rays are its own on page and keepsake. */
-function skyHashOf(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  return (h >>> 0) / 4294967296;
-}
-/* Elsewhere's seededRandom (lib/random.ts): an LCG. NAM's seededRng is
-   a different generator and stays with the chart form; everything in
-   this pipeline seeds from this one, as Elsewhere does. */
-function skySeededRandom(seed) {
-  let state = seed >>> 0;
-  return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
-}
-/* noise1 (paint.ts): smooth 1D value noise in [0,1], seeded. */
-function skyNoise1(seed) {
-  const random = skySeededRandom(seed);
-  const values = Array.from({ length: 256 }, random);
-  return (x) => {
-    const i = Math.floor(x), f = x - i;
-    const a = values[i & 255], b = values[(i + 1) & 255];
-    return a + (b - a) * f * f * (3 - 2 * f);
-  };
-}
-
-/* paletteFor (paint.ts), verbatim keys: deep night, blue hour, dusk,
-   sunset, golden hour, day — interpolated by Sun altitude. An
-   overcast sky greys toward its own lightness; NAM's cover is 0, so
-   the greying stays inert, as in Elsewhere on a clear night. */
-const SKY_PAL_KEYS = ["zenith", "upper", "lower", "horizon", "glow", "cloudLight", "cloudBody", "cloudShadow", "landFar", "landMid", "landNear", "landLight", "leafLight"];
-const SKY_PALETTES = [
-  [-18, "#080c34 #10226a #1d478c #3f7ea6 #78b0c4 #b4c6ee #3a4d8c #19245a #1f4372 #142c52 #0a1734 #4a78a8 #6c9cc0"],
-  [-11, "#0f1a58 #27398c #5a62ac #a182b6 #dc9eb2 #f0c6d8 #62639f #343a74 #44528e #2b3668 #151d40 #7672b0 #8a8cc4"],
-  [-5, "#1c2e80 #4b5fb2 #a984ba #f49e7a #ffba78 #ffd4a4 #ad7a9e #5e4c86 #6a64a2 #473f76 #201f48 #c4849a #d49a8c"],
-  [0, "#2d5cb2 #7696d4 #f2aca4 #ffc27a #ffdc84 #fff2c8 #f2ac94 #91689c #8e84b8 #5c558c #2a2a56 #f6a674 #f0b266"],
-  [6, "#327ad2 #7db4e8 #f6dcbc #ffe8b2 #fff4cc #fffbf0 #fae6d6 #b8a4cc #88aac2 #5c9468 #2c5c40 #dcd472 #e6dc7a"],
-  [18, "#1a66cc #4a9eea #98d4f6 #d6f0fb #ffffff #ffffff #eef4fc #9cb4e0 #92bcd2 #62a85e #2a6a40 #c2dc68 #cfe46c"],
-].map(([alt, colours]) => [alt,
-  Object.fromEntries(colours.split(" ").map((c, i) => [SKY_PAL_KEYS[i], skyHex(c)]))]);
-function skyPaletteFor(sunAlt, cover) {
-  let pal = SKY_PALETTES[SKY_PALETTES.length - 1][1];
-  if (sunAlt <= SKY_PALETTES[0][0]) pal = SKY_PALETTES[0][1];
-  else for (let i = 1; i < SKY_PALETTES.length; i++) {
-    if (sunAlt <= SKY_PALETTES[i][0]) {
-      const [a0, p0] = SKY_PALETTES[i - 1], [a1, p1] = SKY_PALETTES[i];
-      const t = (sunAlt - a0) / (a1 - a0);
-      pal = Object.fromEntries(SKY_PAL_KEYS.map((k) => [k, skyMix(p0[k], p1[k], t)]));
-      break;
-    }
-  }
-  const grey = (c) => {
-    const l = Math.round(c[0] * 0.3 + c[1] * 0.55 + c[2] * 0.15);
-    return skyMix(c, [l, l, Math.min(255, l + 8)], cover * 0.45);
-  };
-  return { ...pal, zenith: grey(pal.zenith), upper: grey(pal.upper),
-    lower: grey(pal.lower), horizon: grey(pal.horizon) };
-}
-
-/* starVisibility.ts, ported whole. NAM's substitutions, stated once:
-   the weather is the clear-sky report (visibilityKm 30, haze 0, all
-   cloud cover 0) because NAM fetches no weather, and the brightness
-   is 'dark', Elsewhere's own default, because NAM asks no
-   light-pollution question. The model itself is untouched. */
-const SKY_WEATHER_CLEAR = { cloudCover: 0, cloudLow: 0, cloudMid: 0, cloudHigh: 0, visibilityKm: 30, haze: 0 };
-const SKY_BRIGHTNESS = "dark";
-function skySmoothstep(x, min, max) {
-  if (x <= min) return 0;
-  if (x >= max) return 1;
-  const t = (x - min) / (max - min);
-  return t * t * (3 - 2 * t);
-}
-/* 1 in a fully dark sky, 0 in daylight, eased through twilight. */
-function skyTwilightVisibility(sunAltitude) {
-  return 1 - skySmoothstep(sunAltitude, -18, -3);
-}
-function skyPlanetTwilightVisibility(sunAltitude, magnitude) {
-  const shift = 1.5 * Math.max(0, 1 - magnitude);
-  return 1 - skySmoothstep(sunAltitude, -18 + shift, -3 + shift);
-}
-/* Faintest magnitude visible overhead for the brightness, reduced by
-   a high bright Moon. moon = { altitude, illumination 0..1 }. */
-function skyLimitingMagnitude(brightness, moon) {
-  const base = brightness === "city" ? 3 : brightness === "suburban" ? 4.5 : 6;
-  return base - Math.max(0, Math.sin(moon.altitude * RAD)) * moon.illumination * 1.6;
-}
-/* Magnitudes lost to the longer air path near the horizon. */
-function skyAtmosphericExtinction(altitude) {
-  return 0.2 / Math.max(0.08, Math.sin(altitude * RAD)) - 0.2;
-}
-/* 0–1: how much a star survives the limiting magnitude. */
-function skyMagnitudeVisibility(star, limit) {
-  if (star.altitude <= 0) return 0;
-  const apparent = star.magnitude + skyAtmosphericExtinction(star.altitude);
-  return 1 - skySmoothstep(apparent, limit - 0.5, limit + 0.3);
-}
-/* 0.1–1: contrast lost to haze and poor visibility (1 when clear). */
-function skyWeatherVisibility(weather) {
-  return Math.max(0.1, Math.min(1, weather.visibilityKm / 28)) * (1 - Math.min(0.85, Math.max(0, weather.haze / 125)));
-}
-function skyStarVisibilityFactors(star, scene) {
-  const moon = { altitude: scene.moon.alt, illumination: scene.moon.illum / 100 };
-  const magnitude = skyMagnitudeVisibility(
-    { altitude: star.alt, magnitude: star.mag }, skyLimitingMagnitude(SKY_BRIGHTNESS, moon));
-  const weather = skyWeatherVisibility(SKY_WEATHER_CLEAR);
-  const twilight = skyTwilightVisibility(scene.sunAlt);
-  return { twilight, magnitude, weather, combined: twilight * magnitude * weather };
-}
-function skyPlanetVisibilityFactors(planet, scene) {
-  const moon = { altitude: scene.moon.alt, illumination: scene.moon.illum / 100 };
-  const magnitude = skyMagnitudeVisibility(
-    { altitude: planet.alt, magnitude: planet.mag }, skyLimitingMagnitude(SKY_BRIGHTNESS, moon));
-  const weather = skyWeatherVisibility(SKY_WEATHER_CLEAR);
-  const twilight = skyPlanetTwilightVisibility(scene.sunAlt, planet.mag);
-  return { twilight, magnitude, weather, combined: twilight * magnitude * weather };
-}
-/* The Moon's bright-limb direction, degrees clockwise from the top of
-   the view (domain/planets.ts brightLimbAngle, verbatim). */
-function skyBrightLimbAngle(sun, body) {
-  const sa = sun.altitude * RAD, ba = body.altitude * RAD;
-  const az = (sun.azimuth - body.azimuth) * RAD;
-  const right = Math.cos(sa) * Math.sin(az);
-  const up = Math.sin(sa) * Math.cos(ba) - Math.cos(sa) * Math.sin(ba) * Math.cos(az);
-  return Math.atan2(right, up) / RAD;
-}
-
-/* Star tints by B-V colour index (illustration.ts STAR_TINTS). */
-const SKY_STAR_TINTS = ["#d2e2ff", "#fff8e6", "#ffe2ac", "#ffbe94"].map(skyHex);
-const SKY_STAR_WHITE = [255, 255, 255];
-function skyStarTint(bv) {
-  return SKY_STAR_TINTS[bv == null || bv < 0.05 ? 0 : bv < 0.6 ? 1 : bv < 1.1 ? 2 : 3];
-}
-/* paintStar (illustration.ts): a star as a brush would touch it in —
-   a soft halo, a small uneven dot of paint and, for the bright ones,
-   thin tapered rays, each a little different (quirk is the star's
-   own number in [0,1)). Three tiers by magnitude. */
-function drawSkyStar(ctx, x, y, mag, tint, alpha, unit, quirk) {
-  const TAU2 = Math.PI * 2;
-  const r = Math.max(1.05, (5.4 - mag) * 1.12) * unit;
-  const turn = (quirk - 0.5) * 0.5;
-  if (mag < 1.6) {
-    skyGlowAt(ctx, x, y, r * 9, tint, 0.26 * alpha);
-    skyGlowAt(ctx, x, y, r * 3.2, SKY_STAR_WHITE, 0.3 * alpha);
-    ctx.fillStyle = skyCss255(skyMix(tint, SKY_STAR_WHITE, 0.4), 0.9 * alpha);
-    ctx.beginPath();
-    skyMark(ctx, x, y, r * (9.5 + quirk * 2.5), r * 0.52, turn + Math.PI / 2);
-    skyMark(ctx, x, y, r * (7.5 + (1 - quirk) * 2.5), r * 0.5, turn);
-    skyMark(ctx, x, y, r * 3.6, r * 0.42, turn + Math.PI / 4);
-    skyMark(ctx, x, y, r * 3.6, r * 0.42, turn - Math.PI / 4);
-    ctx.fill();
-    ctx.fillStyle = skyCss255(SKY_STAR_WHITE, alpha);
-    ctx.beginPath();
-    ctx.ellipse(x, y, r * 1.05, r * 0.95, turn, 0, TAU2);
-    ctx.fill();
-  } else if (mag < 3) {
-    skyGlowAt(ctx, x, y, r * 5, tint, 0.22 * alpha);
-    ctx.fillStyle = skyCss255(skyMix(tint, SKY_STAR_WHITE, 0.3), 0.8 * alpha);
-    ctx.beginPath();
-    skyMark(ctx, x, y, r * (5.2 + quirk * 1.6), r * 0.4, turn + Math.PI / 2);
-    skyMark(ctx, x, y, r * (4.2 + (1 - quirk) * 1.4), r * 0.38, turn);
-    ctx.fill();
-    ctx.fillStyle = skyCss255(SKY_STAR_WHITE, 0.95 * alpha);
-    ctx.beginPath();
-    ctx.ellipse(x, y, r * 0.72, r * 0.64, turn, 0, TAU2);
-    ctx.fill();
-  } else {
-    if (mag < 4.2) skyGlowAt(ctx, x, y, r * 3.4, tint, 0.16 * alpha);
-    ctx.fillStyle = skyCss255(tint, alpha * (0.7 + 0.25 * quirk));
-    ctx.beginPath();
-    ctx.ellipse(x, y, r * (0.5 + 0.2 * quirk), r * 0.5, quirk * 3, 0, TAU2);
-    ctx.fill();
-  }
-}
-
-/* paintMoon (illustration.ts): the Moon as a picture book paints it —
-   a soft halo, a creamy disc, watercolour maria, earthshine. `illum`
-   is the illuminated fraction; `angle` the bright limb's direction
-   (degrees, 90 = lit toward +x before the painter's rotation). */
-function drawSkyPaintedMoon(ctx, x, y, r, illum, angle, day) {
-  const TAU2 = Math.PI * 2;
-  const lit = skyHex("#fff3cf");
-  const dusk = 1 - day * 0.75;
-  skyGlowAt(ctx, x, y, r * 7.5, skyHex("#fff2d0"), (0.08 + 0.26 * illum) * dusk);
-  skyGlowAt(ctx, x, y, r * 3.4, lit, 0.09 * (0.4 + illum) * dusk);
-  ctx.save();
-  ctx.translate(x, y);
-  // Earthshine: the dark part is a deep, faintly luminous blue.
-  ctx.fillStyle = day > 0.5 ? "rgba(255,255,255,.2)"
-    : skyCss255(skyHex("#5a6ea8"), 0.3 + 0.25 * (1 - day));
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, TAU2);
-  ctx.fill();
-  const turn = ((angle - 90) * Math.PI) / 180;
-  ctx.rotate(turn);
-  const terminator = 1 - 2 * skyClamp01(illum);
-  ctx.beginPath();
-  ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2);
-  ctx.ellipse(0, 0, Math.max(0.001, Math.abs(terminator)) * r, r, 0,
-    Math.PI / 2, -Math.PI / 2, terminator > 0);
-  ctx.clip();
-  ctx.rotate(-turn);
-  const body = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r);
-  body.addColorStop(0, "#fffdf0");
-  body.addColorStop(0.7, skyCss255(lit));
-  body.addColorStop(1, "#f0d8a0");
-  ctx.fillStyle = body;
-  ctx.fillRect(-r, -r, r * 2, r * 2);
-  // Maria as soft watercolour blots.
-  ctx.fillStyle = "rgba(190,168,134,.3)";
-  for (const [mx, my, mr] of [
-    [-0.28, -0.3, 0.26], [0.12, -0.38, 0.2], [0.22, -0.02, 0.24],
-    [-0.15, 0.12, 0.17], [0.05, 0.42, 0.12],
-  ]) {
-    ctx.beginPath();
-    ctx.ellipse(mx * r, my * r, mr * r, mr * r * 0.82, 0.4, 0, TAU2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-/* cloudField.ts, ported: cumulus as a seeded two-dimensional
-   transparency field, rasterized small and smoothed onto the canvas. */
-function skyCreateCloudField(random, tiers = 1) {
-  const seed = (random() * 0xffffffff) >>> 0;
-  const count = 9 + (tiers > 1 ? 1 : 0);
-  const masses = [
-    [-0.42, -0.22, 1.67, 0.42, 0.65],
-    [0.28, -0.3, 1.42, 0.48, 0.68],
-  ];
-  for (let i = 0; i < count; i++) {
-    const u = (i + random()) / count;
-    masses.push([
-      (u - 0.5) * 3.3 + (random() - 0.5) * 0.25,
-      -0.36 - random() * 0.53 - Math.sin(u * Math.PI * 3.2) * 0.12,
-      0.38 + random() * 0.53,
-      0.29 + random() * 0.5,
-      0.72 + random() * 0.26,
-    ]);
-  }
-  return { seed, masses };
-}
-/* Soft phase-warped ripples (cloudField.ts's wash). */
-function skyFieldWash(x, y, phase) {
-  return Math.sin(x * 3.8 + Math.sin(y * 2.4 + phase));
-}
-function skySampleCloudField(field, u, v) {
-  const phase = field.seed * 0.000001;
-  const distortion = skyFieldWash(u, v, phase) * 0.07;
-  let clear = 1;
-  for (const [mx, my, rx, ry, strength] of field.masses) {
-    const dx = (u + distortion - mx) / rx;
-    const dy = (v - distortion - my) / ry;
-    clear *= 1 - strength * Math.exp(-1.75 * (dx * dx + dy * dy));
-  }
-  const edge = 1 - clear + skyFieldWash(u * 1.8, v * 1.8, phase + 11) * 0.08;
-  const t = skyClamp01((edge - 0.25) / 0.64);
-  return t * t * (3 - 2 * t);
-}
-function skyCloudFieldLuminance(u, v, opacity, pigment, gradientX, gradientY, light) {
-  const normalSize = Math.hypot(gradientX, gradientY) + 0.07;
-  const facingLight = (-gradientX * light.x - gradientY * light.y) / normalSize;
-  return skyClamp01(
-    0.47 + v * light.y * 0.23 - u * light.x * 0.1 + facingLight * 0.13 +
-    pigment * 0.055 + (opacity - 0.5) * 0.23 - light.backlit * 0.12);
-}
-function skyRasterCloudOpacity(field, columns, rows) {
-  const stepX = 4.66 / columns;
-  const stepY = 2.54 / rows;
-  const clear = new Float32Array(columns * rows).fill(1);
-  for (const [mx, my, rx, ry, strength] of field.masses) {
-    const horizontal = new Float32Array(columns);
-    for (let i = 0; i < columns; i++) {
-      const dx = (-2.33 + (i + 0.5) * stepX - mx) / rx;
-      horizontal[i] = strength * Math.exp(-1.75 * dx * dx);
-    }
-    for (let j = 0; j < rows; j++) {
-      const dy = (-1.9 + (j + 0.5) * stepY - my) / ry;
-      const vertical = Math.exp(-1.75 * dy * dy);
-      for (let i = 0; i < columns; i++) {
-        clear[j * columns + i] *= 1 - horizontal[i] * vertical;
-      }
-    }
-  }
-  const opacity = new Uint8Array(clear.length);
-  const phase = field.seed * 0.000001;
-  for (let j = 0; j < rows; j++) {
-    const v = -1.9 + (j + 0.5) * stepY;
-    for (let i = 0; i < columns; i++) {
-      const u = -2.33 + (i + 0.5) * stepX;
-      const drift = skyFieldWash(u, v, phase) * 0.07;
-      const x = i + drift / stepX;
-      const y = j - drift / stepY;
-      const xi = Math.max(0, Math.min(columns - 2, Math.floor(x)));
-      const yi = Math.max(0, Math.min(rows - 2, Math.floor(y)));
-      const x1 = xi + 1;
-      const y1 = yi + 1;
-      const tx = x - xi;
-      const ty = y - yi;
-      const top = skyLerp(clear[yi * columns + xi], clear[yi * columns + x1], tx);
-      const bottom = skyLerp(clear[y1 * columns + xi], clear[y1 * columns + x1], tx);
-      const edge = 1 - skyLerp(top, bottom, ty) + skyFieldWash(u * 1.8, v * 1.8, phase + 11) * 0.08;
-      const t = skyClamp01((edge - 0.25) / 0.64);
-      opacity[j * columns + i] = Math.round(255 * t * t * (3 - 2 * t));
-    }
-  }
-  return opacity;
-}
-function skyPaintCloudField(ctx, x, y, size, palette, light, random, tiers = 1) {
-  const field = skyCreateCloudField(random, tiers);
-  const width = size * 4.66;
-  const height = size * 2.54;
-  const offscreen = document.createElement("canvas");
-  const c = offscreen.getContext("2d");
-  if (!c) {
-    ctx.save();
-    for (const m of field.masses)
-      skyGlowAt(ctx, x + size * m[0], y + size * m[1],
-        size * Math.max(m[2], m[3]), palette.cloudLight, 0.12 * m[4]);
-    ctx.restore();
-    return field;
-  }
-  const step = Math.max(1.6, size * 0.026);
-  offscreen.width = Math.max(8, Math.ceil(width / step));
-  offscreen.height = Math.max(8, Math.ceil(height / step));
-  const image = c.createImageData(offscreen.width, offscreen.height);
-  const pixels = image.data;
-  const columns = offscreen.width;
-  const rows = offscreen.height;
-  const densities = skyRasterCloudOpacity(field, columns, rows);
-  const shade = skyMix(palette.cloudShadow, palette.cloudBody, 0.52);
-  const base = skyMix(shade, light.underColour, light.under * 0.25);
-  const phase = field.seed * 0.000001;
-  let n = 0;
-  for (let j = 0; j < rows; j++) {
-    const v = -1.9 + (j + 0.5) * (2.54 / rows);
-    for (let i = 0; i < columns; i++) {
-      const u = -2.33 + (i + 0.5) * (4.66 / columns);
-      const opacity = densities[j * columns + i] / 255;
-      const gradientX =
-        densities[j * columns + Math.min(columns - 1, i + 1)] - densities[j * columns + Math.max(0, i - 1)];
-      const gradientY =
-        densities[Math.min(rows - 1, j + 1) * columns + i] - densities[Math.max(0, j - 1) * columns + i];
-      const pigment = skyFieldWash(u * 0.9, v * 0.9, phase);
-      const lit = skyCloudFieldLuminance(u, v, opacity, pigment, gradientX / 255, gradientY / 255, light);
-      for (let ch = 0; ch < 3; ch++) {
-        pixels[n++] = skyLerp(base[ch], palette.cloudLight[ch], lit);
-      }
-      pixels[n++] = 255 * opacity * (0.86 + 0.04 * pigment);
-    }
-  }
-  c.putImageData(image, 0, 0);
-  ctx.save();
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(offscreen, x - size * 2.33, y - size * 1.9, width, height);
-  ctx.restore();
-  return field;
-}
-
-/* clouds.ts, ported: atmospheric watercolour clouds — broad veils,
-   torn horizontal edges and a small number of joined cloud banks. */
-function skySmoothCloudPath(ctx, upper, lower) {
-  const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-  const all = [...upper, ...lower];
-  const first = mid(all[all.length - 1], all[0]);
-  ctx.moveTo(first.x, first.y);
-  for (let i = 0; i < all.length; i++) {
-    const next = mid(all[i], all[(i + 1) % all.length]);
-    ctx.quadraticCurveTo(all[i].x, all[i].y, next.x, next.y);
-  }
-  ctx.closePath();
-}
-function skyVeil(ctx, x, y, length, depth, body, highlight, random, alpha, slope = 0) {
-  if (length <= 0 || depth <= 0 || alpha <= 0.005) return;
-  const upper = [];
-  const lower = [];
-  for (let i = 0; i <= 9; i++) {
-    const t = i / 9;
-    const envelope = Math.pow(Math.max(0, Math.sin(t * Math.PI)), 0.48);
-    const center = y + slope * length * (t - 0.5);
-    const jitter = (random() - 0.5) * depth * 0.22;
-    const px = x + length * (t - 0.5);
-    upper.push({ x: px, y: center - depth * envelope * (0.5 + random() * 0.2) + jitter });
-    lower.unshift({ x: px, y: center + depth * envelope * (0.26 + random() * 0.16) + jitter });
-  }
-  const gradient = ctx.createLinearGradient(0, y - depth, 0, y + depth);
-  gradient.addColorStop(0, skyCss255(highlight, 0));
-  gradient.addColorStop(0.35, skyCss255(highlight, alpha * 0.65));
-  gradient.addColorStop(0.58, skyCss255(body, alpha));
-  gradient.addColorStop(1, skyCss255(body, 0));
-  ctx.save();
-  ctx.fillStyle = gradient;
-  ctx.shadowColor = skyCss255(body, alpha * 0.24);
-  ctx.shadowBlur = depth * 0.28;
-  ctx.beginPath();
-  skySmoothCloudPath(ctx, upper, lower);
-  ctx.fill();
-  ctx.restore();
-}
-function skyCumulus(ctx, x, y, size, palette, light, random, tiers = 1) {
-  skyPaintCloudField(ctx, x, y, size, palette, light, random, tiers);
-}
-function skyStratus(ctx, x, y, length, palette, light, random, unit) {
-  const body = skyMix(palette.cloudBody, palette.cloudShadow, 0.36);
-  const edge = skyMix(palette.cloudLight, palette.glow, 0.3 * light.backlit);
-  const bands = 1 + Math.floor(random() * 2);
-  for (let i = 0; i < bands; i++) {
-    const oy = (i - (bands - 1) / 2) * (13 + random() * 12) * unit;
-    const l = length * (0.72 + random() * 0.5);
-    const t = (8 + random() * 7) * unit;
-    const cx = x + (random() - 0.5) * length * 0.24;
-    skyVeil(ctx, cx, y + oy, l, t * 1.45, body, edge, random, 0.42, (random() - 0.5) * 0.04);
-  }
-}
-function skyAltocumulus(ctx, x, y, size, palette, light, random) {
-  const body = skyMix(palette.cloudBody, palette.cloudShadow, 0.25 + 0.25 * light.backlit);
-  const edge = skyMix(palette.cloudLight, palette.glow, 0.28 * light.backlit);
-  const slope = (random() - 0.5) * 0.12;
-  for (let row = 0; row < 2; row++) {
-    const cy = y + (row - 0.5) * size * 1.2;
-    const shift = (random() - 0.5) * size * 2;
-    const length = size * (4.6 + random() * 3.6);
-    skyVeil(ctx, x + shift, cy, length, size * (0.55 + random() * 0.28), body, edge, random, 0.25, slope);
-  }
-}
-function skyCirrus(ctx, x, y, length, palette, light, random) {
-  const tint = skyMix(palette.cloudLight, palette.glow, 0.3 * light.backlit);
-  const angle = (random() - 0.5) * 0.2;
-  skyWashAt(ctx, x, y, length * 0.035, 9, tint, 0.1);
-  ctx.save();
-  ctx.fillStyle = skyCss255(tint, 0.16);
-  ctx.beginPath();
-  for (let i = 0; i < 5; i++) {
-    const l = length * (0.32 + random() * 0.65);
-    const ox = (random() - 0.5) * length * 0.45;
-    skyMark(ctx, x + ox, y + (random() - 0.5) * length * 0.12 + ox * Math.sin(angle),
-      l, length * (0.003 + random() * 0.005), angle + (random() - 0.5) * 0.08,
-      -l * (0.02 + random() * 0.05));
-  }
-  ctx.fill();
-  ctx.restore();
-}
-function skyOvercastDeckOpacity(amount) {
-  const t = skyClamp01((skyClamp01(amount) - 0.74) / 0.26);
-  return 0.94 * t * t * (3 - 2 * t);
-}
-function skyCloudSheet(ctx, width, top, bottom, palette, light, random, amount) {
-  if (bottom <= top || amount <= 0) return;
-  const span = bottom - top;
-  const bands = 1 + Math.round(skyClamp01(amount) * 2);
-  const shadow = skyMix(palette.cloudBody, palette.cloudShadow, 0.35 + 0.25 * light.backlit);
-  const deckAlpha = skyOvercastDeckOpacity(amount);
-  if (deckAlpha > 0) {
-    const gradient = ctx.createLinearGradient(0, top, light.x * width * 0.2, bottom);
-    gradient.addColorStop(0, skyCss255(palette.cloudLight, deckAlpha * 0.98));
-    gradient.addColorStop(0.5, skyCss255(shadow, deckAlpha));
-    gradient.addColorStop(1, skyCss255(palette.cloudBody, deckAlpha * 0.96));
-    ctx.save();
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, top, width, span);
-    ctx.restore();
-  }
-  for (let i = 0; i < bands; i++) {
-    const t = (i + 0.45 + (random() - 0.5) * 0.28) / bands;
-    const cy = skyLerp(top, bottom, t);
-    const depth = span * (0.11 + random() * 0.09);
-    const length = width * (0.85 + random() * 0.48);
-    const cx = width * (0.3 + random() * 0.4);
-    skyVeil(ctx, cx, cy, length, depth, shadow, palette.cloudLight, random,
-      skyClamp01(0.1 + 0.3 * amount), (random() - 0.5) * 0.045);
-  }
-}
-
-/* scenery.ts + renderer/ridge.ts, ported: horizon variants whose top
-   edge stays under 2° of altitude, so scenery never hides an object
-   the sky reports as visible. */
-function skyRidgeAltitude(azimuthDeg) {
-  const azimuth = azimuthDeg * RAD;
-  const wave = Math.sin(azimuth * 5.0) * 10 + Math.sin(azimuth * 11.0) * 4 + Math.cos(azimuth * 17.0) * 2;
-  const height = Math.max(4, Math.min(38, wave + 18));
-  return (Math.atan2(height, 1435) * 180) / Math.PI;
-}
-const skyHorizonHash = (n) => {
-  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
-  return s - Math.floor(s);
-};
-function skyHorizonAltitude(variant, azimuth) {
-  const a = ((azimuth % 360) + 360) % 360;
-  switch (variant) {
-    case "ridge":
-      return skyRidgeAltitude(a);
-    case "mountains": {
-      let top = 0.15;
-      for (let k = -1; k <= 1; k++) {
-        const i = Math.floor(a / 9) + k;
-        const centre = i * 9 + 4.5 + (skyHorizonHash(i) - 0.5) * 4;
-        const height = 0.5 + skyHorizonHash(i + 1000) * 1.4;
-        const width = 6 + skyHorizonHash(i + 2000) * 6;
-        top = Math.max(top, height * (1 - Math.abs(a - centre) / width));
-      }
-      return Math.min(1.9, top);
-    }
-    case "sea":
-      return 0;
-    case "city": {
-      const i = Math.floor(a / 1.5);
-      const r = skyHorizonHash(i);
-      if (skyHorizonHash(Math.floor(a / 40) + 500) < 0.25) return 0.1;
-      return r > 0.85 ? 1.2 + skyHorizonHash(i + 7) * 0.7 : 0.25 + r * 0.6;
-    }
-  }
-  return 0;
-}
-const SKY_HORIZON_STEP = { ridge: 1, mountains: 0.5, sea: 5, city: 0.25 };
-const SKY_TOWN_TOP = 1.95, SKY_ISLAND_TOP = 1.2, SKY_MAST_TOP = 0.9;
-
-/* seasons.ts, ported. NAM's scene carries the local month (1-based)
-   and latitude of the estimated place, which is all the original
-   reads from its snapshot. */
-const SKY_SEASONAL_COLOURS = {
-  spring: { turf: "#9fad71", leaf: "#c3d982", shallow: "#83c8b7", sea: "#377d79", sand: "#e2cda2" },
-  summer: { turf: "#6d914e", leaf: "#b5cf65", shallow: "#4fc4b5", sea: "#145c85", sand: "#f0d2a1" },
-  autumn: { turf: "#ae854c", leaf: "#d5793b", shallow: "#8ea89c", sea: "#406e70", sand: "#dbb98b" },
-  winter: { turf: "#b8c4bc", leaf: "#a6a19a", shallow: "#9cbac0", sea: "#5a6d81", sand: "#c1b5a3" },
-};
-function skyLandscapeSeason(month, latitude) {
-  if (Math.abs(latitude) <= 23.44) return "summer";
-  const offset = latitude < 0 ? 6 : 0;
-  return ["winter", "spring", "summer", "autumn"][Math.floor(((month + offset) % 12) / 3)];
-}
-
-/* coast.ts, ported: a tidal cove for the 'sea' horizon variant. */
-function skyPaintCove(scene) {
-  const { ctx, width, height, horizonY, day, seed, palette, season, unit } = scene;
-  const depth = height - horizonY;
-  if (depth < 10 * unit) return;
-  const random = skySeededRandom(seed + 103);
-  const weathering = skyNoise1(seed + 105);
-  const side = random() < 0.5 ? -1 : 1;
-  const reach = Math.min(0.56 * width, depth * 2.45);
-  const tones = SKY_SEASONAL_COLOURS[season];
-  const local = (colour) => skyMix(skyDeepen(palette.landMid, 0.38), skyHex(colour), 0.04 + day * 0.94);
-  const sand = local(tones.sand);
-  const shallow = local(tones.shallow);
-  const foam = skyMix(palette.horizon, skyHex("#fff7df"), day * 0.9);
-  const surf = (season === "winter" ? 1.25 : season === "summer" ? 0.8 : 1) * reach;
-  const shore = (t) => reach * (0.11 + 0.74 * t * t - 0.065 * Math.sin(t * Math.PI * 2));
-  const yAt = (t) => horizonY + depth * (0.44 + 0.56 * t);
-  ctx.save();
-  ctx.translate(side > 0 ? 0 : width, 0);
-  ctx.scale(side, 1);
-  const band = (offset, colour, alpha) => {
-    ctx.fillStyle = skyCss255(colour, alpha);
-    ctx.beginPath();
-    ctx.moveTo(-2, yAt(0));
-    for (let i = 0; i <= 84; i++) {
-      const t = i / 84;
-      const swell = (0.24 + 0.76 * t) * (0.89 + 0.17 * weathering(t * 15 + offset * 8));
-      ctx.lineTo(shore(t) + offset * surf * swell, yAt(t));
-    }
-    ctx.lineTo(-2, height + 1);
-    ctx.fill();
-  };
-  band(0.58, shallow, 0.18);
-  band(0.33, shallow, 0.35);
-  band(0.14, shallow, 0.48);
-  band(0.018, foam, 0.94);
-  band(0, skyMix(sand, shallow, 0.28), 1);
-  band(-0.08, sand, 1);
-  for (let line = 1; line <= 4; line++) {
-    const offset = surf * (0.09 * line + 0.015 * line * line);
-    for (let t = 0; t < 1;) {
-      const span = (0.044 + random() * 0.13) / Math.sqrt(line);
-      const points = Array.from({ length: 17 }, (_, j) => {
-        const u = j / 16, q = t + span * u;
-        return {
-          x: shore(q) + offset * (0.21 + 0.79 * q) + surf * 0.018 * weathering(23 * q + line),
-          y: yAt(q),
-          curl: Math.sin(Math.PI * u) * depth * (0.004 + q * 0.022) * (0.7 + 0.3 * weathering(80 * q)),
-        };
-      });
-      for (const [colour, thickness] of [[skyDeepen(shallow, 0.35), 1.8], [foam, 0.67]]) {
-        ctx.fillStyle = skyCss255(colour, 0.84 - line * 0.095);
-        ctx.beginPath();
-        for (const p of points) ctx.lineTo(p.x, p.y);
-        for (let j = points.length - 1; j >= 0; j--) {
-          const p = points[j];
-          ctx.lineTo(p.x, p.y + p.curl * thickness);
-        }
-        ctx.fill();
-      }
-      t += span + random() * 0.032;
-    }
-  }
-  for (let i = 0; i < 115; i++) {
-    const t = random();
-    const x = shore(t) * (0.12 + random() * 0.8);
-    ctx.fillStyle = skyCss255(skyDeepen(sand, 0.48), 0.22 + random() * 0.26);
-    ctx.beginPath();
-    ctx.ellipse(x, yAt(t), (0.8 + 2 * t * random()) * unit, (0.4 + t) * unit, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  const rock = scene.landscapeArt;
-  if (rock) {
-    const w = reach * 0.93;
-    const h = (w * rock.naturalHeight) / rock.naturalWidth;
-    const base = yAt(0.14);
-    ctx.save();
-    ctx.translate(0, base);
-    ctx.scale(1, -0.32);
-    for (let i = 0; i < 13; i++) {
-      const v = i / 13;
-      ctx.globalAlpha = 0.24 * (1 - v);
-      const slice = rock.naturalHeight / 13;
-      ctx.drawImage(rock, 0, rock.naturalHeight - (i + 1) * slice, rock.naturalWidth,
-        slice * 0.75, (weathering(i * 0.7) - 0.5) * 12 * unit, (-(i + 1) * h) / 13, w, (h / 13) * 0.75);
-    }
-    ctx.restore();
-    ctx.drawImage(rock, 0, base - h, w, h);
-    for (let i = 0; i < 42; i++) {
-      const t = random();
-      ctx.fillStyle = skyCss255(foam, 0.16 + random() * 0.36);
-      ctx.beginPath();
-      ctx.ellipse(w * t, base + (random() - 0.5) * h * 0.1, (1 + random() * 7) * unit,
-        (0.4 + random() * 0.65) * unit, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  const duneY = (t) => height - depth * (0.17 * (1 - t * t) + 0.03 * Math.cos(4 * t));
-  const duneWidth = reach * 0.44;
-  ctx.beginPath();
-  ctx.moveTo(0, height);
-  for (let i = 0; i <= 42; i++) ctx.lineTo((duneWidth * i) / 42, duneY(i / 42));
-  ctx.lineTo(duneWidth, height);
-  ctx.fillStyle = skyCss255(skyMix(sand, local(tones.turf), 0.5));
-  ctx.fill();
-  for (let i = 0; i < 108; i++) {
-    const t = random();
-    const x = duneWidth * t;
-    const y = skyLerp(duneY(t), height, random());
-    const h = depth * (0.017 + random() * 0.081) * (1.18 - t * 0.65);
-    for (let j = 0; j < 5; j++) {
-      const sway = (random() - 0.38) * h;
-      const tip = y - h * (0.48 + random() * 0.55);
-      ctx.fillStyle = skyCss255(skyMix(local(tones.turf), skyDeepen(sand, 0.38), random() * 0.8));
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + sway * 0.28, tip + h * 0.16, x + sway, tip);
-      ctx.quadraticCurveTo(x + sway * 0.24 + h * 0.09, tip + h * 0.27, x + h * 0.06, y);
-      ctx.fill();
-      if (j === 0 && (season === "spring" || season === "autumn")) {
-        ctx.fillStyle = skyCss255(local(season === "spring" ? "#e3a6b3" : "#bd8a58"));
-        ctx.beginPath();
-        ctx.ellipse(x + sway, tip, h * 0.11, h * (season === "spring" ? 0.11 : 0.22), 0.3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  }
-  ctx.restore();
-}
-
-/* landscape.ts, ported. The LandScene is a plain object here:
-   { season, ctx, width, height, unit, horizonY, palette, toCanvas,
-     view, sky, day, night, seed, lightX, lightStrength, halfWidth,
-     horizon, landscapeArt }. Above the horizon line there is only the
-   chosen variant (under 2°); everything taller stands on ground
-   below it, so nothing reported visible is ever hidden. */
-function skyMist(ctx, y, width, colour, alpha, depth) {
-  const g = ctx.createLinearGradient(0, y - depth, 0, y + depth * 0.4);
-  g.addColorStop(0, skyCss255(colour, 0));
-  g.addColorStop(0.75, skyCss255(colour, alpha));
-  g.addColorStop(1, skyCss255(colour, alpha * 0.6));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, y - depth, width, depth * 1.4);
-}
-/* One layer of land painted like gouache: the body, broad light on
-   the slopes that face the light and shade on those that turn away,
-   loose brush marks, and a broken line of light along the crest. */
-function skyLandLayer(scene, points, tone, random) {
-  const { ctx, width, height, unit, lightX } = scene;
-  if (points.length < 2) return;
-  const top = points.reduce((m, p) => Math.min(m, p.y), Infinity);
-  if (top > height) return;
-  const path = () => {
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, height + 10);
-    for (const p of points) ctx.lineTo(p.x, p.y);
-    ctx.lineTo(points[points.length - 1].x, height + 10);
-    ctx.closePath();
-  };
-  const g = ctx.createLinearGradient(0, top, 0, top + tone.depth * 2.4);
-  g.addColorStop(0, skyCss255(tone.crest));
-  g.addColorStop(1, skyCss255(tone.body));
-  ctx.fillStyle = g;
-  path();
-  ctx.fill();
-  ctx.save();
-  path();
-  ctx.clip();
-  const slopes = points.map((_, i) => {
-    const a = points[Math.max(0, i - 2)], b = points[Math.min(points.length - 1, i + 3)];
-    return ((b.y - a.y) / Math.max(1, b.x - a.x)) * lightX;
-  });
-  const facing = (i) => skyClamp01((slopes[i] + 0.03) * 4.5);
-  const away = (i) => skyClamp01((-slopes[i] - 0.03) * 4.5);
-  for (const [pick, colour, alpha] of [
-    [away, tone.shade, 0.5],
-    [facing, tone.light, tone.lightAlpha],
-  ])
-    for (const [reach, share] of [[3.2, 0.3], [1.5, 0.4], [0.6, 0.45]]) {
-      const drop = tone.depth * reach;
-      const LEVELS = 4;
-      ctx.fillStyle = skyCss255(colour, (alpha * share) / LEVELS);
-      for (let level = 1; level <= LEVELS; level++) {
-        const threshold = (level - 0.5) / LEVELS;
-        ctx.beginPath();
-        for (let i = 0; i < points.length - 1; i++) {
-          if (pick(i) < threshold) continue;
-          let end = i;
-          while (end < points.length - 2 && pick(end + 1) >= threshold) end++;
-          const length = end + 1 - i;
-          ctx.moveTo(points[i].x, points[i].y);
-          for (let k = i + 1; k <= end + 1; k++) ctx.lineTo(points[k].x, points[k].y);
-          for (let k = end; k > i; k--) {
-            const t = (k - i) / length;
-            const swell = drop * Math.min(1, Math.sin(Math.PI * t) * 1.8);
-            ctx.lineTo(points[k].x - lightX * swell * 0.5, points[k].y + swell);
-          }
-          ctx.closePath();
-          i = end;
-        }
-        ctx.fill();
-      }
-    }
-  const span = Math.min(height - top, tone.depth * 9);
-  for (const [colour, alpha] of [
-    [skyMix(tone.body, tone.light, 0.55), 0.16 + 0.2 * tone.lightAlpha],
-    [skyDeepen(tone.body, 0.35), 0.22],
-  ]) {
-    ctx.fillStyle = skyCss255(colour, alpha);
-    ctx.beginPath();
-    for (let i = 0; i < tone.marks / 2; i++) {
-      const index = Math.floor(random() * (points.length - 1));
-      const a = points[index], b = points[index + 1];
-      const t = random();
-      const slope = Math.atan2(b.y - a.y, Math.max(1, b.x - a.x));
-      skyMark(ctx, a.x + random() * (b.x - a.x), a.y + (4 + t * t * span) * 1,
-        (14 + random() * 50 + t * 40) * unit, (1.5 + random() * 3.5 + t * 3) * unit,
-        slope * (1 - t) + (random() - 0.5) * 0.12, 0);
-    }
-    ctx.fill();
-  }
-  ctx.restore();
-  ctx.strokeStyle = skyCss255(tone.light, Math.min(1, tone.lightAlpha * 1.2));
-  ctx.lineWidth = 1.4 * unit;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  for (let i = 0; i < points.length - 1; i++)
-    if (facing(i) > 0.25 && random() < 0.7 && points[i].x > -20 && points[i].x < width + 20) {
-      ctx.moveTo(points[i].x, points[i].y + 0.6 * unit);
-      ctx.lineTo(points[i + 1].x, points[i + 1].y + 0.6 * unit);
-    }
-  ctx.stroke();
-}
-/* A handful of small leaf-shaped dabs around a point. */
-function skyLeaves(ctx, cx, cy, spread, size, count, random, ring = false) {
-  for (let i = 0; i < count; i++) {
-    const a = random() * Math.PI * 2,
-      d = ring ? spread * (0.82 + random() * 0.3) : spread * Math.sqrt(random()),
-      s = size * (0.6 + random() * 0.8),
-      turn = random() * Math.PI;
-    const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.92;
-    ctx.moveTo(x + s * Math.cos(turn), y + s * Math.sin(turn));
-    ctx.ellipse(x, y, s, s * 0.55, turn, 0, Math.PI * 2);
-  }
-}
-/* A broad-leaved tree: a trunk that forks, and a crown of leafy
-   clumps in three values, with gaps where the sky shows through. */
-function skyBroadleaf(ctx, x, y, h, c, lightX, strength, random, bare) {
-  const lean = (random() - 0.5) * 0.1 * h;
-  const fork = { x: x + lean * 0.7, y: y - h * 0.36 };
-  const clumps = [
-    [-0.3, -0.58, 0.2, true], [0.3, -0.6, 0.2, true], [0.02, -0.8, 0.24, true],
-    [-0.42, -0.45, 0.12, false], [0.43, -0.46, 0.12, false], [-0.19, -0.5, 0.19, false],
-    [0.2, -0.5, 0.2, false], [-0.14, -0.72, 0.2, false], [0.15, -0.73, 0.19, false],
-    [0, -0.9, 0.15, false],
-  ].map(([fx, fy, fr, back]) => [
-    x + lean + (fx + (random() - 0.5) * 0.05) * h,
-    y + (fy + (random() - 0.5) * 0.04) * h,
-    fr * h * (0.9 + random() * 0.25),
-    back,
-  ]);
-  const clump = (cx, cy, r, back) => {
-    ctx.fillStyle = skyCss255(back ? skyDeepen(c.dark, 0.12) : c.dark);
-    ctx.beginPath();
-    skyBlob(ctx, cx, cy, r, r * 0.9, random, 0.2, 10);
-    skyLeaves(ctx, cx, cy, r, r * 0.2, 16, random, true);
-    ctx.fill();
-    if (back) return;
-    const mx = cx + lightX * r * 0.16, my = cy - r * 0.2;
-    ctx.fillStyle = skyCss255(skyMix(c.dark, c.mid, 0.4 + 0.6 * strength));
-    ctx.beginPath();
-    skyBlob(ctx, mx, my, r * 0.7, r * 0.62, random, 0.24, 9);
-    skyLeaves(ctx, mx, my, r * 0.7, r * 0.17, 12, random, true);
-    ctx.fill();
-    const lx = cx + lightX * r * 0.36, ly = cy - r * 0.42;
-    ctx.fillStyle = skyCss255(skyMix(c.mid, c.light, 0.35 + 0.65 * strength), 0.55 + 0.45 * strength);
-    ctx.beginPath();
-    skyBlob(ctx, lx, ly, r * 0.36, r * 0.28, random, 0.3, 7);
-    skyLeaves(ctx, lx, ly, r * 0.5, r * 0.13, 12, random);
-    ctx.fill();
-  };
-  for (const [cx, cy, r, back] of clumps) if (back && !bare) clump(cx, cy, r, true);
-  ctx.fillStyle = skyCss255(c.bark);
-  ctx.beginPath();
-  ctx.moveTo(x - h * 0.062, y + h * 0.01);
-  ctx.quadraticCurveTo(x - h * 0.028, y - h * 0.08, fork.x - h * 0.026, fork.y);
-  ctx.lineTo(fork.x + h * 0.026, fork.y);
-  ctx.quadraticCurveTo(x + h * 0.03, y - h * 0.08, x + h * 0.066, y + h * 0.01);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = skyCss255(c.bark);
-  ctx.lineCap = "round";
-  for (const [cx, cy, r] of [clumps[0], clumps[1], clumps[2], clumps[5], clumps[6]]) {
-    ctx.lineWidth = h * 0.022;
-    ctx.beginPath();
-    ctx.moveTo(fork.x, fork.y + h * 0.02);
-    ctx.quadraticCurveTo(skyLerp(fork.x, cx, 0.3), skyLerp(fork.y, cy, 0.75), cx, cy + r * 0.3);
-    ctx.stroke();
-    if (bare) {
-      for (const side of [-1, 1]) {
-        ctx.lineWidth = h * 0.009;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy + r * 0.3);
-        ctx.quadraticCurveTo(cx + side * r * 0.43, cy, cx + side * r * 0.68, cy - r * 0.66);
-        ctx.stroke();
-      }
-    }
-  }
-  ctx.strokeStyle = skyCss255(skyMix(c.bark, c.light, 0.5), 0.5 * strength);
-  ctx.lineWidth = h * 0.012;
-  ctx.beginPath();
-  ctx.moveTo(x + lightX * h * 0.03, y - h * 0.04);
-  ctx.quadraticCurveTo(x + lightX * h * 0.018, y - h * 0.2, fork.x + lightX * h * 0.014, fork.y);
-  ctx.stroke();
-  for (const [cx, cy, r, back] of clumps) if (!back && !bare) clump(cx, cy, r, false);
-}
-
-/* A cottage seen side-on; its windows glow warm once the light fades. */
-function skyCottage(ctx, x, y, h, c, glow, lightX) {
-  const w = h * 1.4;
-  const eave = y - h * 0.5;
-  const wall = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
-  wall.addColorStop(lightX > 0 ? 1 : 0, skyCss255(c.wall));
-  wall.addColorStop(lightX > 0 ? 0 : 1, skyCss255(skyDeepen(c.wall, 0.28)));
-  ctx.fillStyle = wall;
-  ctx.fillRect(x - w / 2, eave, w, y - eave + h * 0.03);
-  ctx.fillStyle = skyCss255(skyDeepen(c.wall, 0.45), 0.55);
-  ctx.fillRect(x - w / 2, eave, w, h * 0.07);
-  ctx.fillStyle = skyCss255(skyDeepen(c.roof, 0.3));
-  ctx.fillRect(x + w * 0.18, y - h * 1.06, h * 0.13, h * 0.3);
-  ctx.fillStyle = skyCss255(c.roof);
-  ctx.beginPath();
-  ctx.moveTo(x - w * 0.58, eave + h * 0.03);
-  ctx.lineTo(x - w * 0.4, y - h);
-  ctx.lineTo(x + w * 0.4, y - h);
-  ctx.lineTo(x + w * 0.58, eave + h * 0.03);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = skyCss255(skyMix(c.roof, c.trim, 0.55), 0.7);
-  ctx.beginPath();
-  ctx.moveTo(x - w * 0.4, y - h);
-  ctx.lineTo(x + w * 0.4, y - h);
-  ctx.lineTo(x + w * 0.43, y - h * 0.92);
-  ctx.lineTo(x - w * 0.43, y - h * 0.92);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = skyCss255(skyDeepen(c.roof, 0.35));
-  ctx.fillRect(x - h * 0.07, y - h * 0.3, h * 0.14, h * 0.32);
-  const pane = skyMix(skyMix(c.wall, skyHex("#7f9cc0"), 0.6), skyHex("#ffd98a"), glow);
-  for (const side of [-0.32, 0.3]) {
-    const wx = x + side * w, wy = y - h * 0.3;
-    if (glow > 0.15) skyGlowAt(ctx, wx, wy, h * 0.7, skyHex("#ffc56e"), 0.38 * glow);
-    ctx.fillStyle = skyCss255(pane);
-    ctx.fillRect(wx - h * 0.075, wy - h * 0.085, h * 0.15, h * 0.17);
-    ctx.fillStyle = skyCss255(skyDeepen(c.wall, 0.5), 0.7);
-    ctx.fillRect(wx - h * 0.008, wy - h * 0.085, h * 0.016, h * 0.17);
-  }
-  if (glow > 0.15) {
-    ctx.save();
-    ctx.translate(x, y + h * 0.06);
-    ctx.scale(1, 0.22);
-    skyGlowAt(ctx, 0, 0, w * 0.9, skyHex("#ffc56e"), 0.3 * glow);
-    ctx.restore();
-  }
-}
-/* Grass along a crest: tufts of thin tapered blades. */
-function skyGrass(scene, points, dark, light, random, size) {
-  const { ctx, unit, lightStrength, lightX } = scene;
-  for (const lit of [false, true]) {
-    ctx.fillStyle = skyCss255(lit ? light : dark, lit ? 0.3 + 0.6 * lightStrength : 0.94);
-    ctx.beginPath();
-    for (let i = 0; i < points.length - 1; i++) {
-      const a = points[i], b = points[i + 1];
-      if (random() < (lit ? 0.6 : 0.12)) continue;
-      const u = random();
-      const x = skyLerp(a.x, b.x, u), y = skyLerp(a.y, b.y, u) + 3 * unit;
-      const blades = 3 + Math.floor(random() * 5);
-      const tall = size * (0.35 + random() * random() * random() * 2.6) * (lit ? 0.85 : 1);
-      for (let k = 0; k < blades; k++)
-        skyBlade(ctx, x + (random() - 0.5) * 11 * unit, y,
-          tall * (0.45 + random() * 0.7) * unit,
-          ((random() - 0.4) * tall * 0.6 + (lit ? lightX * 2 : 0)) * unit,
-          (0.7 + random() * 0.9) * unit);
-    }
-    ctx.fill();
-  }
-}
-/* One small rounded tree (landscape.ts's crown). */
-function skyCrown(scene, x, y, h, tall, c, random) {
-  const { ctx, lightX, lightStrength } = scene;
-  const rx = h * (tall ? 0.4 : 0.56), ry = h * (tall ? 0.6 : 0.46);
-  const cy = y - ry * 0.95;
-  ctx.fillStyle = skyCss255(c.dark);
-  ctx.beginPath();
-  skyBlob(ctx, x, cy, rx, ry, random, 0.24, 9);
-  skyBlob(ctx, x + (random() - 0.5) * rx, y - ry * 0.6, rx * 0.75, ry * 0.6, random, 0.2, 7);
-  skyLeaves(ctx, x, cy, rx * 0.98, h * 0.085, 9, random, true);
-  ctx.fill();
-  ctx.fillStyle = skyCss255(c.mid, 0.6 + 0.4 * lightStrength);
-  ctx.beginPath();
-  skyBlob(ctx, x + lightX * rx * 0.26, cy - ry * 0.2, rx * 0.86, ry * 0.84, random, 0.24, 8);
-  skyLeaves(ctx, x + lightX * rx * 0.3, cy - ry * 0.25, rx * 0.9, h * 0.075, 7, random, true);
-  ctx.fill();
-  ctx.fillStyle = skyCss255(skyMix(c.light, c.mid, 0.3), 0.15 + 0.75 * lightStrength);
-  ctx.beginPath();
-  skyBlob(ctx, x + lightX * rx * 0.46, cy - ry * 0.46, rx * 0.46, ry * 0.42, random, 0.3, 6);
-  skyLeaves(ctx, x + lightX * rx * 0.36, cy - ry * 0.4, rx * 0.7, h * 0.07, 7, random);
-  ctx.fill();
-}
-/* Small trees along a crest, in loose groups (landscape.ts's copse). */
-function skyCopse(scene, points, c, size, density, random) {
-  const { ctx, horizonY, unit, lightX } = scene;
-  const stride = Math.max(1, Math.round((size * 0.55) / 8));
-  let run = 0;
-  for (let i = 0; i < points.length; i += stride) {
-    if (run <= 0 && random() < density * stride) run = 1 + Math.floor(random() * 5);
-    if (run-- <= 0) continue;
-    const p = points[i];
-    const tall = random() < 0.22;
-    const h = Math.min(size * (0.55 + random() * 0.7) * (tall ? 1.25 : 1), p.y - horizonY - 2 * unit);
-    if (h < 3 * unit) continue;
-    const x = p.x + (random() - 0.5) * 5 * unit, y = p.y + 2 * unit;
-    ctx.fillStyle = skyCss255(skyDeepen(c.dark, 0.25), 0.3);
-    ctx.beginPath();
-    ctx.ellipse(x - lightX * h * 0.3, y, h * 0.6, h * 0.1, 0, 0, Math.PI * 2);
-    ctx.fill();
-    skyCrown(scene, x, y, h, tall, c, random);
-  }
-}
-/* Sea to the horizon (landscape.ts's paintSea). */
-function skyPaintSea(scene, haze) {
-  const { ctx, width, height, horizonY, unit, palette, sky, view, toCanvas, night, day, seed } = scene;
-  const deep = skyMix(palette.landNear, skyHex(SKY_SEASONAL_COLOURS[scene.season].sea), day * 0.85);
-  const water = ctx.createLinearGradient(0, horizonY, 0, Math.max(height, horizonY + 10));
-  water.addColorStop(0, skyCss255(skyMix(palette.horizon, palette.landFar, 0.4)));
-  water.addColorStop(0.32, skyCss255(skyMix(palette.lower, deep, 0.55)));
-  water.addColorStop(1, skyCss255(deep));
-  ctx.fillStyle = water;
-  ctx.fillRect(0, horizonY, width, height - horizonY + 10);
-  const isles = skySeededRandom(seed + 7);
-  const n = skyNoise1(seed + 8);
-  for (let k = 0; k < 2; k++) {
-    const centre = view.heading + (isles() - 0.5) * 2 * scene.halfWidth,
-      span = 6 + isles() * 12, tall = 0.5 + isles() * 0.7;
-    ctx.fillStyle = skyCss255(skyMix(palette.landFar, haze, 0.45 + 0.2 * k));
-    ctx.beginPath();
-    let started = false;
-    for (let a = -span; a <= span; a += 0.5) {
-      const shape = Math.max(0, 1 - (a / span) ** 2) * (0.55 + 0.45 * n((centre + a) / 2.5));
-      const p = toCanvas(Math.min(SKY_ISLAND_TOP, tall * shape), centre + a);
-      if (!p.front) continue;
-      if (started) ctx.lineTo(p.x, p.y);
-      else ctx.moveTo(p.x, horizonY + 1);
-      ctx.lineTo(p.x, p.y);
-      started = true;
-    }
-    const end = toCanvas(0, centre + span);
-    if (end.front) ctx.lineTo(end.x, horizonY + 1);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, horizonY, width, height - horizonY + 10);
-  ctx.clip();
-  skyMist(ctx, horizonY + 10 * unit, width, haze, 0.35, 26 * unit);
-  const waves = skySeededRandom(seed + 3);
-  const room = height - horizonY;
-  for (const [colour, alpha, count] of [
-    [skyDeepen(deep, 0.3), 0.3, 90],
-    [skyMix(palette.lower, palette.cloudLight, 0.5), 0.26, 110],
-  ]) {
-    ctx.fillStyle = skyCss255(colour, alpha);
-    ctx.beginPath();
-    for (let i = 0; i < count; i++) {
-      const t = waves();
-      const y = horizonY + 3 * unit + t * t * room;
-      skyMark(ctx, waves() * width, y, (17 + t * 82) * unit * (0.5 + waves()),
-        (0.7 + t * 2.8) * unit, 0, -(1 + t * 3) * unit);
-    }
-    ctx.fill();
-  }
-  const source = sky.moon.visible && night > 0.05 ? sky.moon
-    : sky.sun.visible ? sky.sun : sky.moon.visible ? sky.moon : null;
-  if (source) {
-    const s = toCanvas(source.altitude, source.azimuth);
-    if (s.front && s.x > -100 && s.x < width + 100) {
-      const moonlit = source === sky.moon;
-      const brightness = moonlit ? (0.3 + 0.6 * sky.moon.illumination) * (1 - day * 0.7) : 0.9;
-      const colour = moonlit ? skyHex("#f4f0d8") : skyMix(palette.glow, skyHex("#fff6d8"), 0.5);
-      const glitter = skySeededRandom(seed + 5);
-      ctx.save();
-      ctx.translate(s.x, horizonY);
-      ctx.scale(1, 2.2);
-      skyGlowAt(ctx, 0, room * 0.1, room * 0.5, colour, 0.16 * brightness);
-      ctx.restore();
-      for (let y = horizonY + 2 * unit, i = 0; y < height; y += (3.5 + i * 0.5) * unit, i++) {
-        const t = (y - horizonY) / room;
-        const spread = (10 + t * 150) * unit * (moonlit ? 0.8 : 1);
-        ctx.fillStyle = skyCss255(colour, brightness * (0.85 - 0.45 * t));
-        ctx.beginPath();
-        for (let k = 0; k < 3; k++) {
-          const off = (glitter() - 0.5) * 2;
-          skyMark(ctx, s.x + off * Math.abs(off) * spread, y,
-            (10 + glitter() * 30 + t * 90) * unit * (1 - Math.abs(off) * 0.6),
-            (0.9 + t * 3.2) * unit, 0, 0);
-        }
-        ctx.fill();
-      }
-    }
-  }
-  ctx.restore();
-  const boatAz = view.heading + (skySeededRandom(seed + 9)() - 0.5) * view.fov * 0.8;
-  const b = toCanvas(0, boatAz), mast = toCanvas(SKY_MAST_TOP, boatAz);
-  if (b.front && b.x > 40 && b.x < width - 40) {
-    const s = Math.max(4, b.y - mast.y);
-    ctx.fillStyle = skyCss255(skyDeepen(palette.landNear, 0.3));
-    ctx.beginPath();
-    ctx.moveTo(b.x - s * 0.7, b.y - s * 0.1);
-    ctx.lineTo(b.x + s * 0.7, b.y - s * 0.1);
-    ctx.lineTo(b.x + s * 0.5, b.y + s * 0.06);
-    ctx.lineTo(b.x - s * 0.5, b.y + s * 0.06);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = skyCss255(skyMix(skyHex("#d8704a"), skyDeepen(palette.landFar, 0.2), 0.15 + 0.6 * (1 - day)));
-    ctx.beginPath();
-    ctx.moveTo(b.x - s * 0.05, b.y - s * 0.14);
-    ctx.lineTo(b.x - s * 0.05, b.y - s);
-    ctx.quadraticCurveTo(b.x + s * 0.4, b.y - s * 0.55, b.x + s * 0.48, b.y - s * 0.18);
-    ctx.closePath();
-    ctx.fill();
-    if (night > 0.3) skyGlowAt(ctx, b.x + s * 0.5, b.y - s * 0.25, s * 0.9, skyHex("#ffcf7a"), 0.8 * night);
-  }
-}
-/* paintLandscape (landscape.ts), whole. NAM paints the 'ridge'
-   variant — Elsewhere's default, and the only variant that is code:
-   'city' and 'mountains' draw pre-rendered art images (NAM has none
-   loaded, so those paths draw the art slot and nothing else, exactly
-   as Elsewhere without its art), and 'sea' paints its cove. */
-function skyPaintLandscape(scene) {
-  const { ctx, width, height, unit, horizonY, toCanvas, view, day, seed, horizon } = scene;
-  if (horizon === "ridge") {
-    const colours = SKY_SEASONAL_COLOURS[scene.season];
-    const turf = skyHex(colours.turf);
-    const palette = scene.palette;
-    scene = {
-      ...scene,
-      palette: {
-        ...palette,
-        landMid: skyMix(palette.landMid, turf, day * 0.65),
-        landNear: skyMix(palette.landNear, skyDeepen(turf, 0.25), day * 0.7),
-        landLight: skyMix(palette.landLight, turf, day * 0.58),
-        leafLight: skyMix(palette.leafLight, skyHex(colours.leaf), day * 0.9),
-      },
-    };
-  }
-  if (horizonY > height + 40 * unit) return;
-  const { lightX, lightStrength, palette } = scene;
-  const left = view.heading - 100, right = view.heading + 100;
-  const edge = (altitude, step) => {
-    const points = [];
-    for (let az = left; az <= right; az += step) {
-      const p = toCanvas(altitude(az), az);
-      if (p.front) points.push(p);
-    }
-    return points;
-  };
-  const haze = skyMix(palette.horizon, palette.glow, 0.25);
-  const twilight = 1 - skyClamp01(Math.abs(scene.sky.sunAltitude) / 12);
-  const far = skyMix(palette.landFar, palette.horizon, 0.32 + 0.28 * twilight);
-  const brush = skySeededRandom(seed + 71);
-  const light = skyMix(palette.landLight, palette.glow, 0.15);
-  if (horizon === "sea") skyPaintSea(scene, haze);
-  else if (horizon === "ridge") {
-    const farEdge = edge((az) => skyHorizonAltitude(horizon, az), SKY_HORIZON_STEP[horizon] / 5);
-    skyLandLayer(scene, farEdge, {
-      crest: skyMix(far, palette.horizon, 0.12),
-      body: skyMix(far, haze, 0.35),
-      light: skyMix(light, haze, 0.4),
-      shade: skyDeepen(far, 0.25),
-      depth: 12 * unit,
-      lightAlpha: 0.4 * lightStrength,
-      marks: 30,
-    }, brush);
-  }
-  const ground = height - horizonY;
-  if (ground <= 1) return;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, horizonY + 1, width, ground + 10);
-  ctx.clip();
-  if (horizon === "city" || horizon === "mountains") {
-    const art = scene.landscapeArt;
-    if (art) {
-      const scale = Math.max(width / art.naturalWidth, ground / art.naturalHeight);
-      const w = art.naturalWidth * scale;
-      const fullHeight = art.naturalHeight * scale;
-      const h = horizon === "mountains" ? Math.max(ground, fullHeight * 0.52) : fullHeight;
-      const x = (width - w) / 2;
-      const y = horizonY + 1;
-      if (horizon === "mountains") {
-        const row = Math.floor(art.naturalHeight * 0.94);
-        const top = (row / art.naturalHeight) * h;
-        ctx.drawImage(art, 0, row, art.naturalWidth, 1, x, y + top, w, h - top);
-      }
-      ctx.drawImage(art, x, y, w, h);
-    }
-    ctx.restore();
-    return;
-  }
-  if (horizon === "sea") {
-    skyPaintCove(scene);
-    ctx.restore();
-    return;
-  }
-  const reach = Math.min(ground, 640 * unit);
-  const azAt = (x) => view.heading + (x / width - 0.5) * 2 * scene.halfWidth;
-  const crestLine = (base, swing, noise, scale) => {
-    const points = [];
-    for (let x = -24; x <= width + 24; x += 8) {
-      const az = azAt(x);
-      points.push({
-        x,
-        y: horizonY + reach * (base + swing * (noise(az / scale) * 0.75 + noise(az / (scale * 0.31)) * 0.25)),
-      });
-    }
-    return points;
-  };
-  const n1 = skyNoise1(seed + 11), n2 = skyNoise1(seed + 23), n3 = skyNoise1(seed + 37);
-  const trees = {
-    dark: skyDeepen(skyMix(palette.landNear, palette.landMid, 0.25), 0.2),
-    mid: skyMix(palette.landNear, palette.landLight, 0.4),
-    light: palette.leafLight,
-    bark: skyDeepen(skyMix(palette.landNear, skyHex("#5a3a2c"), 0.45), 0.25),
-  };
-  const distant = (toward, amount) => ({
-    dark: skyMix(trees.dark, toward, amount),
-    mid: skyMix(trees.mid, toward, amount * 0.8),
-    light: skyMix(trees.light, haze, amount * 0.6),
-    bark: trees.bark,
-  });
-  const midTrees = distant(palette.landMid, 0.4), farTrees = distant(far, 0.62);
-  const at = (points, fraction) =>
-    points.reduce((best, p) =>
-      Math.abs(p.x - width * fraction) < Math.abs(best.x - width * fraction) ? p : best);
-  const side = skySeededRandom(seed + 41)() < 0.5 ? -1 : 1;
-  const hills = [crestLine(0.03, 0.1, n1, 11), crestLine(0.2, 0.17, n2, 16)];
-  const tones = [
-    {
-      crest: skyMix(far, palette.landMid, 0.45),
-      body: skyMix(skyMix(far, palette.landMid, 0.6), haze, 0.3),
-      light: skyMix(light, haze, 0.2),
-      shade: skyDeepen(palette.landMid, 0.2),
-      depth: 16 * unit,
-      lightAlpha: 0.55 * lightStrength,
-      marks: 90,
-    },
-    {
-      crest: skyMix(palette.landMid, palette.landNear, 0.25),
-      body: skyMix(skyMix(palette.landMid, palette.landNear, 0.45), haze, 0.16),
-      light,
-      shade: skyDeepen(palette.landNear, 0.15),
-      depth: 26 * unit,
-      lightAlpha: 0.6 * lightStrength,
-      marks: 150,
-    },
-  ];
-  hills.forEach((points, i) => {
-    const crestY = points.reduce((m, p) => Math.min(m, p.y), Infinity);
-    skyMist(ctx, crestY + 8 * unit, width, haze, 0.42 - i * 0.1 + 0.12 * (1 - day), (46 + i * 14) * unit);
-    skyLandLayer(scene, points, tones[i], brush);
-    const wood = skySeededRandom(seed + 81 + i);
-    skyCopse(scene, points, i ? midTrees : farTrees, (13 + i * 14) * unit, 0.05 + i * 0.012, wood);
-  });
-  const home = at(hills[1], side < 0 ? 0.36 : 0.62);
-  const hh = Math.min(home.y - horizonY - 5 * unit, 32 * unit);
-  if (hh > 16 * unit) {
-    const glow = skyClamp01(1.25 - day * 1.6);
-    skyCottage(ctx, home.x, home.y + 4 * unit, hh, {
-      wall: skyMix(skyDeepen(palette.landMid, 0.2), skyHex("#f6ead0"), 0.2 + 0.75 * day),
-      roof: skyMix(skyDeepen(palette.landMid, 0.3), skyHex("#b4503a"), 0.3 + 0.65 * day),
-      trim: skyMix(light, palette.cloudLight, 0.5),
-    }, glow, lightX);
-    const cx = home.x + hh * 0.34, cy = home.y - hh * 1.02;
-    if (glow > 0.3 && cy - hh * 0.9 > horizonY) {
-      ctx.strokeStyle = skyCss255(palette.cloudLight, 0.22);
-      ctx.lineWidth = 3 * unit;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.bezierCurveTo(cx + 6 * unit, cy - hh * 0.35, cx - 8 * unit, cy - hh * 0.55, cx + 10 * unit, cy - hh * 0.85);
-      ctx.stroke();
-    }
-    const garden = skySeededRandom(seed + 47);
-    skyCopse(scene, [
-      { x: home.x - hh * 1.3, y: home.y + 5 * unit },
-      { x: home.x - hh * 1.0, y: home.y + 6 * unit },
-      { x: home.x + hh * 1.15, y: home.y + 6 * unit },
-    ], midTrees, hh * 0.8, 1, garden);
-  }
-  if (ground > 70 * unit) {
-    const rise = crestLine(0.5, 0.26, n3, 20).map((p) => ({ x: p.x, y: p.y + (ground - reach) * 0.6 }));
-    const crestY = rise.reduce((m, p) => Math.min(m, p.y), Infinity);
-    skyMist(ctx, crestY + 10 * unit, width, haze, 0.26 + 0.12 * (1 - day), 60 * unit);
-    const near = skyMix(palette.landNear, palette.landMid, 0.12);
-    skyLandLayer(scene, rise, {
-      crest: skyMix(near, palette.landLight, 0.1 + 0.25 * lightStrength * day),
-      body: skyDeepen(palette.landNear, 0.18),
-      light,
-      shade: skyDeepen(palette.landNear, 0.35),
-      depth: 34 * unit,
-      lightAlpha: 0.7 * lightStrength,
-      marks: 170,
-    }, brush);
-    const visible = rise.filter((p) => p.y < height + 10 * unit);
-    if (visible.length > 2) {
-      const meadow = skySeededRandom(seed + 31);
-      skyGrass(scene, visible, skyDeepen(near, 0.08),
-        skyMix(skyMix(palette.landLight, palette.leafLight, 0.5), near, 0.3), meadow, 26);
-      const fraction = side < 0 ? 0.14 : 0.86;
-      const spot = at(visible, fraction);
-      const room = spot.y - horizonY - 8 * unit;
-      const big = skySeededRandom(seed + 43);
-      if (room > 60 * unit && spot.x > -40 && spot.x < width + 40) {
-        const h = Math.min(room, 300 * unit);
-        ctx.fillStyle = skyCss255(skyDeepen(palette.landNear, 0.5), 0.28);
-        ctx.beginPath();
-        ctx.ellipse(spot.x - lightX * h * 0.18, spot.y + 8 * unit, h * 0.42, h * 0.045, 0, 0, Math.PI * 2);
-        ctx.fill();
-        skyBroadleaf(ctx, spot.x, spot.y + 8 * unit, h, trees, lightX, lightStrength, big,
-          scene.season === "winter");
-      }
-      const reeds = skySeededRandom(seed + 35);
-      ctx.strokeStyle = skyCss255(skyDeepen(near, 0.3));
-      ctx.fillStyle = skyCss255(skyMix(skyDeepen(near, 0.2), palette.landLight, 0.25 + 0.3 * lightStrength));
-      ctx.lineCap = "round";
-      for (let i = 0; i < 9; i++) {
-        const p = visible[Math.floor(reeds() * visible.length)];
-        const h = (30 + reeds() * 44) * unit;
-        if (p.y - h < horizonY + 4 * unit) continue;
-        const lean = (reeds() - 0.4) * h * 0.4;
-        ctx.lineWidth = 1.3 * unit;
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y + 4 * unit);
-        ctx.quadraticCurveTo(p.x + lean * 0.2, p.y - h * 0.6, p.x + lean, p.y - h);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.ellipse(p.x + lean, p.y - h, 2.2 * unit, 6.5 * unit, lean / h, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  }
-  ctx.restore();
-}
-
-/* projection.ts, ported: a pinhole camera whose frame is the
-   picture's own rectangle. */
-function skyCreateProjection(view, width, height) {
-  const aspect = width / height;
-  const centre = view.altitude;
-  const halfVertical = view.fov / 2;
-  const halfWidth = (Math.atan(Math.tan((halfVertical * Math.PI) / 180) * aspect) * 180) / Math.PI;
-  const toCanvas = (altitude, azimuth) => {
-    const az = azimuth * RAD, el = altitude * RAD;
-    const x = Math.cos(el) * Math.sin(az), y = Math.sin(el), z = Math.cos(el) * Math.cos(az);
-    const heading = view.heading * RAD;
-    const sh = Math.sin(heading), ch = Math.cos(heading);
-    const xr = ch * x - sh * z;
-    const zr = sh * x + ch * z;
-    const pitch = centre * RAD;
-    const sp = Math.sin(pitch), cp = Math.cos(pitch);
-    const yr = cp * y - sp * zr;
-    const z2 = sp * y + cp * zr;
-    const tanH = Math.tan((halfVertical * Math.PI) / 180);
+let skyVisualGen = 0;
+function skyFactsInner(sel) {
+  const K = t().sky;
+  if (sel.skyError) return { error: true, html: esc(K.error) };
+  const sc = sel.summary;
+  if (!sc) return { error: false, html: esc(K.loading) };
+  if (sc.sig) {
     return {
-      x: ((xr / z2 / tanH / aspect + 1) / 2) * width,
-      y: ((1 - yr / z2 / tanH) / 2) * height,
-      front: z2 > 0,
+      error: false,
+      look: K.lookFor(K.asterisms[sc.sig.key].name, K.dirs[sc.sig.dir]),
+      line: K.asterisms[sc.sig.key].line,
     };
-  };
-  return { toCanvas, halfWidth, vertical: halfVertical };
+  }
+  return { error: false, look: K.fallback, line: "" };
 }
-
-/* paintedEdge (postcard.ts): the painted area's outline — a rectangle
-   whose edges wander as a brush leaves them: a slow drift (value noise
-   over ~90px) with a finer tremor (~17px) laid over it, each side
-   seeded apart. Lengths are Elsewhere's own, in postcard pixels
-   (POSTCARD_WIDTH 1200); s carries them to this frame, and the noise
-   is fed the unscaled t so an edge wobbles the same number of times
-   at any size. The path is left open for the caller to stroke/fill. */
-function skyPaintedEdge(ctx, x, y, w, h, seed, s) {
-  const drift = skyNoise1(seed + 99), tremor = skyNoise1(seed + 199);
-  const wander = (side, t) =>
-    (drift(side * 61 + t / (90 * s)) - 0.5) * 7 * s +
-    (tremor(side * 47 + t / (17 * s)) - 0.5) * 2.4 * s;
-  const corner = 12 * s, step = 12 * s;
-  ctx.beginPath();
-  ctx.moveTo(x + corner, y + wander(0, 0));
-  for (let t = corner; t <= w - corner; t += step) ctx.lineTo(x + t, y + wander(0, t));
-  for (let t = corner; t <= h - corner; t += step) ctx.lineTo(x + w + wander(1, t), y + t);
-  for (let t = w - corner; t >= corner; t -= step) ctx.lineTo(x + t, y + h + wander(2, t));
-  for (let t = h - corner; t >= corner; t -= step) ctx.lineTo(x + wander(3, t), y + t);
-  ctx.closePath();
+function skyChartFactsHtml(sel) {
+  const bits = skyFactsInner(sel);
+  if (bits.error) {
+    return `<span>${bits.html}</span><span><button type="button" class="sky-retry">${esc(t().sky.retry)}</button></span>`;
+  }
+  if (!sel.summary) return `<span>${bits.html}</span>`;
+  return (bits.look ? `<span>${esc(bits.look)}</span>` : "") +
+    (bits.line ? `<span>${esc(bits.line)}</span>` : "");
 }
-
-/* paintFinish (postcard.ts): paint diffusion, pigment wash, light
-   spots, vignette, then the bare-paper margin inside the wandering
-   painted edge (pigment gathers in a slightly darker line at the
-   edge; outside it the paper shows), and paper grain over all. */
-let skyDiffusionTile = null, skyGrainTile = null;
-function skyFinishTile(size, build) {
-  const c = document.createElement("canvas");
-  c.width = c.height = size;
-  const g = c.getContext("2d");
-  if (g) build(g, size);
-  return c;
+function skyArtFactsHtml(sel) {
+  const bits = skyFactsInner(sel);
+  if (bits.error) {
+    return `<p class="sa-line">${bits.html}</p><p class="sa-line"><button type="button" class="sky-retry">${esc(t().sky.retry)}</button></p>`;
+  }
+  if (!sel.summary) return `<p class="sa-line">${bits.html}</p>`;
+  return `<p class="sa-line">${esc(bits.look)}</p>` +
+    (bits.line ? `<p class="sa-line">${esc(bits.line)}</p>` : "");
 }
-function skyPaintFinish(ctx, width, height, unit, random, glowList, edgeSeed) {
-  if (!skyDiffusionTile) {
-    skyDiffusionTile = skyFinishTile(1024, (g, size) => {
-      for (let i = 0; i < 220; i++) {
-        const x = Math.random() * size, y = Math.random() * size,
-          r = size * (0.03 + Math.random() * 0.12);
-        const grad = g.createRadialGradient(x, y, 0, x, y, r);
-        grad.addColorStop(0, `rgba(255,255,255,${0.035 + Math.random() * 0.05})`);
-        grad.addColorStop(1, "rgba(255,255,255,0)");
-        g.fillStyle = grad;
-        g.fillRect(x - r, y - r, r * 2, r * 2);
-      }
-    });
-  }
-  if (!skyGrainTile) {
-    skyGrainTile = skyFinishTile(256, (g, size) => {
-      const image = g.createImageData(size, size);
-      const d = image.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const noise = (Math.random() - 0.5) * 14;
-        d[i] = 128 + noise;
-        d[i + 1] = 124 + noise;
-        d[i + 2] = 116 + noise;
-        d[i + 3] = 255;
-      }
-      g.putImageData(image, 0, 0);
-    });
-  }
-  // Paint diffusion: soft light blurs the picture like damp paper.
-  ctx.save();
-  ctx.globalCompositeOperation = "overlay";
-  ctx.globalAlpha = 0.34;
-  ctx.drawImage(skyDiffusionTile, 0, 0, width, height);
-  ctx.restore();
-  // Pigment wash: translucent colour blooming at the edges.
-  const washSeed = skySeededRandom(19);
-  const washTint = [0.07, 0.1, 0.19];
-  ctx.save();
-  ctx.globalAlpha = 0.1;
-  for (let i = 0; i < 3; i++) {
-    const x = width * (0.15 + washSeed() * 0.7);
-    const y = height * washSeed();
-    const r = Math.max(width, height) * (0.28 + washSeed() * 0.24);
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, `rgba(${washTint[0] * 255},${washTint[1] * 255},${washTint[2] * 255},0.32)`);
-    grad.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, height);
-  }
-  ctx.restore();
-  // Light spots blooming inside the paint.
-  for (const spot of glowList) {
-    const grad = ctx.createRadialGradient(spot.x, spot.y, 0, spot.x, spot.y, spot.r);
-    grad.addColorStop(0, skyCss255(spot.colour, spot.a));
-    grad.addColorStop(1, skyCss255(spot.colour, 0));
-    ctx.fillStyle = grad;
-    ctx.fillRect(spot.x - spot.r, spot.y - spot.r, spot.r * 2, spot.r * 2);
-  }
-  // Vignette.
-  const vignette = ctx.createRadialGradient(
-    width / 2, height / 2, Math.min(width, height) * 0.45,
-    width / 2, height / 2, Math.max(width, height) * 0.85);
-  vignette.addColorStop(0, "rgba(0,0,0,0)");
-  vignette.addColorStop(1, "rgba(0,0,0,0.22)");
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, width, height);
-  // Bare paper around the painting, inside the wandering edge
-  // (paintFinish's closing steps): the edge is stroked first so a
-  // darker line of gathered pigment survives just inside it, then
-  // everything outside the outline is paper again. The margin is
-  // Elsewhere's MARGIN — 22 of its 1200 postcard px, 14 along the
-  // bottom — scaled by es; the seed is the scene's own, so a card
-  // and its keepsake tear along the same line.
-  const es = width / 1200;
-  const eM = 22 * es;
-  const edgePath = () =>
-    skyPaintedEdge(ctx, eM, eM, width - eM * 2, height - eM - 14 * es, edgeSeed, es);
-  ctx.save();
-  ctx.globalCompositeOperation = "multiply";
-  ctx.strokeStyle = "rgba(70,74,120,.22)";
-  ctx.lineWidth = 5 * es;
-  edgePath();
-  ctx.stroke();
-  ctx.globalCompositeOperation = "source-over";
-  ctx.fillStyle = PC_PAPER;
-  edgePath();
-  ctx.rect(0, 0, width, height);
-  ctx.fill("evenodd");
-  ctx.restore();
-  // Paper grain.
-  if (skyGrainTile) {
-    ctx.save();
-    ctx.globalCompositeOperation = "overlay";
-    ctx.globalAlpha = 0.2;
-    const pattern = ctx.createPattern(skyGrainTile, "repeat");
-    if (pattern) {
-      ctx.fillStyle = pattern;
-      ctx.fillRect(0, 0, width, height);
-    }
-    ctx.restore();
-  }
-  void unit; void random;
-}
-
-/* ================= The illustration: Elsewhere's whole pipeline ======
-   drawIllustration (src/moment/illustration.ts), assembled section by
-   section from its real parts — paletteFor, the altitude-banded sky,
-   wet-in-wet washes, the 2,045-star field behind the visibility
-   model, chalk-dot lines, Sun/Moon/planets deferred over the clouds,
-   paintLandscape, and the postcard's paintFinish.
-   NAM's adaptations, all declared: no names are lettered onto the
-   painting (Elsewhere labels its sky; NAM keeps words on the paper);
-   the only lines are NAM's own signature asterism (SKY_ASTERISMS),
-   in the same chalk-dot style; the horizon is 'ridge', Elsewhere's
-   default and its only procedural variant ('city'/'mountains' draw
-   a pre-rendered art image Elsewhere ships as files, which NAM does
-   not carry); the weather is the clear-sky report (cover 0), so the
-   cloud placement below runs and paints nothing, exactly as
-   Elsewhere on a clear night; the frame centres on the signature
-   asterism when one is up. */
-const SKY_PLANET_FILL = {
-  mercury: ["#e8d6c2", "#b39c86"], venus: ["#fffbe8", "#f1dca6"],
-  mars: ["#ff9a6a", "#c9573a"], jupiter: ["#f9e2bd", "#d6a874"],
-  saturn: ["#f6e0a0", "#c8a868"],
-};
-function drawSkyIllustration(ctx, scene, x, y, w, h) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
-  ctx.translate(x, y);
-  const width = w, height = h;
-  const unit = height / 1000;
-  const TAU2 = Math.PI * 2;
-  const sunAlt = scene.sunAlt, sunAz = scene.sunAz;
-  const moon = {
-    visible: scene.moon.alt > 0, altitude: scene.moon.alt,
-    azimuth: scene.moon.az, illumination: scene.moon.illum / 100,
-  };
-  const day = skyClamp01((sunAlt + 8) / 14);
-  const night = 1 - skyClamp01((sunAlt + 14) / 10);
-  const cover = 0;
-  const palette = skyPaletteFor(sunAlt, cover);
-  const seed = (scene.seedHour * 31 + Math.round(scene.lat * 10) * 7 +
-    Math.round(scene.lon * 10)) >>> 0;
-  const sig = scene.sig;
-  const view = {
-    heading: sig ? sig.az : scene.lat >= 0 ? 180 : 0,
-    altitude: sig ? skyClamp(sig.alt - 15, 12, 52) : 30,
-    fov: 66,
-  };
-  const projection = skyCreateProjection(view, width, height);
-  const toCanvas = projection.toCanvas;
-  const inView = (p, margin = 40) =>
-    p.front && p.x > -margin && p.x < width + margin && p.y > -margin && p.y < height + margin;
-  const horizonY = toCanvas(0, view.heading).y;
-  // The one light of the painting: the Sun by day and through
-  // twilight, else the Moon.
-  const sunLit = sunAlt > -10;
-  const lightBody = sunLit ? { altitude: sunAlt, azimuth: sunAz }
-    : moon.visible ? moon : null;
-  const lightAt = lightBody ? toCanvas(Math.max(-2, lightBody.altitude), lightBody.azimuth) : null;
-  const lightFront = lightAt && lightAt.front ? lightAt : null;
-  const lightSide = lightFront
-    ? Math.max(-1, Math.min(1, (lightFront.x - width / 2) / (width / 2))) : -0.45;
-  const lightX = (lightSide < 0 ? -1 : 1) * Math.max(0.3, Math.abs(lightSide));
-  const moonlight = moon.visible ? 0.2 + 0.5 * moon.illumination : 0.1;
-  const against = lightFront && lightBody && lightBody.altitude < 14
-    ? 0.45 * (1 - Math.abs(lightSide)) : 0;
-  const lightStrength = skyLerp(moonlight, 1, skyClamp01((sunAlt + 12) / 12)) *
-    (1 - cover * 0.35) * (1 - against);
-  const skyObj = {
-    sunAltitude: sunAlt,
-    sun: { visible: sunAlt > 0, altitude: sunAlt, azimuth: sunAz },
-    moon: {
-      visible: moon.visible, altitude: moon.altitude, azimuth: moon.azimuth,
-      illumination: moon.illumination,
-    },
-  };
-
-  // 1. The sky: bands of colour by altitude, from the zenith down
-  // to a luminous horizon.
-  const yAt = (altitude) => toCanvas(altitude, view.heading).y;
-  const highest = Math.min(89, view.altitude + view.fov);
-  const top = yAt(highest), span = horizonY - top || 1;
-  const gradient = ctx.createLinearGradient(0, top, 0, horizonY);
-  for (const [altitude, colour] of [
-    [highest, palette.zenith], [48, palette.upper],
-    [16, palette.lower], [0, palette.horizon],
-  ]) {
-    const t = (yAt(Math.min(altitude, highest)) - top) / span;
-    if (Number.isFinite(t)) gradient.addColorStop(skyClamp01(t), skyCss255(colour));
-  }
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-  // Wet-in-wet washes of neighbouring colours, so no part of the
-  // sky is quite even.
-  const washes = skySeededRandom(seed + 61);
-  const skyBottom = Math.min(height, horizonY);
-  for (let i = 0; i < 22; i++) {
-    const t = washes();
-    const washY = skyLerp(Math.max(0, top), skyBottom, t);
-    const r = (50 + washes() * 120) * unit;
-    const tone = washes();
-    const colour = tone < 0.4
-      ? skyMix(t < 0.5 ? palette.zenith : palette.upper, [14, 12, 52], 0.25)
-      : tone < 0.75
-        ? skyMix(t < 0.5 ? palette.upper : palette.lower, palette.glow, washes() * 0.25)
-        : skyMix(palette.lower, palette.horizon, washes());
-    skyWashAt(ctx, washes() * width, washY, r, 4 + washes() * 6, colour, 0.1 + washes() * 0.14);
-  }
-  // A luminous haze lying on the horizon.
-  {
-    const haze = ctx.createLinearGradient(0, horizonY - 110 * unit, 0, horizonY + 20 * unit);
-    const hazeColour = skyMix(palette.horizon, palette.glow, 0.4);
-    haze.addColorStop(0, skyCss255(hazeColour, 0));
-    haze.addColorStop(0.8, skyCss255(hazeColour, 0.5));
-    haze.addColorStop(1, skyCss255(hazeColour, 0.35));
-    ctx.fillStyle = haze;
-    ctx.fillRect(0, horizonY - 110 * unit, width, 130 * unit);
-  }
-  // Glows: toward the Sun near the horizon, and moonlight around
-  // the Moon.
-  if (sunAlt > -14) {
-    const s = toCanvas(Math.max(-2, sunAlt), sunAz);
-    if (s.front) {
-      const strength = (1 - Math.abs(sunAlt + 2) / 14) * (1 - cover * 0.6);
-      const gy = Math.max(s.y, horizonY - 4 * unit);
-      skyWashAt(ctx, s.x, gy, 460 * unit, 2.8, palette.glow, 0.5 * strength);
-      skyWashAt(ctx, s.x, gy, 150 * unit, 3.6,
-        skyMix(palette.glow, skyHex("#fff6dc"), 0.5), 0.45 * strength);
-    }
-  }
-  if (moon.visible) {
-    const p = toCanvas(moon.altitude, moon.azimuth);
-    if (p.front) skyGlowAt(ctx, p.x, p.y, 560 * unit, skyHex("#cfe0ff"),
-      0.24 * moon.illumination * night);
-  }
-
-  // 2. Stars, through the visibility model. The Sun, Moon, planets
-  // and first-magnitude stars are painted after the clouds
-  // (overClouds), so a cloud can never cover them.
-  const overClouds = [];
-  {
-    const stars = scene.field.filter((s) => s.alt > 0).slice(0, 900);
-    for (const star of stars) {
-      const share = skyStarVisibilityFactors(star, scene).combined;
-      if (share < 0.06) continue;
-      const p = toCanvas(star.alt, star.az);
-      if (!inView(p)) continue;
-      const a = Math.min(1, 0.3 + share * 0.7);
-      const paint = () => drawSkyStar(ctx, p.x, p.y, star.mag,
-        skyStarTint(star.bv), a, unit, skyHashOf(star.id));
-      if (star.mag < 1.6) overClouds.push(paint);
-      else paint();
-    }
-  }
-
-  // 3. Line patterns as soft chalk dots — NAM's signature asterism
-  // only, in the same style, faded by the same twilight share.
-  const linesShare = skyTwilightVisibility(sunAlt);
-  if (sig && linesShare > 0.01) {
-    ctx.strokeStyle = skyCss255(skyHex("#d6e2ff"), 0.55 * linesShare);
-    ctx.lineWidth = 2.4 * unit;
-    ctx.lineCap = "round";
-    ctx.setLineDash([0.1, 8 * unit]);
-    for (const seg of SKY_ASTERISMS[sig.key]) {
-      for (let i = 0; i + 1 < seg.length; i++) {
-        const sa = scene.stars[seg[i]], sb = scene.stars[seg[i + 1]];
-        if (sa.alt <= 0 || sb.alt <= 0) continue;
-        const pa = toCanvas(sa.alt, sa.az), pb = toCanvas(sb.alt, sb.az);
-        if (!pa.front || !pb.front) continue;
-        ctx.beginPath();
-        ctx.moveTo(pa.x, pa.y);
-        ctx.lineTo(pb.x, pb.y);
-        ctx.stroke();
-      }
-    }
-    ctx.setLineDash([]);
-  }
-
-  // 4. The Sun: a warm disc in soft painted rings, larger and
-  // redder as it sinks.
-  if (sunAlt > 0) {
-    const p = toCanvas(sunAlt, sunAz);
-    if (inView(p, 120)) {
-      const low = skyClamp01(1 - sunAlt / 8);
-      const r = (30 + 8 * low) * unit;
-      overClouds.push(() => {
-        skyGlowAt(ctx, p.x, p.y, r * 9, skyHex("#fff1c2"), 0.42 * (1 - cover * 0.5));
-        skyGlowAt(ctx, p.x, p.y, r * 4,
-          skyMix(skyHex("#fff4cf"), skyHex("#ffc880"), low), 0.5);
-        skyGlowAt(ctx, p.x, p.y, r * 1.9, skyHex("#fffbe8"), 0.75);
-        const disc = ctx.createRadialGradient(p.x - r * 0.25, p.y - r * 0.25, r * 0.1, p.x, p.y, r);
-        disc.addColorStop(0, "#fffdf0");
-        disc.addColorStop(0.6, skyCss255(skyMix(skyHex("#fff3b8"), skyHex("#ffd27a"), low)));
-        disc.addColorStop(1, skyCss255(skyMix(skyHex("#ffe38a"), skyHex("#ff9a58"), low)));
-        ctx.fillStyle = disc;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, TAU2);
-        ctx.fill();
-      });
-    }
-  }
-
-  // 5. Planets: small glowing pastel worlds.
-  for (const planet of scene.planets) {
-    if (!planet.visible) continue;
-    const share = skyPlanetVisibilityFactors(planet, scene).combined;
-    if (share < 0.15) continue;
-    const p = toCanvas(planet.alt, planet.az);
-    if (!inView(p)) continue;
-    const r = (planet.mag < -2 ? 11 : 8.5) * unit;
-    overClouds.push(() => {
-      const [fill, shade] = SKY_PLANET_FILL[planet.id];
-      skyGlowAt(ctx, p.x, p.y, r * 5.5, skyHex(fill), 0.36 * share);
-      if (planet.id === "venus") {
-        ctx.fillStyle = skyCss255(skyHex("#ffffff"), 0.8 * share);
-        ctx.beginPath();
-        skyMark(ctx, p.x, p.y, r * 7.4, r * 0.34, Math.PI / 2 + 0.06);
-        skyMark(ctx, p.x, p.y, r * 6, r * 0.32, 0.06);
-        ctx.fill();
-      }
-      const ring = (from, to) => {
-        ctx.strokeStyle = skyCss255(skyHex("#f8e6b0"), 0.92);
-        ctx.lineWidth = 2.6 * unit;
-        ctx.beginPath();
-        ctx.ellipse(p.x, p.y, r * 2.1, r * 0.72, -0.35, from, to);
-        ctx.stroke();
-      };
-      if (planet.id === "saturn") ring(Math.PI, TAU2);
-      const ball = ctx.createRadialGradient(p.x - r * 0.35, p.y - r * 0.35, r * 0.1, p.x, p.y, r);
-      ball.addColorStop(0, "#fffdf4");
-      ball.addColorStop(0.5, fill);
-      ball.addColorStop(1, shade);
-      ctx.fillStyle = ball;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, r, 0, TAU2);
-      ctx.fill();
-      if (planet.id === "jupiter") {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, TAU2);
-        ctx.clip();
-        ctx.fillStyle = "rgba(176,120,80,.45)";
-        ctx.fillRect(p.x - r, p.y - r * 0.35, r * 2, r * 0.18);
-        ctx.fillRect(p.x - r, p.y + r * 0.15, r * 2, r * 0.16);
-        ctx.restore();
-      }
-      if (planet.id === "saturn") ring(0, Math.PI);
-    });
-  }
-
-  // 6. The Moon, larger than life, in its true phase and
-  // orientation.
-  if (moon.visible) {
-    const p = toCanvas(moon.altitude, moon.azimuth);
-    if (inView(p, 120)) {
-      const r = 42 * unit;
-      overClouds.push(() => drawSkyPaintedMoon(ctx, p.x, p.y, r,
-        moon.illumination,
-        skyBrightLimbAngle({ altitude: sunAlt, azimuth: sunAz },
-          { altitude: moon.altitude, azimuth: moon.azimuth }), day));
-    }
-  }
-
-  // 7. Clouds. NAM's weather is the clear-sky report (cover 0), so
-  // the sheet is never laid and every layer's count is zero — the
-  // placement code runs and paints nothing, as Elsewhere's does on
-  // a clear night. The painters themselves are ported above
-  // (skyCloudSheet, skyCirrus, skyAltocumulus, skyStratus,
-  // skyCumulus) for the day weather data exists.
-  if (cover > 0.35) {
-    skyCloudSheet(ctx, width, Math.max(0, top), horizonY - 30 * unit,
-      palette, { x: lightX, y: 0.55, underColour: palette.horizon, under: 0, backlit: 0 },
-      skySeededRandom(seed), cover);
-  }
-
-  // The Sun, Moon, planets and bright stars, over the clouds.
-  for (const paint of overClouds) paint();
-
-  // 8. The landscape, painted in depth under the same light. Its
-  // seed is the place itself, so the terrain stays put.
-  skyPaintLandscape({
-    season: skyLandscapeSeason(scene.month, scene.lat),
-    ctx, width, height, unit, horizonY,
-    palette, toCanvas, view, sky: skyObj, day, night,
-    seed: Math.imul(Math.round(scene.lat * 100), 73856093) ^
-      Math.imul(Math.round(scene.lon * 100), 19349663),
-    lightX, lightStrength, halfWidth: projection.halfWidth,
-    horizon: "ridge", landscapeArt: null,
+function bindSkyRetry(sel) {
+  const btn = document.querySelector("#card-body .sky-retry");
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentSelection !== sel) return;
+    NAM_SKY.reset();
+    sel.ready = NAM_SKY.sceneFor(sel.observer);
+    sel.scene = null;
+    sel.summary = null;
+    sel.skyError = null;
+    updateSkyCopy(sel);
+    scheduleSkyVisual(sel);
   });
-
-  // The postcard finish, over the painting (NAM's keepsake finish
-  // spots stand in for the postcard's own glow list).
-  const twilightFactor = skyClamp01(1 - Math.abs(sunAlt) / 14);
-  skyPaintFinish(ctx, width, height, unit, skySeededRandom(seed + 37), [
-    { x: width * 0.3, y: height * 0.25, r: width * 0.45, colour: palette.glow, a: 0.1 + 0.14 * twilightFactor },
-    { x: width * 0.72, y: height * 0.7, r: width * 0.4, colour: palette.glow, a: 0.06 + 0.1 * twilightFactor },
-  ], seed);
-  ctx.restore();
+}
+function updateSkyCopy(sel) {
+  if (String(sel._skyGen || "") !== String($("card").dataset.skyGen || "")) return;
+  if (sel.form === "illustration") {
+    const text = document.querySelector("#card-body .sa-text");
+    const head = text && text.querySelector(".sa-head");
+    if (!text || !head) return;
+    [...text.children].forEach((el) => { if (el !== head) el.remove(); });
+    head.insertAdjacentHTML("afterend", skyArtFactsHtml(sel));
+  } else if (sel.form === "chart") {
+    const row = document.querySelector("#card-body .fact-row");
+    if (row) row.innerHTML = skyChartFactsHtml(sel);
+  }
+  bindSkyRetry(sel);
+}
+function skyCancelled(err) {
+  const msg = String((err && err.message) || err || "");
+  return (err && err.name === "AbortError") || msg.indexOf("cancelled") >= 0 || msg.indexOf("canceled") >= 0;
+}
+/* Start a scene during the draw, but never await it under the deck lock.
+   A later card increments the generation and aborts the canvas paint. */
+function scheduleSkyVisual(sel) {
+  const gen = ++skyVisualGen;
+  sel._skyGen = gen;
+  if (sel._abort) sel._abort.abort();
+  const ctrl = new AbortController();
+  sel._abort = ctrl;
+  $("card").dataset.skyGen = String(gen);
+  sel.skyError = null;
+  const job = Promise.resolve(sel.ready || (sel.ready = NAM_SKY.sceneFor(sel.observer)))
+    .then(async (scene) => {
+      if (gen !== skyVisualGen || ctrl.signal.aborted) return;
+      if ($("card").dataset.skyGen !== String(gen)) return;
+      sel.scene = scene;
+      sel.summary = skySummary(scene, sel.observer);
+      updateSkyCopy(sel);
+      const cv = document.querySelector("#card-body canvas.sky-canvas");
+      if (!cv || $("card").dataset.skyGen !== String(gen)) return;
+      if (sel.form === "chart") {
+        const ctx = cv.getContext("2d");
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        drawSkyChart(ctx, sel.summary, 0, 0, cv.width, cv.height);
+      } else {
+        await NAM_SKY.paintIllustration(cv, scene, sel.summary.sig, ctrl.signal);
+      }
+    })
+    .catch((err) => {
+      if (gen !== skyVisualGen || ctrl.signal.aborted || skyCancelled(err)) return;
+      sel.skyError = err;
+      sel.summary = null;
+      updateSkyCopy(sel);
+    });
+  sel.painted = job.then(() => !sel.skyError && !!sel.summary);
+  return sel.painted;
 }
 /* ================= End night sky ================= */
+
 
 /* ================= Formatting helpers ================= */
 function timeInZone(date, tz) {
@@ -4290,16 +2353,21 @@ function makeSelection(cat) {
     case "sky": {
       // No deck: the sky is computed per draw, like the almanac. Its
       // three forms — chart, illustration, moon — are equally likely.
+      // The scene itself is async (SDK); the draw lock does not wait.
       const form = ["chart", "illustration", "moon"][Math.floor(Math.random() * 3)];
-      if (form === "moon") return { cat, form, scene: null };
-      if (form === "chart") return { cat, form, scene: computeSkyScene(new Date()) };
-      // The illustration looks from a place (see illustrationPlace):
-      // the visitor's own sky when geolocation is granted, else a
-      // randomly drawn city's. The place rides on the selection, so
-      // re-renders and the keepsake keep the same view.
+      if (form === "moon") return { cat, form, summary: null };
       const now = new Date();
+      if (form === "chart") {
+        const observer = skyObserverFor(now, null);
+        const sel = { cat, form, observer, summary: null, skyError: null };
+        sel.ready = NAM_SKY.sceneFor(observer);
+        return sel;
+      }
       const place = illustrationPlace(now);
-      return { cat, form, scene: computeSkyScene(now, place), place };
+      const observer = skyObserverFor(now, place);
+      const sel = { cat, form, place, observer, summary: null, skyError: null };
+      sel.ready = NAM_SKY.sceneFor(observer);
+      return sel;
     }
     case "poem":
       return selectionForLanguage({ cat });
@@ -4441,29 +2509,28 @@ function renderPostcard(sel) {
    sized by the longest (English) copy. */
 function renderSkyArt(sel) {
   const K = t().sky;
-  const sc = sel.scene;
   $("card-category").textContent = t().categories.sky;
   $("card-meta").textContent = "";
   const placeName = sel.place ? skyPlaceName(sel.place) : t().categories.sky;
-  const facts = sc && sc.sig
-    ? `<p class="sa-line">${esc(K.lookFor(K.asterisms[sc.sig.key].name, K.dirs[sc.sig.dir]))}</p>` +
-      `<p class="sa-line">${esc(K.asterisms[sc.sig.key].line)}</p>`
-    : `<p class="sa-line">${esc(K.fallback)}</p>`;
   $("card-body").innerHTML =
     `<div class="skyart">` +
     `<div class="sa-photo"><canvas class="sky-canvas sky-illustration" data-form="illustration" width="1080" height="1180"></canvas></div>` +
     `<div class="sa-text">` +
     `<div class="sa-head"><h3 class="sa-title">${esc(placeName)}</h3><p class="sa-meta">${esc(K.illusMeta)}</p></div>` +
-    facts +
+    skyArtFactsHtml(sel) +
     `</div></div>`;
   liveWorldTime = null;
-  // A sky visual lives on a canvas, not in the markup: paint it now
-  // that the element exists. The keepsake repaints it from the scene.
-  const cv = $("card-body").querySelector("canvas.sky-canvas");
-  if (cv && sc) drawSkyIllustration(cv.getContext("2d"), sc, 0, 0, cv.width, cv.height);
+  scheduleSkyVisual(sel);
 }
 
 function renderSelection(sel) {
+  const skyVisual = sel.cat === "sky" && (sel.form === "chart" || sel.form === "illustration");
+  if (!skyVisual) {
+    // Drop a sky paint that is still in flight so it cannot write into the next card.
+    skyVisualGen++;
+    if (currentSelection && currentSelection._abort) currentSelection._abort.abort();
+    delete $("card").dataset.skyGen;
+  }
   const s = t();
   // The postcard is its own surface: the stage card's chrome (header,
   // translucent panel) steps aside so the cream paper IS the card.
@@ -4497,23 +2564,18 @@ function renderSelection(sel) {
   if (sel.cat === "sky") {
     const K = s.sky;
     if (sel.form === "moon") {
-      // The moon card, unchanged — it lives here now, not in world.
+      // The moon card, unchanged — a synodic glyph, not the SDK painting.
       const mp = moonPhase(now);
       meta = s.world.moonTitle;
       body = `<span class="moon-glyph">${mp.glyph}</span><span class="big">${s.world.phases[mp.idx]}</span>` +
         `<div class="fact-row"><span>${s.world.moonIllum(mp.illum)}</span><span>${s.world.moonAge(mp.age)}</span></div>`;
     } else {
-      const sc = sel.scene;
       meta = sel.form === "chart" ? K.chartMeta : K.illusMeta;
-      const facts = sc && sc.sig
-        ? `<span>${esc(K.lookFor(K.asterisms[sc.sig.key].name, K.dirs[sc.sig.dir]))}</span>` +
-          `<span>${esc(K.asterisms[sc.sig.key].line)}</span>`
-        : `<span>${esc(K.fallback)}</span>`;
       const size = sel.form === "chart"
         ? 'width="880" height="880"'
         : 'width="1120" height="640"';
       body = `<canvas class="sky-canvas sky-${sel.form}" data-form="${sel.form}" ${size}></canvas>` +
-        `<div class="fact-row">${facts}</div>` +
+        `<div class="fact-row">${skyChartFactsHtml(sel)}</div>` +
         `<div class="sub">${K.approx}</div>`;
     }
   }
@@ -4686,16 +2748,10 @@ function renderSelection(sel) {
     $("card-foot").hidden = false;
   }
 
-  // A sky visual lives on a canvas, not in the markup: paint it now
-  // that the element exists. The same draw functions repaint it into
-  // the keepsake later.
-  if (sel.cat === "sky" && sel.scene) {
-    const cv = $("card-body").querySelector("canvas.sky-canvas");
-    if (cv) {
-      const ctx = cv.getContext("2d");
-      if (sel.form === "chart") drawSkyChart(ctx, sel.scene, 0, 0, cv.width, cv.height);
-      else drawSkyIllustration(ctx, sel.scene, 0, 0, cv.width, cv.height);
-    }
+  // Chart and the in-card illustration paint after the SDK scene
+  // resolves. The deck lock has already been released by then.
+  if (sel.cat === "sky" && sel.form !== "moon" && sel.form !== "illustration") {
+    scheduleSkyVisual(sel);
   }
 
   // A world-city card's local time is live text, not a snapshot: give it
@@ -5105,7 +3161,7 @@ function setClockStyle(st) {
 /* ================= Events & init ================= */
 $("draw-btn").addEventListener("click", drawCard);
 $("card").addEventListener("click", (e) => {
-  if (e.target.closest("a")) return; // let gossip links open normally
+  if (e.target.closest("a, .sky-retry")) return; // links and sky retry stay put
   drawCard();
 });
 $("card").addEventListener("keydown", (e) => {
@@ -5595,9 +3651,8 @@ function renderKeepsakeCanvas(snap, pal) {
 
   for (const it of layout.items) {
     if (it.type === "sky") {
-      if (snap.sky) {
-        if (it.form === "chart") drawSkyChart(ctx, snap.sky, textX, bodyTop + it.yOff, textW, it.h);
-        else drawSkyIllustration(ctx, snap.sky, textX, bodyTop + it.yOff, textW, it.h);
+      if (snap.sky && it.form === "chart") {
+        drawSkyChart(ctx, snap.sky, textX, bodyTop + it.yOff, textW, it.h);
       }
       continue;
     }
@@ -5775,13 +3830,13 @@ function renderPostcardKeepsake(sel, img, serif) {
 const SKY_KEEP_ART_H = 1350;   // the painting: 1080×1350, 4:5 portrait
 const SKY_KEEP_PANEL_H = 350;  // the paper panel below it
 const SKY_KEEP_H = SKY_KEEP_ART_H + SKY_KEEP_PANEL_H;
-function renderSkyArtKeepsake(sel, serif) {
+async function renderSkyArtKeepsake(sel, serif) {
   const cv = document.createElement("canvas");
   cv.width = KEEP_W;
   cv.height = SKY_KEEP_H;
   const ctx = cv.getContext("2d");
   const K = t().sky;
-  const sc = sel.scene;
+  const sc = sel.summary;
   const brand = lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有";
 
   ctx.fillStyle = PC_PAPER;
@@ -5790,7 +3845,16 @@ function renderSkyArtKeepsake(sel, serif) {
   // paper panel below is sized to its text (350), so the keepsake
   // stands 1080×1700 in all.
   const artH = SKY_KEEP_ART_H;
-  if (sc) drawSkyIllustration(ctx, sc, 0, 0, KEEP_W, artH);
+  if (sel.scene) {
+    const off = document.createElement("canvas");
+    off.width = KEEP_W;
+    off.height = artH;
+    await NAM_SKY.paintIllustration(off, sel.scene, sc && sc.sig);
+    ctx.drawImage(off, 0, 0);
+  } else {
+    ctx.fillStyle = "#1b2438";
+    ctx.fillRect(0, 0, KEEP_W, artH);
+  }
 
   // Text zone: y 1350→1700, x = 56, width 968 (the postcard's numbers).
   const tx = 56, tw = KEEP_W - 112;
@@ -5915,13 +3979,17 @@ async function captureKeepsake() {
     // A sky illustration captures in its postcard-like dress (see
     // renderSkyArtKeepsake); chart and moon forms keep the panel.
     if (currentSelection && currentSelection.cat === "sky" &&
-        currentSelection.form === "illustration" && currentSelection.scene) {
+        currentSelection.form === "illustration") {
+      if (currentSelection.painted) await currentSelection.painted;
       await ensureCaptureFonts();
       const palSa = capturePalette();
-      const cvSa = renderSkyArtKeepsake(currentSelection, palSa.serif);
+      const cvSa = await renderSkyArtKeepsake(currentSelection, palSa.serif);
       const blobSa = await new Promise((res) => cvSa.toBlob((b) => res(b), "image/png"));
       if (blobSa) showCapture(blobSa, frozen);
       return;
+    }
+    if (currentSelection && currentSelection.cat === "sky" && currentSelection.form === "chart" && currentSelection.painted) {
+      await currentSelection.painted;
     }
     const s = t();
     const enc = encounter > 0 ? s.encounter(encounter) : "";
@@ -5931,7 +3999,8 @@ async function captureKeepsake() {
       category: $("card-category").textContent,
       meta: $("card-meta").textContent,
       blocks: extractCardBlocks(),
-      sky: currentSelection && currentSelection.cat === "sky" ? currentSelection.scene : null,
+      sky: currentSelection && currentSelection.cat === "sky" && currentSelection.form === "chart"
+        ? currentSelection.summary : null,
       brand: lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有",
       footer: enc ? `${enc} · now.orangely.xyz` : "now.orangely.xyz",
     };
@@ -6007,6 +4076,14 @@ tick();
 
 /* Offline shell: register the service worker after load; any failure is
    silent — the site must work exactly the same without it. */
+/* Warm the SDK after first paint. A failure here must not block the
+   site; the sky card retries on its own. */
+try {
+  const warmSky = () => { if (window.NAM_SKY) NAM_SKY.warm().catch(() => {}); };
+  if (window.requestIdleCallback) requestIdleCallback(warmSky, { timeout: 2500 });
+  else setTimeout(warmSky, 600);
+} catch (e) { /* ignore */ }
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     try {
