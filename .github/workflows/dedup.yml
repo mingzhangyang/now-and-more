@@ -1,0 +1,17 @@
+name: Draw regression tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  dedup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check js/dedup.js && node --check js/app.js && node --check js/data.js && node --check sw.js
+      - run: node --test tests/dedup.test.cjs
