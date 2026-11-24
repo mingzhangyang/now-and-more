@@ -103,9 +103,9 @@ test("gate rejects overlapping requests and releases after errors", () => {
 function harness() {
   const source = core + "\n" + data + "\n" + `
     let lang = "zh", currentSelection = null, lastCategory = null, encounter = 0, lastDrawAt = 0;
-    let gossipCache = [], notesList = [], userSign = "", gossipFetchedAt = 0;
+    let notesList = [], userSign = "";
     let note = null, postcard = null, delivered = false, gifted = false, failRender = false;
-    const GOSSIP_CACHE_MS = 600000;
+    const gossipCandidates = () => [];
     const gossipEndpoint = () => "";
     const refreshGossip = () => {};
     const randInt = n => Math.floor(Math.random() * n);
@@ -302,9 +302,14 @@ test("midnight postcard receipt belongs to rendered day; next day's postcard is 
 
 test("HTML load order and offline precache match the new module", () => {
   const html = read("index.html"), sw = read("sw.js");
-  assert.ok(html.indexOf("js/dedup.js?v=23") > html.indexOf("js/data.js?v=23"));
-  assert.ok(html.indexOf("js/app.js?v=23") > html.indexOf("js/dedup.js?v=23"));
-  assert.ok(sw.includes('"/js/dedup.js?v=23"'));
-  assert.ok(sw.includes('"/js/app.js?v=23"'));
-  assert.ok(sw.includes('"nam-v23"'));
+  assert.ok(html.indexOf("js/dedup.js?v=24") > html.indexOf("js/data.js?v=24"));
+  assert.ok(html.indexOf("js/app.js?v=24") > html.indexOf("js/dedup.js?v=24"));
+  assert.ok(sw.includes('"/js/dedup.js?v=24"'));
+  assert.ok(html.indexOf("gossip-service/news-id.js?v=24") > html.indexOf("js/dedup.js?v=24"));
+  assert.ok(html.indexOf("js/gossip.js?v=24") > html.indexOf("gossip-service/news-id.js?v=24"));
+  assert.ok(html.indexOf("js/app.js?v=24") > html.indexOf("js/gossip.js?v=24"));
+  assert.ok(sw.includes('"/gossip-service/news-id.js?v=24"'));
+  assert.ok(sw.includes('"/js/gossip.js?v=24"'));
+  assert.ok(sw.includes('"/js/app.js?v=24"'));
+  assert.ok(sw.includes('"nam-v24"'));
 });

@@ -4,21 +4,19 @@
 // headlines are real-time, so they cannot ship with the static build; this
 // separate Worker aggregates direct publisher entertainment RSS feeds
 // (plus the Weibo hot-search board for zh),
-// caches the parsed headlines for 10 minutes (Workers Cache API), and serves
-// ONE randomly chosen recent headline as JSON. It stores nothing and only
-// relays headline + source + link from public RSS.
+// caches the deduplicated news pool for 10 minutes (Workers Cache API),
+// and serves a list of recent headlines. No personal data or history is
+// stored by the Worker; the browser owns display history.
 //
-// Endpoints:
-//   GET /gossip?lang=zh|en   -> {"title","source","link","publishedAt","lang"}
-//   GET /health              -> {"ok": true}
-//   (no headlines available) -> 503 {"error":"no_headlines"}
+// GET /gossip?lang=zh|en -> {lang, fetchedAt, items:[...]}
+// GET /health           -> {"ok":true}
+// Empty/unavailable pool -> 503 {"error":"no_headlines"}
 
-const CACHE_TTL_SECONDS = 600; // 10 minutes
-const MAX_HEADLINES = 50;
-const MAX_AGE_MS = 72 * 60 * 60 * 1000; // drop items older than 72 hours
-
-const TOPIC_ID =
-  "CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB";
+import "./news-id.js";
+const NEWS_ID = globalThis.NAM_NEWS_ID;
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const RETRY_MS = 60 * 1000;
+const MAX_HEADLINES = NEWS_ID.MAX_ITEMS;
 
 // Google News RSS is deliberately NOT used: from Cloudflare Workers egress
 // it times out or returns 503 (verified 2026-11-23 via /debug). Sources are
@@ -58,6 +56,10 @@ function jsonResponse(body, status = 200, extraHeaders = {}) {
 
 // ---------- RSS parsing (string/regex only, no XML library) ----------
 
+function safeCodePoint(entity, n) {
+  return Number.isInteger(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : entity;
+}
+
 function unescapeXml(text) {
   if (!text) return "";
   let out = text;
@@ -68,8 +70,8 @@ function unescapeXml(text) {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&#(\d+);/g, (m, n) => safeCodePoint(m, Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, n) => safeCodePoint(m, parseInt(n, 16)))
     .replace(/&amp;/g, "&")
     .trim();
 }
@@ -91,7 +93,7 @@ export function parseFeed(xml) {
       const linkMatch =
         block.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/) ||
         block.match(/<link[^>]*href="([^"]+)"/);
-      const link = linkMatch ? linkMatch[1] : "";
+      const link = linkMatch ? unescapeXml(linkMatch[1]) : "";
       const dateRaw = extractTag(block, "published") || extractTag(block, "updated");
       if (!title || !link) continue;
       const parsed = dateRaw ? Date.parse(dateRaw) : NaN;
@@ -105,6 +107,8 @@ export function parseFeed(xml) {
     }
     return items;
   }
+  const firstItem = xml.search(/<item(?:\s[^>]*)?>/);
+  const feedTitle = firstItem >= 0 ? extractTag(xml.slice(0, firstItem), "title") : "";
   const itemBlocks = xml.match(/<item(?:\s[^>]*)?>[\s\S]*?<\/item>/g) || [];
   for (const block of itemBlocks) {
     let title = extractTag(block, "title");
@@ -113,16 +117,17 @@ export function parseFeed(xml) {
     let source = extractTag(block, "source");
     if (!title || !link) continue;
 
-    // Google News appends " - Source" to titles; prefer the <source> tag,
-    // fall back to the title suffix, and strip the suffix either way.
+    // Strip a publisher suffix only when the source is independently known.
+    // A hyphen can be meaningful in an ordinary publisher's headline.
+    source = source || feedTitle;
     const suffixMatch = title.match(/^(.*)\s+-\s+([^-]+)$/);
-    if (suffixMatch) {
-      if (!source) source = suffixMatch[2].trim();
-      if (source && suffixMatch[2].trim() === source) {
-        title = suffixMatch[1].trim();
-      }
+    if (suffixMatch && source && suffixMatch[2].trim() === source) {
+      title = suffixMatch[1].trim();
     }
-    if (!source) source = "Google News";
+    if (!source) {
+      try { source = new URL(link).hostname; }
+      catch { source = "RSS"; }
+    }
 
     const parsed = pubDateRaw ? Date.parse(pubDateRaw) : NaN;
     items.push({
@@ -136,26 +141,16 @@ export function parseFeed(xml) {
   return items;
 }
 
-export function mergeHeadlines(feedTexts) {
-  const byLink = new Map();
-  for (const text of feedTexts) {
-    for (const item of parseFeed(text)) {
-      if (!byLink.has(item.link)) byLink.set(item.link, item);
-    }
-  }
-  const now = Date.now();
-  const merged = [...byLink.values()]
-    .filter((it) => it._ts === 0 || now - it._ts <= MAX_AGE_MS)
-    .sort((a, b) => b._ts - a._ts)
-    .slice(0, MAX_HEADLINES)
-    .map(({ _ts, ...rest }) => rest);
-  return merged;
+export function mergeHeadlines(feedTexts, now = Date.now()) {
+  const items = feedTexts.flatMap(parseFeed).sort((a, b) => b._ts - a._ts);
+  return NEWS_ID.dedupe(items, now, MAX_HEADLINES);
 }
 
 // ---------- caching (Workers Cache API, per language) ----------
-
+// Store for the stale-fallback window, but revalidate after ten minutes.
+// v2 avoids mixing legacy single-link cache identities with the list protocol.
 function cacheKeyFor(lang) {
-  return new Request(`https://gossip-cache.internal/headlines?lang=${lang}`);
+  return new Request(`https://gossip-cache.internal/headlines?v=2&lang=${lang}`);
 }
 
 async function readCache(lang) {
@@ -163,20 +158,24 @@ async function readCache(lang) {
     const hit = await caches.default.match(cacheKeyFor(lang));
     if (!hit) return null;
     const payload = await hit.json();
-    if (!payload || !Array.isArray(payload.headlines)) return null;
-    return payload; // { fetchedAt, headlines }
+    const now = Date.now();
+    if (!payload || !Array.isArray(payload.headlines) ||
+        !Number.isFinite(payload.fetchedAt) || payload.fetchedAt > now ||
+        now - payload.fetchedAt > NEWS_ID.MAX_STALE_MS) return null;
+    const headlines = NEWS_ID.dedupe(payload.headlines, now);
+    return headlines.length ? { fetchedAt: payload.fetchedAt, headlines } : null;
   } catch {
     return null;
   }
 }
 
-async function writeCache(lang, headlines) {
+async function writeCache(lang, payload) {
   try {
-    const payload = { fetchedAt: Date.now(), headlines };
+    const ttl = Math.max(1, Math.ceil((NEWS_ID.MAX_STALE_MS - (Date.now() - payload.fetchedAt)) / 1000));
     const res = new Response(JSON.stringify(payload), {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}`,
+        "Cache-Control": `public, max-age=${ttl}`,
       },
     });
     await caches.default.put(cacheKeyFor(lang), res);
@@ -259,23 +258,22 @@ async function fetchHeadlines(lang) {
   );
   if (lang === "zh") jobs.push(fetchWeiboTop());
   const pools = await Promise.all(jobs);
-  // Round-robin interleave the pools before capping, so no single source
-  // crowds out the others (each source alone can return up to MAX_HEADLINES).
-  const seen = new Set();
-  const merged = [];
-  const maxLen = Math.max(0, ...pools.map((p) => p.length));
-  for (let i = 0; i < maxLen && merged.length < MAX_HEADLINES; i++) {
-    for (const pool of pools) {
-      if (merged.length >= MAX_HEADLINES) break;
-      const item = pool[i];
-      if (!item || seen.has(item.link)) continue;
-      seen.add(item.link);
-      const { _ts, ...rest } = item;
-      merged.push(rest);
-    }
-  }
+  const merged = mergePools(pools);
   if (merged.length === 0) throw new Error("all_sources_failed");
   return merged;
+}
+
+export function mergePools(pools, now = Date.now()) {
+  // Round robin preserves source diversity. Collect all rows before the
+  // limit so duplicate groups can acquire aliases even after the first 50.
+  const rows = [];
+  const maxLen = Math.max(0, ...pools.map(pool => pool.length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const pool of pools) {
+      if (pool[i]) rows.push(pool[i]);
+    }
+  }
+  return NEWS_ID.dedupe(rows, now, MAX_HEADLINES);
 }
 
 // Diagnostic for /debug: per-source HTTP status and parsed item counts.
@@ -308,22 +306,23 @@ async function debugSources(lang) {
   return rss;
 }
 
+// Cache settled data only. Avoid sharing a pending I/O promise between
+// independent Worker request contexts. Browser-side requests coalesce.
+const retryAt = new Map();
 async function getHeadlines(lang) {
   const cached = await readCache(lang);
-  const fresh =
-    cached && Date.now() - cached.fetchedAt < CACHE_TTL_SECONDS * 1000;
-  if (fresh && cached.headlines.length > 0) return cached.headlines;
+  const now = Date.now();
+  if (cached && now - cached.fetchedAt < CACHE_TTL_MS) return cached;
+  if (now < (retryAt.get(lang) || 0)) return cached;
   try {
     const headlines = await fetchHeadlines(lang);
-    if (headlines.length > 0) {
-      await writeCache(lang, headlines);
-      return headlines;
-    }
-    throw new Error("empty_pool");
+    const payload = { fetchedAt: Date.now(), headlines };
+    await writeCache(lang, payload);
+    retryAt.delete(lang);
+    return payload;
   } catch {
-    // Serve stale cache on failure, if we have any.
-    if (cached && cached.headlines.length > 0) return cached.headlines;
-    return null;
+    retryAt.set(lang, Date.now() + RETRY_MS);
+    return cached;
   }
 }
 
@@ -384,18 +383,12 @@ export default {
 
     if (url.pathname === "/gossip") {
       const lang = url.searchParams.get("lang") === "en" ? "en" : "zh";
-      const headlines = await getHeadlines(lang);
-      if (!headlines || headlines.length === 0) {
-        return jsonResponse({ error: "no_headlines" }, 503);
-      }
-      const idx = Math.floor(Math.random() * headlines.length);
-      const picked = headlines[idx];
-      return jsonResponse({
-        title: picked.title,
-        source: picked.source,
-        link: picked.link,
-        publishedAt: picked.publishedAt ?? null,
-        lang,
+      const payload = await getHeadlines(lang);
+      const items = payload && Date.now() - payload.fetchedAt <= NEWS_ID.MAX_STALE_MS
+        ? NEWS_ID.dedupe(payload.headlines, Date.now()) : [];
+      if (!items.length) return jsonResponse({ error: "no_headlines" }, 503, { "Cache-Control": "no-store" });
+      return jsonResponse({ lang, fetchedAt: payload.fetchedAt, items }, 200, {
+        "Cache-Control": "no-store",
       });
     }
 

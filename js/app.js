@@ -3,44 +3,22 @@
 "use strict";
 
 /* ================= Config ================= */
-/* Gossip feed endpoint. Leave "" to disable the gossip category entirely.
-   Can also be set at runtime via window.NOW_AND_MORE_CONFIG = { gossipApi: "..." }.
-   Expected JSON: { title, source, link, publishedAt, lang } — a single headline,
-   an array of such objects, or { items: [...] }. Headlines only; content is
-   never invented locally. */
+/* The Worker serves a language-specific candidate list. The cache and
+   in-flight requests are isolated by language, so a late reply cannot
+   replace another language's news. Empty config disables the category. */
 const GOSSIP_API = "https://now-and-more.orangely.workers.dev/gossip";
-const GOSSIP_CACHE_MS = 10 * 60 * 1000;
-const GOSSIP_TIMEOUT_MS = 3000;
-let gossipCache = [];
-let gossipFetchedAt = 0;
+const gossipClient = NAM_GOSSIP.createClient();
 
 function gossipEndpoint() {
   try {
-    if (typeof window !== "undefined" && window.NOW_AND_MORE_CONFIG && window.NOW_AND_MORE_CONFIG.gossipApi) {
-      return window.NOW_AND_MORE_CONFIG.gossipApi;
-    }
+    const config = window.NOW_AND_MORE_CONFIG;
+    if (config && typeof config.gossipApi === "string") return config.gossipApi;
   } catch (e) { /* ignore */ }
   return GOSSIP_API;
 }
 
-async function refreshGossip() {
-  const url = gossipEndpoint();
-  if (!url) return;
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), GOSSIP_TIMEOUT_MS);
-  try {
-    const fetchUrl = url + (url.includes("?") ? "&" : "?") + "lang=" + lang;
-    const res = await fetch(fetchUrl, { signal: ctl.signal });
-    if (!res.ok) return;
-    const data = await res.json();
-    const raw = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : [data]);
-    const items = raw.filter((i) => i && i.title && i.link);
-    if (items.length) {
-      gossipCache = items;
-      gossipFetchedAt = Date.now();
-    }
-  } catch (e) { /* feed unavailable: gossip category stays excluded */ }
-  finally { clearTimeout(timer); }
+function refreshGossip() {
+  return gossipClient.refresh(lang, gossipEndpoint());
 }
 
 /* ================= State ================= */
@@ -88,31 +66,16 @@ const pick = (arr) => arr[randInt(arr.length)];
 const deckState = NAM_DEDUP.createDeckState(localStorage, () => Math.random());
 const deckDraw = (key, n) => deckState.draw(key, n);
 
-/* Gossip has no fixed pool: headlines arrive from the feed and change
-   over time. Dedupe by headline — the stable identity — kept per
-   language and pruned to the current list on every draw, so brand-new
-   headlines are drawable at once and vanished ones are forgotten. When
-   everything current has been seen, a new cycle starts with the
-   previous cycle's last headline held back for one draw, so it cannot
-   repeat back-to-back (list size > 1). */
+/* Dynamic news is eligible only if unseen or cooled down. Keep history
+   in D1's render transaction: no fetch or failed render consumes news. */
+function gossipCandidates() {
+  return NAM_GOSSIP.eligible(gossipClient.items(lang, gossipEndpoint()), deckState.state.g[lang]);
+}
 function drawGossipItem() {
-  let g = deckState.state.g[lang];
-  if (!g || !Array.isArray(g.seen)) {
-    g = { seen: [], last: null };
-    deckState.state.g[lang] = g;
-  }
-  const alive = new Set(gossipCache.map((i) => i.title));
-  g.seen = g.seen.filter((title) => alive.has(title));
-  let unseen = gossipCache.filter((i) => !g.seen.includes(i.title));
-  if (!unseen.length) {
-    g.seen = gossipCache.length > 1 && g.last && alive.has(g.last) ? [g.last] : [];
-    unseen = gossipCache.filter((i) => !g.seen.includes(i.title));
-    if (!unseen.length) unseen = gossipCache.slice(); // a one-headline list
-  }
-  const item = unseen[randInt(unseen.length)];
-  g.seen.push(item.title);
-  if (g.seen.length > 500) g.seen = g.seen.slice(-500);
-  g.last = item.title;
+  const candidates = gossipCandidates();
+  if (!candidates.length) return null;
+  const item = pick(candidates);
+  deckState.state.g[lang] = NAM_GOSSIP.record(deckState.state.g[lang], item);
   return item;
 }
 
@@ -1838,7 +1801,7 @@ function availableCategories() {
     ? ["world", "poem", "history", "thought", "science", "quotes", "classics", "almanac", "astro", "chance", "memory"]
     : ["world", "poem", "history", "thought", "science", "quotes", "proverbs", "word", "astro", "chance", "memory"];
   const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key));
-  if (gossipCache.length) {
+  if (gossipCandidates().length) {
     const g = CATEGORY_WEIGHTS.find((c) => c.key === "gossip");
     if (g) list.push(g);
   }
@@ -1918,8 +1881,16 @@ function makeSelection(cat) {
       return { cat, item: PROVERBS[deckDraw("proverbs", PROVERBS.length)] };
     case "word":
       return { cat, item: WORDS[deckDraw("word", WORDS.length)] };
-    case "gossip":
-      return { cat, item: drawGossipItem() };
+    case "gossip": {
+      const item = drawGossipItem();
+      if (item) return { cat, item, newsLang: lang };
+      // A candidate may expire at the boundary between eligibility and
+      // selection. Recondition the original category weights, not a fixed
+      // fallback that might repeat the last category.
+      const fallback = NAM_DEDUP.weightedCategory(
+        availableCategories().filter(c => c.key !== "gossip"), lastCategory, Math.random);
+      return makeSelection(fallback);
+    }
     case "memory":
       return { cat, item: MEMORY_PROMPTS[deckDraw("memory", MEMORY_PROMPTS.length)] };
     case "mine": {
@@ -2223,7 +2194,7 @@ function drawCard() {
   card.classList.add("leaving");
   return drawGate.request(() => {
     try {
-      if (gossipEndpoint() && Date.now() - gossipFetchedAt >= GOSSIP_CACHE_MS) refreshGossip();
+      if (gossipEndpoint()) refreshGossip();
       // Select at the end of the transition using the current language.
       // The old selection remains the displayed card until this commits.
       const selected = deckState.transact(() => {
@@ -2447,8 +2418,10 @@ function applyStaticStrings() {
   if (currentSelection && !drawGate.pending) {
     // If a draw is in flight it will select in the latest language, so do
     // not consume an extra variant of the card that is leaving.
-    if (currentSelection.cat === "postcard" ||
-        availableCategories().some((c) => c.key === currentSelection.cat)) {
+    const sameNewsLanguage = currentSelection.cat === "gossip" && currentSelection.newsLang === lang;
+    if (currentSelection.cat === "postcard" || sameNewsLanguage ||
+        (currentSelection.cat !== "gossip" &&
+         availableCategories().some((c) => c.key === currentSelection.cat))) {
       currentSelection = deckState.transact(() => {
         const sel = selectionForLanguage(currentSelection);
         renderSelection(sel);
@@ -2548,8 +2521,6 @@ function setLang(next) {
   if (next === lang) return;
   lang = next;
   localStorage.setItem(LS_LANG, lang);
-  gossipCache = [];
-  gossipFetchedAt = 0;
   refreshGossip();
   applyStaticStrings();
 }

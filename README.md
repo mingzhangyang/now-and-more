@@ -28,11 +28,11 @@ A single-page clock. At the centre, a precise real clock that never moves (certa
 
 ## 抽卡去重 / Draw deduplication
 
-固定内容池使用无放回洗牌袋，正常循环边界不重复；仅在成功渲染后提交进度，并使用 `nam-decks-v1` 在同一浏览器重载时恢复。诗词和名言独立记录中英文进度，切换语言时才抽取需要展示的版本。同一相遇内切回已展示的语言不会再消耗牌组。手动、定时和键盘抽卡共用一个过渡锁；特殊日期赠礼优先，日期确定内容和纯随机值仍允许设计上的重复。动态新闻协议、稳定内容 ID 与多标签页协调留给后续批次。
+固定内容池使用无放回洗牌袋，正常循环边界不重复；仅在成功渲染后提交进度，并使用 `nam-decks-v1` 在同一浏览器重载时恢复。诗词和名言独立记录中英文进度，切换语言时才抽取需要展示的版本。同一相遇内切回已展示的语言不会再消耗牌组。手动、定时和键盘抽卡共用一个过渡锁；特殊日期赠礼优先，日期确定内容和纯随机值仍允许设计上的重复。D2 动态新闻采用列表接口、URL/标题指纹、语言独立缓存和 72 小时本地历史（重复间隔至少 30 分钟）。静态内容稳定 ID 与多标签页协调留给后续批次。
 
-Fixed pools draw without replacement and avoid repeats across normal bag boundaries. Progress commits after rendering and survives reload in the same browser via `nam-decks-v1`. Poems and quotes consume only the language rendered; revisiting an already displayed variant of the same encounter consumes nothing. Manual, keyboard and timed draws share a transition lock. Date-specific gifts retain priority; deterministic daily cards and chance values may repeat by design. Dynamic-news protocol, stable content IDs and cross-tab coordination are follow-up work.
+Fixed pools draw without replacement and avoid repeats across normal bag boundaries. Progress commits after rendering and survives reload in the same browser via `nam-decks-v1`. Poems and quotes consume only the language rendered; revisiting an already displayed variant of the same encounter consumes nothing. Manual, keyboard and timed draws share a transition lock. Date-specific gifts retain priority; deterministic daily cards and chance values may repeat by design. Dynamic news uses the D2 list API, URL/title fingerprints, per-language caching, and a bounded 72-hour local history with a 30-minute minimum repeat cooldown. Stable IDs for static pools and cross-tab coordination remain follow-up work.
 
-Regression tests (Node 22+, no dependencies): `node --test tests/dedup.test.cjs`.
+Regression tests (Node 22+, no dependencies): `node --test tests/*.test.cjs`.
 
 ## 本地运行 / Run locally
 

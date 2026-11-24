@@ -13,5 +13,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --check js/dedup.js && node --check js/app.js && node --check js/data.js && node --check sw.js
-      - run: node --test tests/dedup.test.cjs
+      - run: node --check js/dedup.js && node --check js/gossip.js && node --check gossip-service/news-id.js && node --check gossip-service/worker.js && node --check js/app.js && node --check js/data.js && node --check sw.js
+      - run: node --test tests/*.test.cjs
