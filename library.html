@@ -156,6 +156,7 @@
   <p class="foot"><span data-lang="zh">一件来自 orangely.xyz 的小作品 · 2026</span><span data-lang="en">A small work from orangely.xyz · 2026</span></p>
 </main>
 
+<script src="js/dedup.js?v=27"></script>
 <script>
   /* My notes — the library page. Reads (and deletes from) the same
      IndexedDB store the main page writes to (`nam-notes` / `notes`,
@@ -251,7 +252,9 @@
         typeof n.text === "string" && n.text.trim() &&
         typeof n.createdAt === "number";
     }
+    var loadSequence = 0;
     function loadAll() {
+      var sequence = ++loadSequence;
       return openDb().then(function (db) {
         if (!db) { dbFailed = true; entries = []; return; }
         return new Promise(function (resolve) {
@@ -260,7 +263,7 @@
             rq.onsuccess = function () {
               var rows = (rq.result || []).filter(validNote);
               rows.sort(function (a, b) { return (b.createdAt - a.createdAt) || (b.id - a.id); });
-              entries = rows;
+              if (sequence === loadSequence) entries = rows;
               resolve();
             };
             rq.onerror = function () { resolve(); };
@@ -271,13 +274,22 @@
     function deleteNote(id) {
       return openDb().then(function (db) {
         if (!db) return false;
-        return new Promise(function (resolve) {
-          try {
-            var rq = db.transaction("notes", "readwrite").objectStore("notes").delete(id);
-            rq.onsuccess = function () { resolve(true); };
-            rq.onerror = function () { resolve(false); };
-          } catch (e) { resolve(false); }
-        });
+        function remove() {
+          return new Promise(function (resolve) {
+            try {
+              var tx = db.transaction("notes", "readwrite");
+              tx.objectStore("notes").delete(id);
+              tx.oncomplete = function () {
+                try { localStorage.setItem("nam-notes-revision", Date.now() + ":" + Math.random()); }
+                catch (e) { /* focus refresh is the fallback */ }
+                resolve(true);
+              };
+              tx.onabort = function () { resolve(false); };
+            } catch (e) { resolve(false); }
+          });
+        }
+        return typeof NAM_DEDUP === "undefined" ? remove() :
+          NAM_DEDUP.runShared(NAM_DEDUP.browserLocks(), remove);
       });
     }
 
@@ -336,8 +348,13 @@
       if (!btn) return;
       var id = Number(btn.dataset.id);
       if (!Number.isFinite(id)) return;
-      deleteNote(id).then(function () {
-        entries = entries.filter(function (n) { return n.id !== id; });
+      deleteNote(id).then(function (ok) {
+        if (ok) {
+          entries = entries.filter(function (n) { return n.id !== id; });
+          loadAll().then(render);
+        } else {
+          dbFailed = true;
+        }
         render();
       });
     });
@@ -361,6 +378,10 @@
         apply(next);
       });
     });
+    window.addEventListener("storage", function (e) {
+      if (e.key === "nam-notes-revision" || e.key === null) loadAll().then(render);
+    });
+    window.addEventListener("focus", function () { loadAll().then(render); });
     apply(lang);
     loadAll().then(render);
   })();

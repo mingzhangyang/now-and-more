@@ -9,9 +9,10 @@ const app = read("js/app.js");
 const core = read("js/dedup.js");
 const data = read("js/data.js");
 const api = new Function(core + "\nreturn NAM_DEDUP;")();
-const key = "nam-decks-v1";
+const ids = n => Array.from({length:n}, (_,i) => "id:" + i);
+const key = "nam-decks-v2";
 const store = (seed) => {
-  const m = new Map(seed ? [[key, JSON.stringify(seed)]] : []);
+  const m = new Map(seed ? [[seed.v === 1 ? "nam-decks-v1" : key, JSON.stringify(seed)]] : []);
   return { writes: 0, getItem(k) { return m.get(k) ?? null; },
     setItem(k, v) { this.writes++; m.set(k, v); } };
 };
@@ -29,7 +30,7 @@ test("800 complete fixed-pool cycles, including normal bag seams", () => {
     const state = api.createDeckState(store(), seeded(n));
     let last = -1;
     for (let cycle = 0; cycle < 100; cycle++) {
-      const bag = Array.from({ length: n }, () => state.transact(() => state.draw("pool", n)));
+      const bag = Array.from({ length: n }, () => state.transact(() => state.draw("pool", ids(n))));
       assert.equal(new Set(bag).size, n);
       assert.ok(bag.every((i) => i >= 0 && i < n));
       if (n > 1) assert.notEqual(bag[0], last);
@@ -41,30 +42,30 @@ test("800 complete fixed-pool cycles, including normal bag seams", () => {
 test("commit after render, rollback on failure, reload resumes bag", () => {
   const storage = store();
   let state = api.createDeckState(storage, seeded(42));
-  const seen = Array.from({ length: 7 }, () => state.transact(() => state.draw("pool", 20)));
+  const seen = Array.from({ length: 7 }, () => state.transact(() => state.draw("pool", ids(20))));
   const before = storage.getItem(key);
   const count = storage.writes;
   assert.throws(() => state.transact(() => {
-    state.draw("pool", 20);
+    state.draw("pool", ids(20));
     state.state.g.zh = { seen: ["unrendered"] };
     assert.equal(storage.getItem(key), before);
     throw Error("render failed");
   }), /render failed/);
   assert.equal(storage.writes, count);
   assert.equal(JSON.stringify(state.state), before);
-  assert.throws(() => state.draw("pool", 20), /transaction/);
+  assert.throws(() => state.draw("pool", ids(20)), /transaction/);
   state = api.createDeckState(storage, seeded(7));
-  const remaining = Array.from({ length: 13 }, () => state.transact(() => state.draw("pool", 20)));
+  const remaining = Array.from({ length: 13 }, () => state.transact(() => state.draw("pool", ids(20))));
   assert.equal(new Set([...seen, ...remaining]).size, 20);
 });
 
 test("old store format, corrupted index bag, resize seam and storage denial", () => {
   const storage = store({ v: 1, d: { p: { n: 4, r: [1, 1, 99], l: 2 } }, g: {}, fp: [] });
-  const state = api.createDeckState(storage, () => 0.999);
-  assert.notEqual(state.transact(() => state.draw("p", 3)), 2);
+  const state = api.createDeckState(storage, () => 0.999, {legacyIds:{p:ids(4)}});
+  assert.notEqual(state.transact(() => state.draw("p", ids(3))), 2);
   const blocked = api.createDeckState({ getItem() { throw Error(); }, setItem() { throw Error(); } }, () => 0.999);
-  assert.equal(blocked.transact(() => blocked.draw("p", 3)), 2);
-  assert.equal(blocked.transact(() => blocked.draw("p", 3)), 1);
+  assert.equal(blocked.transact(() => blocked.draw("p", ids(3))), 2);
+  assert.equal(blocked.transact(() => blocked.draw("p", ids(3))), 1);
 });
 
 test("100,000 weighted draws never repeat if alternatives exist", () => {
@@ -112,7 +113,8 @@ function harness() {
     const pick = arr => arr[randInt(arr.length)];
     const pad = n => String(n).padStart(2, "0");
     const deckState = NAM_DEDUP.createDeckState(storage, Math.random);
-    const deckDraw = (key, n) => deckState.draw(key, n);
+    const deckDraw = key => deckState.draw(key, NAM_DECK_IDS[key]);
+    const notesCurrent = () => true;
     const todaysDatedNoteSelection = () => delivered ? null : note;
     const todaysPostcardSelection = () => postcard;
     const postcardGifted = () => gifted;
@@ -231,7 +233,9 @@ function midnightGiftHarness(notesList, postcards) {
     let currentSelection = null, lastCategory = null, encounter = 0, lastDrawAt = 0;
     let failRender = false;
     const pad = n => String(n).padStart(2, "0");
-    const deckState = NAM_DEDUP.createDeckState(localStorage);
+    const appStorage = localStorage;
+    const notesCurrent = () => true;
+    const deckState = NAM_DEDUP.createDeckState(appStorage);
     const gossipEndpoint = () => "";
     const postcardForDate = date => postcards[noteDayStr(date)] || null;
     const weightedCategory = () => "world";
@@ -302,14 +306,14 @@ test("midnight postcard receipt belongs to rendered day; next day's postcard is 
 
 test("HTML load order and offline precache match the new module", () => {
   const html = read("index.html"), sw = read("sw.js");
-  assert.ok(html.indexOf("js/dedup.js?v=25") > html.indexOf("js/data.js?v=25"));
-  assert.ok(html.indexOf("js/app.js?v=25") > html.indexOf("js/dedup.js?v=25"));
-  assert.ok(sw.includes('"/js/dedup.js?v=25"'));
-  assert.ok(html.indexOf("gossip-service/news-id.js?v=25") > html.indexOf("js/dedup.js?v=25"));
-  assert.ok(html.indexOf("js/gossip.js?v=25") > html.indexOf("gossip-service/news-id.js?v=25"));
-  assert.ok(html.indexOf("js/app.js?v=25") > html.indexOf("js/gossip.js?v=25"));
-  assert.ok(sw.includes('"/gossip-service/news-id.js?v=25"'));
-  assert.ok(sw.includes('"/js/gossip.js?v=25"'));
-  assert.ok(sw.includes('"/js/app.js?v=25"'));
-  assert.ok(sw.includes('"nam-v25"'));
+  assert.ok(html.indexOf("js/dedup.js?v=27") > html.indexOf("js/data.js?v=27"));
+  assert.ok(html.indexOf("js/app.js?v=27") > html.indexOf("js/dedup.js?v=27"));
+  assert.ok(sw.includes('"/js/dedup.js?v=27"'));
+  assert.ok(html.indexOf("gossip-service/news-id.js?v=27") > html.indexOf("js/dedup.js?v=27"));
+  assert.ok(html.indexOf("js/gossip.js?v=27") > html.indexOf("gossip-service/news-id.js?v=27"));
+  assert.ok(html.indexOf("js/app.js?v=27") > html.indexOf("js/gossip.js?v=27"));
+  assert.ok(sw.includes('"/gossip-service/news-id.js?v=27"'));
+  assert.ok(sw.includes('"/js/gossip.js?v=27"'));
+  assert.ok(sw.includes('"/js/app.js?v=27"'));
+  assert.ok(sw.includes('"nam-v27"'));
 });
