@@ -1041,3 +1041,20 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
   .brand-text small { display: none; }
   .footer-note { display: none; }
 }
+
+/* ---------- Touch devices: no focus zoom ----------
+   iOS Safari rescales the page whenever a focused input, select or
+   textarea renders below 16px — the visible "zoom-in" when typing in
+   the My Days / note modals or picking from a settings select. Floor
+   every form control at 16px on coarse-pointer devices (phones and
+   tablets, at any width); fine-pointer desktop rendering is untouched,
+   and the viewport meta keeps no scale locks. The class selectors
+   repeat the base rules' specificity and come later in the file, so
+   they win inside this media query only. (.note-text-input already
+   computes to 16px and needs no help.) */
+@media (pointer: coarse) {
+  input, select, textarea,
+  .sign-select,
+  .myday-name,
+  .note-date-row input[type="date"] { font-size: 16px; }
+}
