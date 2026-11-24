@@ -124,7 +124,8 @@ function harness() {
     const el = { classList: { add(){}, remove(){} }, textContent: "" };
     const $ = () => el;
     const renderSelection = sel => { if (failRender) throw Error("render failed"); rendered.push(sel); };
-  ` + section("function availableCategories()", "function esc(str)") +
+  ` + section("function postcardDayKey(", "/* Today's postcard") +
+    section("function availableCategories()", "function esc(str)") +
     section("const POSTCARD_POOL_CHANCE", "/* ================= Clock engine") + `
     return {
       state: deckState, drawCard, makeSelection, selectionForLanguage,
