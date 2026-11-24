@@ -18,7 +18,19 @@ function gossipEndpoint() {
 }
 
 function refreshGossip() {
-  return gossipClient.refresh(lang, gossipEndpoint());
+  const requestLang = lang;
+  const endpoint = gossipEndpoint();
+  // Persist legacy conversion even when the pool is empty or cooling down.
+  // Refresh observations enrich seen identities but never consume a draw.
+  deckState.updateGossip(requestLang, raw => NAM_GOSSIP.reconcile([], raw));
+  return gossipClient.refresh(requestLang, endpoint).then(items => {
+    // A reply for a replaced endpoint must not change history. Language
+    // switches are safe because each reply retains its original language.
+    if (endpoint === gossipEndpoint()) {
+      deckState.updateGossip(requestLang, raw => NAM_GOSSIP.reconcile(items, raw));
+    }
+    return items;
+  });
 }
 
 /* ================= State ================= */

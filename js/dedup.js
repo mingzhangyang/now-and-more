@@ -59,6 +59,22 @@ const NAM_DEDUP = (() => {
       return idx;
     }
 
+    function persist() {
+      try { storage.setItem(KEY, JSON.stringify(state)); }
+      catch (e) { /* Keep the committed state in memory if storage is unavailable. */ }
+    }
+
+    // Non-draw maintenance is independent of the render transaction.
+    // The updater is pure and must not consume an unseen news item.
+    function updateGossip(language, update) {
+      if (active) throw new Error("News maintenance must be outside a render transaction");
+      const previous = state.g[language];
+      const next = update(previous);
+      if (JSON.stringify(next) === JSON.stringify(previous)) return;
+      state.g[language] = next;
+      persist();
+    }
+
     // Synchronous: choose, render, and only then publish the new history.
     // No asynchronous callback or storage write can expose a partial bag.
     function transact(render) {
@@ -75,12 +91,11 @@ const NAM_DEDUP = (() => {
       } finally {
         active = false;
       }
-      try { storage.setItem(KEY, JSON.stringify(state)); }
-      catch (e) { /* Keep the committed state in memory if storage is unavailable. */ }
+      persist();
       return selection;
     }
 
-    return { get state() { return state; }, draw, transact };
+    return { get state() { return state; }, draw, transact, updateGossip };
   }
 
   // Condition the configured weights on a different eligible category.

@@ -50,12 +50,11 @@ const NAM_GOSSIP = (() => {
     return cooled.length ? [cooled[0].item] : [];
   }
 
-  function record(raw, item, now = Date.now()) {
-    const entries = history(raw, now).entries;
-    const keys = new Set(ID.keysFor(item));
-    if (!keys.size) return { v: 2, entries };
+  // Collect all transitively connected history entries without changing
+  // their timestamps. The caller decides whether a display actually happened.
+  function collectMatches(entries, keys) {
     const remaining = entries.slice();
-    // Retain previously observed aliases, including transitive matches.
+    const matches = [];
     let changed = true;
     while (changed) {
       changed = false;
@@ -63,10 +62,35 @@ const NAM_GOSSIP = (() => {
         const row = remaining[i];
         if (!row.keys.some(k => keys.has(k))) continue;
         for (const k of row.keys) keys.add(k);
+        matches.push(row);
         remaining.splice(i, 1);
         changed = true;
       }
     }
+    return { remaining, matches };
+  }
+
+  // Observation is not a draw. Migrate once and enrich only already-seen
+  // identities, retaining the most recent actual display time in a group.
+  function reconcile(pool, raw, now = Date.now()) {
+    if (raw == null) return raw;
+    let { entries } = history(raw, now);
+    for (const item of ID.dedupe(pool, now)) {
+      const keys = new Set(ID.keysFor(item));
+      const { remaining, matches } = collectMatches(entries, keys);
+      if (!matches.length) continue;
+      if (matches.length === 1 && [...keys].every(k => matches[0].keys.includes(k))) continue;
+      const at = Math.max(...matches.map(row => row.at));
+      entries = [...remaining, { keys: ID.cleanKeys([...keys]), at }].sort((a, b) => a.at - b.at);
+    }
+    return { v: 2, entries };
+  }
+
+  function record(raw, item, now = Date.now()) {
+    const entries = history(raw, now).entries;
+    const keys = new Set(ID.keysFor(item));
+    if (!keys.size) return { v: 2, entries };
+    const { remaining } = collectMatches(entries, keys);
     remaining.push({ keys: ID.cleanKeys([...keys]), at: now });
     return { v: 2, entries: remaining.slice(-HISTORY_LIMIT) };
   }
@@ -120,7 +144,7 @@ const NAM_GOSSIP = (() => {
       // Race the full response (including JSON) against a timeout, even
       // if a network adapter ignores AbortSignal.
       const load = Promise.resolve().then(async () => {
-        const res = await fetcher(slot.url, { signal: ctl.signal });
+        const res = await fetcher(slot.url, { signal: ctl.signal, cache: "no-store" });
         if (!res.ok) throw Error("news unavailable");
         return res.json();
       });
@@ -154,5 +178,5 @@ const NAM_GOSSIP = (() => {
     return { items, refresh };
   }
 
-  return { history, eligible, record, createClient, requestUrl, CACHE_MS, RETRY_MS, COOLDOWN_MS, HISTORY_LIMIT };
+  return { history, eligible, reconcile, record, createClient, requestUrl, CACHE_MS, RETRY_MS, COOLDOWN_MS, HISTORY_LIMIT };
 })();

@@ -212,7 +212,7 @@ export function parseWeiboTop(html) {
   const re = /<a[^>]+href="\/weibo\?q=[^"]*"[^>]*>([^<]+)<\/a>\s*<span>([\d,]+)<\/span>/g;
   let m;
   let rank = 0;
-  while ((m = re.exec(html)) !== null && items.length < MAX_HEADLINES) {
+  while ((m = re.exec(html)) !== null) {
     const word = unescapeXml(m[1]);
     const heat = m[2].replace(/,/g, "");
     if (!word) continue;
@@ -250,10 +250,11 @@ async function fetchWeiboTop() {
 }
 
 async function fetchHeadlines(lang) {
-  // Fetch all sources in parallel: one slow source must not stall the rest.
+  // Fetch all sources in parallel. Keep raw rows (including late alias
+  // bridges) until the single global grouping and output cap in mergePools.
   const jobs = RSS_SOURCES[lang].map((url) =>
     fetchSource(url)
-      .then((r) => (r.ok ? mergeHeadlines([r.text]) : []))
+      .then((r) => (r.ok ? parseFeed(r.text).sort((a, b) => b._ts - a._ts) : []))
       .catch(() => [])
   );
   if (lang === "zh") jobs.push(fetchWeiboTop());

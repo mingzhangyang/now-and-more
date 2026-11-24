@@ -268,3 +268,139 @@ test("real Worker endpoint: strict list response, CORS, fresh cache, language is
     globalThis.fetch=oldFetch;globalThis.caches=oldCaches;Date.now=oldNow;
   }
 });
+
+test("app refresh persists legacy migration once, without a successful draw", async () => {
+  const key = "nam-decks-v1";
+  const memory = new Map([[key, JSON.stringify({v:1,d:{},g:{en:{seen:[A.title],last:A.title},zh:{seen:[C.title],last:C.title}},fp:[]})]]);
+  const storage = {getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
+  const app = read("js/app.js");
+  const refresh = app.slice(app.indexOf("function refreshGossip()"), app.indexOf("/* ================= State"));
+  const candidates = app.slice(app.indexOf("function gossipCandidates()"), app.indexOf("/* Chance values"));
+  let rows = [A], now = start;
+  const oldNow = Date.now;
+  Date.now = () => now;
+  function boot() {
+    const deck = D.createDeckState(storage);
+    const client = {items:()=>rows,refresh:async()=>rows};
+    const api = new Function("NAM_GOSSIP","deckState","gossipClient","lang","gossipEndpoint","pick",
+      refresh+"\n"+candidates+"\nreturn {refreshGossip,gossipCandidates,drawGossipItem};")(
+      G,deck,client,"en",()=>endpoint,items=>items[0]);
+    return {deck,...api};
+  }
+  try {
+    let api=boot();
+    await api.refreshGossip();
+    assert.equal(api.gossipCandidates().length,0);
+    assert.equal(api.deck.state.g.en.entries[0].at,start);
+    assert.deepEqual(api.deck.state.g.zh,{seen:[C.title],last:C.title});
+    now+=G.COOLDOWN_MS-1;
+    api=boot();
+    await api.refreshGossip();
+    assert.equal(api.gossipCandidates().length,0);
+    assert.equal(api.deck.state.g.en.entries[0].at,start);
+    now++;
+    api=boot();
+    await api.refreshGossip();
+    assert.equal(api.gossipCandidates()[0].title,A.title);
+    assert.equal(api.deck.state.g.en.entries[0].at,start);
+  } finally { Date.now=oldNow; }
+});
+
+test("app refresh persists observed aliases, but does not consume unseen items or reset cooldown", async () => {
+  const memory=new Map();
+  const storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
+  const app=read("js/app.js");
+  const refresh=app.slice(app.indexOf("function refreshGossip()"),app.indexOf("/* ================= State"));
+  const candidates=app.slice(app.indexOf("function gossipCandidates()"),app.indexOf("/* Chance values"));
+  let rows=[A], now=start;
+  const oldNow=Date.now;
+  Date.now=()=>now;
+  function boot() {
+    const deck=D.createDeckState(storage);
+    const api=new Function("NAM_GOSSIP","deckState","gossipClient","lang","gossipEndpoint","pick",
+      refresh+"\n"+candidates+"\nreturn {refreshGossip,gossipCandidates,drawGossipItem};")(
+      G,deck,{items:()=>rows,refresh:async()=>rows},"en",()=>endpoint,items=>items[0]);
+    return {deck,...api};
+  }
+  try {
+    let api=boot();
+    await api.refreshGossip();
+    assert.equal(memory.size,0);
+    api.deck.transact(()=>api.drawGossipItem());
+    now+=1000;
+    rows=[A,B,{...A,title:B.title},C];
+    await api.refreshGossip();
+    assert.deepEqual(api.gossipCandidates().map(x=>x.title),[C.title]);
+    assert.equal(api.deck.state.g.en.entries.length,1);
+    assert.equal(api.deck.state.g.en.entries[0].at,start);
+    assert.ok(api.deck.state.g.en.entries[0].keys.includes(ID.normalize(B,start).id));
+    rows=[B];
+    api=boot();
+    await api.refreshGossip();
+    assert.equal(api.gossipCandidates().length,0);
+    now=start+G.COOLDOWN_MS;
+    assert.equal(api.gossipCandidates()[0].title,B.title);
+    const merged=G.reconcile([A,B,{...A,title:B.title}],G.record(G.record(null,A,start),B,start+1),now);
+    assert.equal(merged.entries.length,1);
+    assert.equal(merged.entries[0].at,start+1);
+  } finally { Date.now=oldNow; }
+});
+
+test("real Worker endpoint retains RSS alias bridges beyond the per-source 50-row boundary", async () => {
+  // Isolate the module's per-language retry state from the stale-failure test.
+  const w=await import(pathToFileURL(path.join(root,"gossip-service/worker.js")).href+"?bridge-regression");
+  const oldFetch=globalThis.fetch, oldCaches=globalThis.caches, oldNow=Date.now;
+  const fillers=Array.from({length:50},(_,i)=>story("filler-"+i));
+  const bridge={...B,title:A.title,publishedAt:new Date(start-1000).toISOString()};
+  globalThis.caches={default:{match:async()=>undefined,put:async()=>{}}};
+  Date.now=()=>start;
+  globalThis.fetch=async url=>{
+    const s=String(url);
+    if(s.includes("entertainment_and_arts")) return new Response(rss([...fillers,bridge]));
+    if(s.includes("variety.com")) return new Response(rss([A,B]));
+    return new Response("",{status:503});
+  };
+  try {
+    const res=await w.default.fetch(new Request(endpoint+"?lang=en&v=2"));
+    assert.equal(res.status,200);
+    const body=await res.json();
+    assert.equal(body.items.length,50);
+    const a=body.items.find(x=>x.link===A.link);
+    assert.ok(a);
+    assert.ok(ID.keysFor(a).includes(ID.normalize(B,start).id));
+    assert.ok(!body.items.some(x=>x.link===B.link));
+  } finally { globalThis.fetch=oldFetch;globalThis.caches=oldCaches;Date.now=oldNow; }
+});
+
+test("configured endpoint bypasses service-worker cache across refresh and stale expiry", async () => {
+  let now=start,calls=0,value=list("en",[A]),handleFetch;
+  const custom="https://custom.example/api/headlines?topic=entertainment";
+  const network=async request=>{
+    calls++;
+    assert.equal(request.cache,"no-store");
+    assert.equal(new URL(request.url).pathname,"/api/headlines");
+    return response(value);
+  };
+  const self={location:{origin:"https://site.example"},addEventListener:(type,fn)=>{if(type==="fetch")handleFetch=fn;}};
+  const caches={match:async()=>response(list("en",[A])),open:async()=>{throw Error("no-store must not write");}};
+  new Function("self","caches","fetch",read("sw.js"))(self,caches,network);
+  assert.equal(typeof handleFetch,"function");
+  const dispatch=(url,opts)=>{
+    const request=new Request(url,opts);
+    let result;
+    handleFetch({request,respondWith:p=>{result=p;}});
+    return result??network(request);
+  };
+  const client=G.createClient({now:()=>now,...fakeTimers(),fetcher:dispatch});
+  assert.equal((await client.refresh("en",custom))[0].title,A.title);
+  now+=G.CACHE_MS;
+  value=list("en",[B],now);
+  assert.equal((await client.refresh("en",custom))[0].title,B.title);
+  assert.equal(calls,2);
+  now+=ID.MAX_STALE_MS+1;
+  assert.deepEqual(await client.refresh("en",custom),[]);
+  now+=G.RETRY_MS;
+  value=list("en",[C],now);
+  assert.equal((await client.refresh("en",custom))[0].title,C.title);
+  assert.equal(calls,4);
+});

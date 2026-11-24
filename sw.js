@@ -3,18 +3,18 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v24";
+var CACHE_NAME = "nam-v25";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=24",
-  "/js/data.js?v=24",
-  "/js/dedup.js?v=24",
-  "/gossip-service/news-id.js?v=24",
-  "/js/gossip.js?v=24",
-  "/js/app.js?v=24",
+  "/css/style.css?v=25",
+  "/js/data.js?v=25",
+  "/js/dedup.js?v=25",
+  "/gossip-service/news-id.js?v=25",
+  "/js/gossip.js?v=25",
+  "/js/app.js?v=25",
   "/privacy.html",
   "/about.html",
   "/library.html",
@@ -103,6 +103,10 @@ function cacheFirst(request) {
 self.addEventListener("fetch", function (event) {
   var request = event.request;
   if (request.method !== "GET") return;
+  // The v2 news client deliberately uses no-store, including configured
+  // endpoint origins and paths. Let the browser fetch directly; the client
+  // and Worker already enforce freshness and bounded stale fallback.
+  if (request.cache === "no-store") return;
 
   var url;
   try {
