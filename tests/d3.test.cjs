@@ -284,11 +284,11 @@ test("known-stale IndexedDB note snapshot is excluded and older load cannot repl
 
 test("library shares the write lock, signals after commit, and offline shell includes the script",()=>{
   const library=read("library.html");
-  assert.ok(library.includes('src="js/dedup.js?v=32"'));
+  assert.ok(library.includes('src="js/dedup.js?v=33"'));
   assert.ok(library.includes('NAM_DEDUP.runShared(NAM_DEDUP.browserLocks(), remove)'));
   assert.ok(library.indexOf("tx.oncomplete = function ()")<library.indexOf('localStorage.setItem("nam-notes-revision"'));
   assert.ok(app.includes("NAM_DEDUP.runShared(sharedLocks"));
-  assert.ok(read("sw.js").includes('"/js/dedup.js?v=32"'));
+  assert.ok(read("sw.js").includes('"/js/dedup.js?v=33"'));
 });
 
 /* Real draw, revision, receipt and bag logic. Only IndexedDB, the clock,
@@ -308,7 +308,7 @@ function notePriorityHarness() {
     section("function drawNoteEntry()","/* ---------- Source context")+
     section("function postcardDayKey(","/* The meta line")+
     section("const POSTCARD_POOL_CHANCE","/* ================= Clock engine")+String.raw`
-    let notesList=[],notesDbFailed=false,currentSelection=null,lastCategory=null,encounter=0,lastDrawAt=0;
+    let notesList=[],notesDbFailed=false,currentSelection=null,lastCategory=null,encounter=0,lastDrawAt=0,ambientOn=false;
     const notesOpenDb=async()=>db;
     const pad=n=>String(n).padStart(2,"0");
     const deckState=NAM_DEDUP.createDeckState(appStorage,()=>0.999,{locks});
@@ -320,7 +320,8 @@ function notePriorityHarness() {
     const showGiftNotice=()=>{},dismissGiftNotice=()=>{};
     const renderSelection=sel=>rendered.push(sel);
     drawsReady=true;
-    return {drawCard,notesLoadAll,get pending(){return drawGate.pending;}};
+    return {drawCard,notesLoadAll,openPicture:sel=>deliverPostcardGift(sel),
+      get pending(){return drawGate.pending;}};
   `;
   const h=new Function("appStorage","locks","db","rendered","Date","setTimeout","clearTimeout",source)(
     storage,locks,db,rendered,FakeDate,
@@ -374,6 +375,9 @@ test("unrelated cross-tab note edit before first draw preserves note-first gift 
   assert.equal(x.storage.getItem("nam-postcard-20261224"),null);
   await x.draw();
   assert.deepEqual(x.rendered.map(s=>s.cat),["mine","postcard"]);
+  // The postcard arrived as an envelope: no receipt until it is opened.
+  assert.equal(x.storage.getItem("nam-postcard-20261224"),null);
+  x.h.openPicture(x.rendered[1]);
   assert.equal(x.storage.getItem("nam-postcard-20261224"),"1");
   assert.equal(x.hasTimer(500),false);
 });
@@ -388,6 +392,9 @@ test("fresh snapshot confirms deletion before gifting postcard; stale due note i
   await draw;
   assert.deepEqual(x.rendered.map(s=>s.cat),["postcard"]);
   assert.equal(x.storage.getItem("nam-note-20261224"),null);
+  // Envelope first: the receipt waits for the picture to be opened.
+  assert.equal(x.storage.getItem("nam-postcard-20261224"),null);
+  x.h.openPicture(x.rendered[0]);
   assert.equal(x.storage.getItem("nam-postcard-20261224"),"1");
 });
 

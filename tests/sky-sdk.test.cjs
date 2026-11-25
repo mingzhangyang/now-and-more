@@ -66,7 +66,7 @@ test("app keeps business astronomy and drops the ported illustration engine", ()
     assert.equal(app.includes(gone), false, gone);
   }
   const sw = read("sw.js");
-  assert.match(sw, /nam-v32/);
+  assert.match(sw, /nam-v33/);
   assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/sky-engine\.mjs/);
   assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/stars\.json/);
   assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/moon-lroc\.jpg/);

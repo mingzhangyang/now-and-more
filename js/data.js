@@ -69,6 +69,10 @@ const I18N = {
         crux: { name: "南十字座", line: "长轴所指，就是南天极" },
       },
     },
+    picture: {
+      received: "你收到一张图卡",
+      view: "点击查看",
+    },
     history: {
       onThisDay: (y) => `${y} 年的今天`,
       randomDay: "历史上的某一天",
@@ -232,6 +236,10 @@ const I18N = {
         scorpius: { name: "Scorpius", line: "Red Antares burns at its heart" },
         crux: { name: "the Southern Cross", line: "Its long axis points to the south celestial pole" },
       },
+    },
+    picture: {
+      received: "You've received a picture card",
+      view: "Tap to view",
     },
     history: {
       onThisDay: (y) => `On this day in ${y}`,

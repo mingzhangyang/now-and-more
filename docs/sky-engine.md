@@ -71,7 +71,7 @@ Sun, Moon, planets and stars cannot disagree between those surfaces.
 
 ## Service worker
 
-Cache name `nam-v32` precaches `sky-engine.mjs`, `stars.json`, and
+Cache name `nam-v33` precaches `sky-engine.mjs`, `stars.json`, and
 `moon-lroc.jpg` for this exact directory, plus the adapter. Activating the
 worker deletes every other cache name, so an older shell cannot pair a new
 module with an old catalog or an old lunar map. The version lives in the

@@ -74,7 +74,9 @@ test("card Enter shortcut belongs only to the card, not nested controls", () => 
   const handlers = {};
   const card = {addEventListener: (type, fn) => {handlers[type] = fn;}};
   let draws = 0;
-  vm.runInNewContext(app.slice(start, end), {$: (id) => id === "card" ? card : {addEventListener() {}}, drawCard: () => {draws++;}});
+  vm.runInNewContext(app.slice(start, end), {$: (id) => id === "card" ? card : {addEventListener() {}},
+    drawCard: () => {draws++;},
+    stageShowsEnvelope: () => false, currentSelection: null, openImageModal: () => {}});
   handlers.keydown({key: "Enter", target: {}, currentTarget: card});
   handlers.keydown({key: "Enter", target: {}, currentTarget: card});
   assert.equal(draws, 0);

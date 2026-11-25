@@ -104,7 +104,7 @@ test("gate rejects overlapping requests and releases after errors", () => {
 function harness() {
   const source = core + "\n" + data + "\n" + `
     let lang = "zh", currentSelection = null, lastCategory = null, encounter = 0, lastDrawAt = 0;
-    let notesList = [], userSign = "";
+    let notesList = [], userSign = "", ambientOn = false;
     let note = null, postcard = null, delivered = false, gifted = false, failRender = false;
     const gossipCandidates = () => [];
     const gossipEndpoint = () => "";
@@ -120,6 +120,9 @@ function harness() {
     const postcardGifted = () => gifted;
     const markNoteDelivered = () => { delivered = true; };
     const markPostcardGifted = () => { gifted = true; };
+    const isPictureCard = sel => !!sel && (sel.cat === "postcard" || sel.cat === "sky");
+    const stageShowsEnvelope = sel => isPictureCard(sel) && !ambientOn;
+    const deliverPostcardGift = sel => { if (sel && sel.cat === "postcard" && sel.gifted) markPostcardGifted(sel.giftStamp); };
     const showGiftNotice = () => {};
     const dismissGiftNotice = () => {};
     const t = () => ({ encounter: n => String(n) });
@@ -135,6 +138,7 @@ function harness() {
       setLang: v => { lang = v; },
       fail: v => { failRender = v; },
       setGifts: (n, p) => { note = n; postcard = p; },
+      openPicture: () => deliverPostcardGift(currentSelection),
       get current() { return currentSelection; }, get count() { return encounter; },
       get delivered() { return delivered; }, get gifted() { return gifted; },
       select: cat => deckState.transact(() => {
@@ -213,6 +217,10 @@ test("dated note then postcard, no gift receipt before successful render", () =>
   assert.equal(h.delivered, true);
   assert.equal(h.gifted, false);
   h.drawCard(); queue.shift()();
+  // The postcard renders as an envelope outside ambient mode: the gift
+  // receipt is written only when the picture is opened, not on render.
+  assert.equal(h.gifted, false);
+  h.openPicture();
   assert.equal(h.gifted, true);
   assert.deepEqual(rendered.map(s => s.cat), ["mine", "postcard"]);
   h.drawCard(); queue.shift()();
@@ -231,7 +239,7 @@ function midnightGiftHarness(notesList, postcards) {
   }
   const source = core + "\n" + `
     let currentSelection = null, lastCategory = null, encounter = 0, lastDrawAt = 0;
-    let failRender = false;
+    let failRender = false, ambientOn = false;
     const pad = n => String(n).padStart(2, "0");
     const appStorage = localStorage;
     const notesCurrent = () => true;
@@ -255,7 +263,8 @@ function midnightGiftHarness(notesList, postcards) {
     section("function noteGiftKey(", "/* ---------- Source context") +
     section("const POSTCARD_POOL_CHANCE", "/* ================= Clock engine") + `
     drawsReady = true;
-    return { drawCard, fail: v => { failRender = v; } };
+    return { drawCard, fail: v => { failRender = v; },
+      openPicture: sel => deliverPostcardGift(sel) };
   `;
   const h = new Function("localStorage", "rendered", "setTimeout", "Date", "notesList", "postcards", "crossMidnight", source)(
     storage, rendered, fn => queue.push(fn), FakeDate, notesList, postcards, () => { now = tomorrow; });
@@ -283,7 +292,7 @@ test("midnight note receipt belongs to rendered day; next day's note is still de
   assert.equal(rendered[2].cat, "world");
 });
 
-test("midnight postcard receipt belongs to rendered day; next day's postcard is still gifted", () => {
+test("midnight postcard receipt belongs to the opened day; next day's postcard is still gifted", () => {
   const { h, storage, draw, rendered } = midnightGiftHarness([], {
     "2026-12-31": { key: "newyearseve" }, "2027-01-01": { key: "newyear" },
   });
@@ -294,11 +303,19 @@ test("midnight postcard receipt belongs to rendered day; next day's postcard is 
   h.fail(false);
   draw();
   assert.equal(rendered[0].key, "newyearseve");
+  // Envelope semantics: rendering the envelope writes no receipt —
+  // the gift is delivered when the picture is opened, and the receipt
+  // belongs to the day the envelope was rendered for.
+  assert.equal(storage.getItem("nam-postcard-20261231"), null);
+  assert.equal(storage.getItem("nam-postcard-20270101"), null);
+  h.openPicture(rendered[0]);
   assert.equal(storage.getItem("nam-postcard-20261231"), "1");
   assert.equal(storage.getItem("nam-postcard-20270101"), null);
   draw();
   assert.equal(rendered[1].key, "newyear");
   assert.equal(rendered[1].gifted, true);
+  assert.equal(storage.getItem("nam-postcard-20270101"), null);
+  h.openPicture(rendered[1]);
   assert.equal(storage.getItem("nam-postcard-20270101"), "1");
   draw();
   assert.equal(rendered[2].cat, "world");
@@ -306,19 +323,19 @@ test("midnight postcard receipt belongs to rendered day; next day's postcard is 
 
 test("HTML load order and offline precache match the new module", () => {
   const html = read("index.html"), sw = read("sw.js");
-  assert.ok(html.indexOf("js/dedup.js?v=32") > html.indexOf("js/data.js?v=32"));
-  assert.ok(html.indexOf("js/app.js?v=32") > html.indexOf("js/dedup.js?v=32"));
-  assert.ok(sw.includes('"/js/dedup.js?v=32"'));
-  assert.ok(html.indexOf("gossip-service/news-id.js?v=32") > html.indexOf("js/dedup.js?v=32"));
-  assert.ok(html.indexOf("js/gossip.js?v=32") > html.indexOf("gossip-service/news-id.js?v=32"));
-  assert.ok(html.indexOf("js/sky-engine-adapter.js?v=32") > html.indexOf("js/gossip.js?v=32"));
-  assert.ok(html.indexOf("js/app.js?v=32") > html.indexOf("js/sky-engine-adapter.js?v=32"));
-  assert.ok(sw.includes('"/gossip-service/news-id.js?v=32"'));
-  assert.ok(sw.includes('"/js/gossip.js?v=32"'));
-  assert.ok(sw.includes('"/js/sky-engine-adapter.js?v=32"'));
-  assert.ok(sw.includes('"/js/app.js?v=32"'));
+  assert.ok(html.indexOf("js/dedup.js?v=33") > html.indexOf("js/data.js?v=33"));
+  assert.ok(html.indexOf("js/app.js?v=33") > html.indexOf("js/dedup.js?v=33"));
+  assert.ok(sw.includes('"/js/dedup.js?v=33"'));
+  assert.ok(html.indexOf("gossip-service/news-id.js?v=33") > html.indexOf("js/dedup.js?v=33"));
+  assert.ok(html.indexOf("js/gossip.js?v=33") > html.indexOf("gossip-service/news-id.js?v=33"));
+  assert.ok(html.indexOf("js/sky-engine-adapter.js?v=33") > html.indexOf("js/gossip.js?v=33"));
+  assert.ok(html.indexOf("js/app.js?v=33") > html.indexOf("js/sky-engine-adapter.js?v=33"));
+  assert.ok(sw.includes('"/gossip-service/news-id.js?v=33"'));
+  assert.ok(sw.includes('"/js/gossip.js?v=33"'));
+  assert.ok(sw.includes('"/js/sky-engine-adapter.js?v=33"'));
+  assert.ok(sw.includes('"/js/app.js?v=33"'));
   assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/sky-engine.mjs"'));
   assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/stars.json"'));
   assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/moon-lroc.jpg"'));
-  assert.ok(sw.includes('"nam-v32"'));
+  assert.ok(sw.includes('"nam-v33"'));
 });

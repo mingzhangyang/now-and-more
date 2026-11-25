@@ -415,7 +415,8 @@ function skyArtFactsHtml(sel) {
     (bits.line ? `<p class="sa-line">${esc(bits.line)}</p>` : "");
 }
 function bindSkyRetry(sel) {
-  const btn = document.querySelector("#card-body .sky-retry");
+  const surface = sel._surface || stageSurface();
+  const btn = surface.body.querySelector(".sky-retry");
   if (!btn || btn.dataset.bound) return;
   btn.dataset.bound = "1";
   btn.addEventListener("click", (e) => {
@@ -432,24 +433,25 @@ function bindSkyRetry(sel) {
     sel.summary = null;
     sel.skyError = null;
     updateSkyCopy(sel);
-    scheduleSkyVisual(sel);
+    scheduleSkyVisual(sel, surface);
   });
 }
 function updateSkyCopy(sel) {
-  if (String(sel._skyGen || "") !== String($("card").dataset.skyGen || "")) return;
+  const surface = sel._surface || stageSurface();
+  if (String(sel._skyGen || "") !== String(surface.card.dataset.skyGen || "")) return;
   if (sel.form === "illustration") {
-    const text = document.querySelector("#card-body .sa-text");
+    const text = surface.body.querySelector(".sa-text");
     const head = text && text.querySelector(".sa-head");
     if (!text || !head) return;
     [...text.children].forEach((el) => { if (el !== head) el.remove(); });
     head.insertAdjacentHTML("afterend", skyArtFactsHtml(sel));
   } else if (sel.form === "chart") {
-    const row = document.querySelector("#card-body .fact-row");
+    const row = surface.body.querySelector(".fact-row");
     if (row) row.innerHTML = skyChartFactsHtml(sel);
   } else if (sel.form === "moon") {
-    const row = document.querySelector("#card-body .fact-row");
+    const row = surface.body.querySelector(".fact-row");
     if (row) row.innerHTML = skyMoonFactsHtml(sel);
-    const big = document.querySelector("#card-body .big");
+    const big = surface.body.querySelector(".big");
     if (big) big.textContent = sel.summary ? t().world.phases[sel.summary.moon.idx] : t().sky.loading;
   }
   bindSkyRetry(sel);
@@ -459,24 +461,30 @@ function skyCancelled(err) {
   return (err && err.name === "AbortError") || msg.indexOf("cancelled") >= 0 || msg.indexOf("canceled") >= 0;
 }
 /* Start a scene during the draw, but never await it under the deck lock.
-   A later card increments the generation and aborts the canvas paint. */
-function scheduleSkyVisual(sel) {
+   A later card increments the generation and aborts the canvas paint.
+   The paint is scoped to ONE surface (the stage, or the picture modal):
+   the generation stamp lives on that surface's card element and the
+   canvas is looked up inside that surface's body, so a stage repaint
+   can never write into the modal's canvas, nor the other way round. */
+function scheduleSkyVisual(sel, surface) {
+  surface = surface || stageSurface();
+  sel._surface = surface;
   const gen = ++skyVisualGen;
   sel._skyGen = gen;
   if (sel._abort) sel._abort.abort();
   const ctrl = new AbortController();
   sel._abort = ctrl;
-  $("card").dataset.skyGen = String(gen);
+  surface.card.dataset.skyGen = String(gen);
   sel.skyError = null;
   const job = Promise.resolve(sel.ready || (sel.ready = NAM_SKY.sceneFor(sel.observer)))
     .then(async (scene) => {
       if (gen !== skyVisualGen || ctrl.signal.aborted) return;
-      if ($("card").dataset.skyGen !== String(gen)) return;
+      if (surface.card.dataset.skyGen !== String(gen)) return;
       sel.scene = scene;
       sel.summary = skySummary(scene, sel.observer);
       updateSkyCopy(sel);
-      const cv = document.querySelector("#card-body canvas.sky-canvas");
-      if (!cv || $("card").dataset.skyGen !== String(gen)) return;
+      const cv = surface.body.querySelector("canvas.sky-canvas");
+      if (!cv || surface.card.dataset.skyGen !== String(gen)) return;
       if (sel.form === "chart") {
         await NAM_SKY.paintChart(cv, scene, lang === "zh" ? "zh-Hans" : "en");
       } else if (sel.form === "moon") {
@@ -1521,6 +1529,9 @@ function buildMyDaysForm() {
    Delivery: the postcard is the FIRST card of its day, once per device
    (a per-date appStorage key, nam-postcard-<yyyymmdd>); afterwards it
    joins the day's rotation with a modest chance, never back-to-back.
+   Outside ambient mode the first card is its envelope, and the receipt
+   is written when the visitor opens the picture (deliverPostcardGift);
+   an unopened postcard is offered again on every later draw that day.
    One postcard per day at most — collisions resolve festival first,
    then western days, then bare solar terms （清明 the festival beats
    清明 the term, so the term painting qingming.webp is kept in the data
@@ -1639,6 +1650,34 @@ function markPostcardGifted(stamp) {
   postcardGiftStamp = stamp;
   try { appStorage.setItem("nam-postcard-" + postcardGiftStamp, "1"); }
   catch (e) { /* Still delivered for this page session. */ }
+}
+
+/* ---------- Picture cards （图卡） ----------
+   Two categories are pictures rather than text: the special-date
+   postcard and the night sky (chart / illustration / moon). Outside
+   ambient mode they no longer render straight onto the stage: the
+   stage shows an envelope that names the picture, and the picture
+   itself opens in a modal (see the picture-modal section below).
+   In ambient mode they still render directly — nobody is there to
+   tap an envelope on a desk screen. */
+function isPictureCard(sel) {
+  return !!sel && (sel.cat === "postcard" || sel.cat === "sky");
+}
+/* True when this selection will sit on the stage as an envelope:
+   a picture card, outside ambient mode. */
+function stageShowsEnvelope(sel) {
+  return isPictureCard(sel) && !ambientOn;
+}
+/* A gifted postcard is delivered when its picture is OPENED, not when
+   its envelope is rendered: opening the modal is the moment the gift
+   is received. Until then nextSelection keeps offering it first, so
+   an unopened envelope can never be lost to the rotation. Pool
+   re-entries (not gifted) carry no receipt and ignore this. */
+function deliverPostcardGift(sel) {
+  if (!sel || sel.cat !== "postcard" || !sel.gifted || !sel.giftStamp) return false;
+  if (postcardGifted(sel.giftStamp)) return false;
+  markPostcardGifted(sel.giftStamp);
+  return true;
 }
 
 /* The meta line inside the composition, as segments so the term's exact
@@ -2088,6 +2127,158 @@ $("full-overlay").addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("full-overlay").hidden) closeFullText();
 });
+
+/* ================= Picture cards: envelope & modal （图卡信封与弹窗） =================
+   A picture card (postcard / sky — see isPictureCard) arrives on the
+   stage as an ENVELOPE: a card that names what was received — its
+   category, its own title, one line of introduction, a blurred glimpse
+   of the painting for a postcard — and invites a tap. The picture
+   itself renders inside the image modal, in the same composition it
+   always had on the stage. Ambient mode is the exception throughout:
+   there the picture renders directly on the stage and the modal
+   never opens.
+
+   Rendering takes a SURFACE — the set of elements a renderer writes
+   to. The stage surface is the page's #card; the modal surface is the
+   modal's own card. Renderers never look elements up globally, so the
+   two surfaces can never write into each other, and no id is ever
+   duplicated. */
+
+/* The stage surface: the page's one stage card. */
+function stageSurface() {
+  return {
+    stage: true,
+    card: $("card"), cat: $("card-category"), meta: $("card-meta"),
+    body: $("card-body"), foot: $("card-foot"), fullBtn: $("full-text-btn"),
+  };
+}
+/* The picture modal's surface: its own card, head and body. Picture
+   cards never carry a full text, so there is no foot door here. */
+function modalSurface() {
+  return {
+    stage: false,
+    card: $("img-card"), cat: $("img-cat"), meta: $("img-meta"),
+    body: $("img-body"), foot: null, fullBtn: null,
+  };
+}
+
+/* What the envelope says about a picture, in the UI language: its
+   category, its specific title, one introductory line, and — for a
+   postcard — the painting to glimpse blurred under the words. Sky
+   titles need no scene: the chart names itself, the illustration
+   names its place (the same synchronous place the card would print),
+   and the moon names its phase via the site's own moonPhase(). */
+function pictureInfo(sel) {
+  const s = t();
+  if (sel.cat === "postcard") {
+    const copy = POSTCARD_COPY[sel.key];
+    if (!copy) return null;
+    const title = lang === "zh" ? copy.titleZh : copy.titleEn;
+    const sub = lang === "zh" ? copy.subZh : copy.subEn;
+    const pass = lang === "zh" ? copy.passZh : copy.passEn;
+    const art = lang === "en" && copy.artEn ? copy.artEn : copy.art;
+    const chars = [...(pass || "")];
+    const excerpt = chars.length > 42 ? chars.slice(0, 42).join("") + "…" : pass;
+    return {
+      kind: "postcard", category: s.categories.postcard, title,
+      intro: sub || excerpt, glimpse: excerpt, art,
+      meta: postcardMetaText(sel),
+    };
+  }
+  const K = s.sky;
+  if (sel.form === "chart") {
+    return { kind: "sky", category: s.categories.sky, title: K.chartMeta, intro: K.approx, art: null, meta: "" };
+  }
+  if (sel.form === "moon") {
+    const when = sel.observer && sel.observer.when ? new Date(sel.observer.when) : new Date();
+    const mp = moonPhase(when);
+    return {
+      kind: "sky", category: s.categories.sky, title: s.world.moonTitle,
+      intro: `${s.world.phases[mp.idx]} · ${s.world.moonIllum(mp.illum)}`, art: null, meta: "",
+    };
+  }
+  return {
+    kind: "sky", category: s.categories.sky,
+    title: sel.place ? skyPlaceName(sel.place) : s.categories.sky,
+    intro: K.illusMeta, art: null, meta: "",
+  };
+}
+
+/* The envelope itself, rendered into a surface (in practice always
+   the stage; the modal never shows an envelope). No sky scene is
+   painted here — the SDK canvas exists only inside the modal, so a
+   picture is never rendered twice. */
+function renderEnvelope(sel, surface) {
+  const info = pictureInfo(sel);
+  if (!info) { renderPostcard(sel, surface); return; }
+  const P = t().picture;
+  surface.cat.textContent = info.category;
+  surface.meta.textContent = info.meta || "";
+  const preview = info.art
+    ? `<div class="env-preview env-preview-art"><img src="assets/special-dates/${esc(info.art)}.webp" alt="" loading="lazy" decoding="async"></div>`
+    : `<div class="env-preview env-preview-sky" aria-hidden="true"></div>`;
+  surface.body.innerHTML =
+    `<div class="envelope env-${info.kind}">` +
+    preview +
+    `<p class="env-received">${esc(P.received)}</p>` +
+    `<span class="big env-title">${esc(info.title)}</span>` +
+    (info.intro ? `<div class="sub env-intro">${esc(info.intro)}</div>` : "") +
+    (info.glimpse && info.glimpse !== info.intro ? `<div class="sub env-glimpse">${esc(info.glimpse)}</div>` : "") +
+    `<p class="env-cta">${esc(P.view)} <span aria-hidden="true">›</span></p>` +
+    `</div>`;
+  liveWorldTime = null;
+}
+
+/* ---------- The picture modal ---------- */
+let imageOpener = null; // element to refocus on close (the stage card)
+
+function imageModalOpen() {
+  return !$("img-overlay").hidden;
+}
+
+/* Open the picture itself in the modal. A gifted postcard is
+   delivered by this opening (see deliverPostcardGift) — the envelope
+   on the stage was only its announcement. */
+function openImageModal(sel) {
+  if (ambientOn || !isPictureCard(sel) || imageModalOpen()) return;
+  imageModalSel = sel;
+  imageOpener = $("card");
+  renderSelection(sel, modalSurface());
+  $("img-capture-btn").textContent = t().capture;
+  $("img-close-btn").textContent = t().captureClose;
+  $("img-overlay").hidden = false;
+  deliverPostcardGift(sel);
+  $("img-close-btn").focus();
+}
+
+function closeImageModal() {
+  if (!imageModalOpen()) return;
+  $("img-overlay").hidden = true;
+  imageModalSel = null;
+  // A sky paint still in flight for the modal must not land after the
+  // modal has closed: dropping the surface's generation stamp makes
+  // the late job a no-op (it re-checks the stamp before painting).
+  skyVisualGen++;
+  delete $("img-card").dataset.skyGen;
+  // The stage rotation was paused while the modal was open; give the
+  // visitor a full minute with the stage again from the close.
+  lastDrawAt = Date.now();
+  if (imageOpener && imageOpener.isConnected) imageOpener.focus();
+  imageOpener = null;
+}
+$("img-close-btn").addEventListener("click", closeImageModal);
+$("img-overlay").addEventListener("click", (e) => {
+  if (e.target === $("img-overlay")) closeImageModal();
+});
+$("img-capture-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  captureKeepsake();
+});
+document.addEventListener("keydown", (e) => {
+  // A keepsake preview taken from inside the modal sits above it:
+  // Escape closes that first, and the modal only on the next press.
+  if (e.key === "Escape" && imageModalOpen() && $("capture-overlay").hidden) closeImageModal();
+});
 $("note-save").addEventListener("click", async () => {
   const text = $("note-text").value.trim();
   if (!text) return;
@@ -2375,7 +2566,8 @@ function esc(str) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function renderPostcard(sel) {
+function renderPostcard(sel, surface) {
+  surface = surface || stageSurface();
   const copy = POSTCARD_COPY[sel.key];
   if (!copy) return;
   const title = lang === "zh" ? copy.titleZh : copy.titleEn;
@@ -2393,9 +2585,9 @@ function renderPostcard(sel) {
     const cut = title.indexOf(" · ");
     if (cut > 0) titleHtml = esc(title.slice(0, cut)) + `<span class="pc-title-gloss">${esc(title.slice(cut))}</span>`;
   }
-  $("card-category").textContent = t().categories.postcard;
-  $("card-meta").textContent = "";
-  $("card-body").innerHTML =
+  surface.cat.textContent = t().categories.postcard;
+  surface.meta.textContent = "";
+  surface.body.innerHTML =
     `<div class="postcard" lang="${lang === "zh" ? "zh-CN" : "en"}">` +
     `<div class="pc-photo"><img src="assets/special-dates/${art}.webp" alt="${esc(title)}" loading="lazy" decoding="async"></div>` +
     `<div class="pc-text">` +
@@ -2421,12 +2613,13 @@ function renderPostcard(sel) {
    stands 1200×1500, taller than wide. Here it is 1080×1180: as tall
    as the 3:4 card allows once the paper below is a compact strip
    sized by the longest (English) copy. */
-function renderSkyArt(sel) {
+function renderSkyArt(sel, surface) {
+  surface = surface || stageSurface();
   const K = t().sky;
-  $("card-category").textContent = t().categories.sky;
-  $("card-meta").textContent = "";
+  surface.cat.textContent = t().categories.sky;
+  surface.meta.textContent = "";
   const placeName = sel.place ? skyPlaceName(sel.place) : t().categories.sky;
-  $("card-body").innerHTML =
+  surface.body.innerHTML =
     `<div class="skyart">` +
     `<div class="sa-photo"><canvas class="sky-canvas sky-illustration" data-form="illustration" width="1080" height="1180"></canvas></div>` +
     `<div class="sa-text">` +
@@ -2434,26 +2627,34 @@ function renderSkyArt(sel) {
     skyArtFactsHtml(sel) +
     `</div></div>`;
   liveWorldTime = null;
-  scheduleSkyVisual(sel);
+  scheduleSkyVisual(sel, surface);
 }
 
-function renderSelection(sel) {
-  const skyVisual = sel.cat === "sky" && (sel.form === "chart" || sel.form === "illustration" || sel.form === "moon");
+function renderSelection(sel, surface) {
+  surface = surface || stageSurface();
+  // On the stage, outside ambient mode, a picture card arrives as an
+  // envelope instead of the picture itself (see the picture-modal
+  // section). The modal surface — and the stage in ambient mode —
+  // always renders the picture directly.
+  const envelope = surface.stage && stageShowsEnvelope(sel);
+  const skyVisual = !envelope && sel.cat === "sky" && (sel.form === "chart" || sel.form === "illustration" || sel.form === "moon");
   if (!skyVisual) {
     // Drop a sky paint that is still in flight so it cannot write into the next card.
     skyVisualGen++;
     if (currentSelection && currentSelection._abort) currentSelection._abort.abort();
-    delete $("card").dataset.skyGen;
+    delete surface.card.dataset.skyGen;
   }
   const s = t();
-  // The postcard is its own surface: the stage card's chrome (header,
+  // The postcard is its own surface: the card's chrome (header,
   // translucent panel) steps aside so the cream paper IS the card.
-  $("card").classList.toggle("has-postcard", sel.cat === "postcard");
+  surface.card.classList.toggle("has-postcard", !envelope && sel.cat === "postcard");
   // The sky illustration wears the same dress (see renderSkyArt).
-  $("card").classList.toggle("has-skyart", sel.cat === "sky" && sel.form === "illustration");
-  $("card-foot").hidden = true; // re-enabled below when the item carries a full text
-  if (sel.cat === "postcard") { renderPostcard(sel); return; }
-  if (sel.cat === "sky" && sel.form === "illustration") { renderSkyArt(sel); return; }
+  surface.card.classList.toggle("has-skyart", !envelope && sel.cat === "sky" && sel.form === "illustration");
+  surface.card.classList.toggle("has-envelope", envelope);
+  if (surface.foot) surface.foot.hidden = true; // re-enabled below when the item carries a full text
+  if (envelope) { renderEnvelope(sel, surface); return; }
+  if (sel.cat === "postcard") { renderPostcard(sel, surface); return; }
+  if (sel.cat === "sky" && sel.form === "illustration") { renderSkyArt(sel, surface); return; }
   let meta = "";
   let body = "";
   let worldLive = null; // { prefix, tz } when this render is a world-city card
@@ -2648,24 +2849,24 @@ function renderSelection(sel) {
   }
 
   // A note's eyebrow is its kind （心得 / 备忘）, not the pool's name.
-  $("card-category").textContent = sel.cat === "mine"
+  surface.cat.textContent = sel.cat === "mine"
     ? s.notes.types[sel.note.type]
     : s.categories[sel.cat];
-  $("card-meta").textContent = meta;
-  $("card-body").innerHTML = body;
+  surface.meta.textContent = meta;
+  surface.body.innerHTML = body;
 
   // An item whose complete text is on file (a classics passage, a
   // full tale) gets a quiet door to it at the card's foot (outside
-  // #card-body, so the keepsake keeps capturing the card text only).
-  if (sel.item && fullTextOf(sel.item)) {
-    $("full-text-btn").textContent = `${s.fullText} ›`;
-    $("card-foot").hidden = false;
+  // the body, so the keepsake keeps capturing the card text only).
+  if (surface.foot && surface.fullBtn && sel.item && fullTextOf(sel.item)) {
+    surface.fullBtn.textContent = `${s.fullText} ›`;
+    surface.foot.hidden = false;
   }
 
   // Chart and the in-card illustration paint after the SDK scene
   // resolves. The deck lock has already been released by then.
   if (sel.cat === "sky" && (sel.form === "chart" || sel.form === "moon")) {
-    scheduleSkyVisual(sel);
+    scheduleSkyVisual(sel, surface);
   }
 
   // A world-city card's local time is live text, not a snapshot: give it
@@ -2679,16 +2880,20 @@ function renderSelection(sel) {
     span.id = "world-live-time";
     span.dataset.tz = worldLive.tz;
     span.textContent = timeInZone(new Date(), worldLive.tz);
-    const metaEl = $("card-meta");
+    const metaEl = surface.meta;
     metaEl.textContent = "";
     metaEl.append(document.createTextNode(worldLive.prefix), span);
     liveWorldTime = { tz: worldLive.tz, el: span };
   }
 }
 
-/* Dated note first, then the day's ungifted postcard. Neither is marked
-   delivered until it has rendered. After the gifts, the postcard joins
-   the rotation with its original 12% chance (never twice in a row). */
+/* Dated note first, then the day's ungifted postcard. A dated note is
+   marked delivered once it has rendered; a gifted postcard renders as
+   an envelope outside ambient mode, so its receipt waits until the
+   visitor opens the picture modal (deliverPostcardGift) — in ambient
+   mode it renders directly and rendering is still the delivery.
+   After the gifts, the postcard joins the rotation with its original
+   12% chance (never twice in a row). */
 const POSTCARD_POOL_CHANCE = 0.12;
 const NOTE_GIFT_REFRESH_MS = 500;
 const NOTE_GIFT_REFRESH_RETRIES = 2;
@@ -2730,8 +2935,14 @@ function nextSelection(retryNotes = true) {
 let drawsReady = false;
 const drawGate = NAM_DEDUP.createDrawGate((task) => setTimeout(task, 180));
 
+/* The picture modal's selection, while it is open. While it is set,
+   every draw path (the minute tick, the button, the card, the space
+   bar) is inert: the visitor is looking at a picture, and the stage
+   waits. Closing the modal clears it and restarts the minute. */
+let imageModalSel = null;
+
 function drawCard() {
-  if (!drawsReady || drawGate.pending) return false;
+  if (!drawsReady || drawGate.pending || imageModalSel) return false;
   const card = $("card");
   card.classList.add("leaving");
   return drawGate.request(() => {
@@ -2758,7 +2969,12 @@ function drawCard() {
           $("encounter").textContent = t().encounter(encounter);
           if (selected.gifted) {
             if (selected.cat === "mine") markNoteDelivered(selected.note.id, selected.giftStamp);
-            if (selected.cat === "postcard") markPostcardGifted(selected.giftStamp);
+            // A postcard shown as an envelope is announced, not yet
+            // delivered: its receipt is written when the picture modal
+            // opens. Direct rendering (ambient) delivers on render.
+            if (selected.cat === "postcard" && !stageShowsEnvelope(selected)) {
+              markPostcardGifted(selected.giftStamp);
+            }
             showGiftNotice(selected);
           } else {
             dismissGiftNotice();
@@ -3076,12 +3292,18 @@ function setClockStyle(st) {
 $("draw-btn").addEventListener("click", drawCard);
 $("card").addEventListener("click", (e) => {
   if (e.target.closest("a, .sky-retry")) return; // links and sky retry stay put
+  // An envelope on the stage opens its picture instead of drawing.
+  if (stageShowsEnvelope(currentSelection)) { openImageModal(currentSelection); return; }
   drawCard();
 });
 $("card").addEventListener("keydown", (e) => {
   // Enter draws only when the card itself is focused. Descendant controls
   // (including sky retry and reading links/buttons) own their activation.
-  if (e.key === "Enter" && e.target === e.currentTarget) drawCard();
+  // On an envelope, Enter opens the picture, like a click does.
+  if (e.key === "Enter" && e.target === e.currentTarget) {
+    if (stageShowsEnvelope(currentSelection)) { openImageModal(currentSelection); return; }
+    drawCard();
+  }
 });
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && !e.repeat && e.target === document.body) {
@@ -3091,6 +3313,10 @@ document.addEventListener("keydown", (e) => {
 });
 function setLang(next) {
   if (next === lang) return;
+  // A picture modal open across a language switch would keep the old
+  // language inside it: close it first; the stage (envelope or card)
+  // is repainted by applyStaticStrings in the new language.
+  if (imageModalOpen()) closeImageModal();
   lang = next;
   appStorage.setItem(LS_LANG, lang);
   refreshGossip();
@@ -3159,13 +3385,32 @@ async function acquireWakeLock() {
   } catch (e) { /* denied or unsupported: ambient still works */ }
 }
 
+/* Repaint the current selection in place (no new draw, no deck
+   movement) — used when ambient mode flips a picture card between
+   its envelope and its direct rendering. */
+function repaintCurrentSelection() {
+  if (!currentSelection || drawGate.pending) return;
+  drawGate.run(() => deckState.withLock(() => {
+    if (!currentSelection) return;
+    currentSelection = deckState.transact(() => {
+      const sel = selectionForLanguage(currentSelection);
+      renderSelection(sel);
+      return sel;
+    });
+  }));
+}
+
 function enterAmbient() {
   if (ambientOn) return;
+  if (imageModalOpen()) closeImageModal(); // no picture modal in ambient mode
   ambientOn = true;
   document.body.classList.add("ambient");
   setSettingsOpen(false);
   dismissGiftNotice();
   resetFab();
+  // A picture card (or its envelope) on the stage changes dress:
+  // in ambient the picture itself is shown, directly.
+  if (isPictureCard(currentSelection)) repaintCurrentSelection();
   try {
     const p = document.documentElement.requestFullscreen
       ? document.documentElement.requestFullscreen()
@@ -3196,6 +3441,8 @@ function exitAmbient() {
     } catch (e) { /* ignore */ }
     wakeLock = null;
   }
+  // …and a picture that was shown directly goes back into its envelope.
+  if (isPictureCard(currentSelection)) repaintCurrentSelection();
 }
 
 $("ambient-btn").addEventListener("click", enterAmbient);
@@ -3259,8 +3506,8 @@ function capturePalette() {
    the DOM (instead of re-deriving from the selection) keeps every
    category — poems, almanac, astro, chance… — faithful to what is on
    stage right now. Block kinds mirror the on-page typography. */
-function extractCardBlocks() {
-  const root = $("card-body");
+function extractCardBlocks(rootEl) {
+  const root = rootEl || $("card-body");
   const blocks = [];
   let line = null;
   const ensureLine = () => {
@@ -3870,13 +4117,63 @@ function closeCapture() {
     captureUrl = null;
   }
   captureFile = null;
-  $("capture-btn").focus();
+  // Return focus to the surface the keepsake was taken from.
+  if (imageModalOpen()) $("img-close-btn").focus();
+  else $("capture-btn").focus();
+}
+
+/* A sky chart / moon whose picture is NOT on the stage right now —
+   its envelope is (or the stage is otherwise occupied) — captures
+   from the selection itself: the scene is the adapter's cached one,
+   painted once into an off-screen canvas at the stage's own size.
+   Nothing here touches the stage DOM, so the envelope never leaks
+   into the keepsake. */
+async function captureSkyPanelSnap(sel, frozen) {
+  const s = t();
+  const scene = await (sel.ready || (sel.ready = NAM_SKY.sceneFor(sel.observer)));
+  sel.scene = scene;
+  if (!sel.summary) sel.summary = skySummary(scene, sel.observer);
+  const cv = document.createElement("canvas");
+  let meta = "";
+  let blocks = [];
+  if (sel.form === "chart") {
+    cv.width = 880; cv.height = 880;
+    await NAM_SKY.paintChart(cv, scene, lang === "zh" ? "zh-Hans" : "en");
+    meta = s.sky.chartMeta;
+    const bits = skyFactsInner(sel);
+    const fact = [bits.look, bits.line].filter(Boolean).join("  ·  ");
+    if (fact) blocks.push({ text: fact, kind: "fact" });
+    blocks.push({ text: s.sky.approx, kind: "sub" });
+  } else {
+    cv.width = 720; cv.height = 720;
+    await NAM_SKY.paintMoon(cv, scene, null);
+    meta = s.world.moonTitle;
+    const moon = sel.summary.moon;
+    blocks.push({ text: s.world.phases[moon.idx], kind: "big" });
+    blocks.push({ text: `${s.world.moonIllum(moon.illum)}  ·  ${s.world.moonAge(moon.age)}`, kind: "fact" });
+    blocks.push({ text: s.sky.approx, kind: "sub" });
+    blocks.push({ text: s.sky.moonCredit, kind: "sub" });
+  }
+  blocks.unshift({ type: "sky", form: sel.form });
+  return {
+    time: `${pad(frozen.getHours())}:${pad(frozen.getMinutes())}:${pad(frozen.getSeconds())}`,
+    dateLine: $("date-line").textContent,
+    category: s.categories.sky,
+    meta,
+    blocks,
+    skyCanvas: cv,
+    brand: lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有",
+    footer: (encounter > 0 ? s.encounter(encounter) : "") ?
+      `${s.encounter(encounter)} · now.orangely.xyz` : "now.orangely.xyz",
+  };
 }
 
 async function captureKeepsake() {
   const btn = $("capture-btn");
+  const imgBtn = $("img-capture-btn");
   if (btn.disabled) return;
   btn.disabled = true;
+  if (imgBtn) imgBtn.disabled = true;
   try {
     const frozen = new Date();
     // A postcard on stage captures as the postcard itself (see above).
@@ -3908,17 +4205,33 @@ async function captureKeepsake() {
         currentSelection.painted) {
       await currentSelection.painted;
     }
+    // An unopened envelope on the stage: the keepsake is the picture
+    // itself, rebuilt from the selection — never the envelope.
+    if (currentSelection && currentSelection.cat === "sky" &&
+        (currentSelection.form === "chart" || currentSelection.form === "moon") &&
+        stageShowsEnvelope(currentSelection) && !imageModalOpen()) {
+      const palEnv = capturePalette();
+      await ensureCaptureFonts();
+      const snapEnv = await captureSkyPanelSnap(currentSelection, frozen);
+      const cvEnv = renderKeepsakeCanvas(snapEnv, palEnv);
+      const blobEnv = await new Promise((res) => cvEnv.toBlob((b) => res(b), "image/png"));
+      if (blobEnv) showCapture(blobEnv, frozen);
+      return;
+    }
     const s = t();
     const enc = encounter > 0 ? s.encounter(encounter) : "";
+    // With the picture modal open, the keepsake reads the modal's card
+    // (the picture), not the envelope waiting on the stage behind it.
+    const inModal = imageModalOpen();
     const snap = {
       time: `${pad(frozen.getHours())}:${pad(frozen.getMinutes())}:${pad(frozen.getSeconds())}`,
       dateLine: $("date-line").textContent,
-      category: $("card-category").textContent,
-      meta: $("card-meta").textContent,
-      blocks: extractCardBlocks(),
+      category: inModal ? $("img-cat").textContent : $("card-category").textContent,
+      meta: inModal ? $("img-meta").textContent : $("card-meta").textContent,
+      blocks: extractCardBlocks(inModal ? $("img-body") : $("card-body")),
       skyCanvas: currentSelection && currentSelection.cat === "sky" &&
         (currentSelection.form === "chart" || currentSelection.form === "moon")
-        ? document.querySelector("#card-body canvas.sky-canvas") : null,
+        ? (inModal ? $("img-body") : $("card-body")).querySelector("canvas.sky-canvas") : null,
       brand: lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有",
       footer: enc ? `${enc} · now.orangely.xyz` : "now.orangely.xyz",
     };
@@ -3928,7 +4241,7 @@ async function captureKeepsake() {
     const blob = await new Promise((res) => cv.toBlob((b) => res(b), "image/png"));
     if (blob) showCapture(blob, frozen);
   } catch (e) { /* capture is a keepsake, never a page-breaker */ }
-  finally { btn.disabled = false; }
+  finally { btn.disabled = false; if (imgBtn) imgBtn.disabled = false; }
 }
 
 $("capture-btn").addEventListener("click", captureKeepsake);

@@ -19,7 +19,7 @@ A single-page clock. At the centre, a precise real clock that never moves (certa
   - 纯偶然 Pure Chance (10)：当场生成的随机整数、骰子、硬币序列、抽牌、随机颜色。
   - 你的从前 Your Past (5)：回望提示，只提问，不编造你的记忆。
 - **写一句 / Add a note** — 你可以写下一句心得或备忘（≤120 字），存进只属于这台设备的库（IndexedDB），日后像其他内容一样随机回来相遇；若选定了日期，它会在那天作为第一张卡准时送达。写字入口藏在右下角（悬停 / 上滑 / 聚焦时浮现），库本身是独立的一页（`library.html`，「我的库」），在设置里只有一个链接通向它；库页可看全文、删除，页上的「写一句」会回到主页并打开写字框。
-- **特殊日明信片 / Special-date postcards** — 节气与节日当天，第一张卡是一张明信片：画满幅在上，下方纸面写几行字；留影即 1080×1440 的成图。
+- **特殊日明信片 / Special-date postcards** — 节气与节日当天，第一张卡是一张明信片：画满幅在上，下方纸面写几行字；留影即 1080×1440 的成图。图卡（明信片与星空）以信封送达：非氛围模式下舞台先显示一张写明身份的信封卡（明信片露一小块模糊的画），点击后在弹窗里打开图卡本身——赠送的明信片以打开为送达，未打开会持续呈递；氛围模式下图卡仍直接显示。/ Picture cards (postcards and the night sky) arrive as envelopes: outside ambient mode the stage first shows a named envelope card, and the picture itself opens in a modal — a gifted postcard counts as delivered when opened; in ambient mode pictures still render directly.
 - **秒层随机 / Second-layer randomness** — 左下角每秒跳一个新随机数，背景微光每秒随机漂移，还有一条走完一分钟的细进度线。
 - **双语 / Bilingual** — 中文 / English 一键切换，按浏览器语言自动首选，选择保存在 localStorage。界面、城市名、诗歌、念头、历史全部双语。
 - **交互 / Interaction** — 点卡片、点「再抽一张 / Draw another」或按空格立刻抽下一张；计数器记录「第 N 次相遇 / Encounter N」。同一类别不会连续出现两次（可避免时）。
@@ -96,7 +96,7 @@ npx wrangler pages deploy . --project-name now-and-more
 ## 说明 / Notes
 
 - 日出、日落与昼长由页面内嵌的紧凑太阳位置算法现场计算（基于太阳黄经、赤纬与时角），不是查表。世界卡片与节气历法仍用这套，不走 Sky Engine。
-- 月相卡片是 Sky Engine 的月面肖像（当前时刻，朝向按时间区估算），月龄与照亮比例取自同一次计算。星图是 SDK 的圆形星图。星空插画仍是 SDK 的水彩。日出、日落与节气不走 Sky Engine。见 `docs/sky-engine.md`。
+- 月相卡片是 Sky Engine 的月面肖像（当前时刻，朝向按时间区估算），月龄与照亮比例取自同一次计算。星图是 SDK 的圆形星图。星空插画仍是 SDK 的水彩。星空三形态与明信片同为图卡：非氛围模式下以信封送达、点击在弹窗里打开（SDK 画布只在弹窗里绘制），氛围模式直接显示。日出、日落与节气不走 Sky Engine。见 `docs/sky-engine.md`。
 - 字体已自托管（思源宋体/黑体，unicode-range 切片 woff2 在 `assets/fonts/`，OFL 许可同目录），随站点一同提供，不向任何第三方发出请求；用过的切片由 Service Worker 缓存，离线可用。
 - 诗歌均为公有领域作品。
 

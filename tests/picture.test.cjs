@@ -1,0 +1,221 @@
+"use strict";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = path.join(__dirname, "..");
+const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
+const app = read("js/app.js");
+const data = read("js/data.js");
+
+function section(start, end) {
+  const a = app.indexOf(start), b = app.indexOf(end, a + start.length);
+  assert.ok(a >= 0 && b > a, start);
+  return app.slice(a, b);
+}
+
+/* Real envelope / modal / receipt code from app.js, driven through a
+   tiny element-map DOM. Only the boundaries are stubbed: the SDK
+   (NAM_SKY), the scene summary, the postcard meta line and the
+   keepsake entry the modal's button calls. */
+function harness() {
+  const store = new Map();
+  const storage = {
+    getItem: (k) => store.get(k) ?? null,
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  const elements = new Map();
+  function makeEl(id) {
+    const el = {
+      id, hidden: true, disabled: false, textContent: "", innerHTML: "",
+      isConnected: true, focused: 0, dataset: {}, children: [], handlers: {},
+      classList: {
+        _s: new Set(),
+        add(...cs) { cs.forEach((c) => this._s.add(c)); },
+        remove(...cs) { cs.forEach((c) => this._s.delete(c)); },
+        toggle(c, f) {
+          if (f === undefined) f = !this._s.has(c);
+          if (f) this._s.add(c); else this._s.delete(c);
+          return f;
+        },
+        contains(c) { return this._s.has(c); },
+      },
+      addEventListener(type, fn) { (this.handlers[type] ||= []).push(fn); },
+      setAttribute() {}, getAttribute() { return null; },
+      focus() { this.focused++; },
+      querySelector() { return null; },
+      querySelectorAll() { return []; },
+      append() {},
+    };
+    return el;
+  }
+  const $ = (id) => {
+    if (!elements.has(id)) elements.set(id, makeEl(id));
+    return elements.get(id);
+  };
+  const documentStub = {
+    addEventListener() {},
+    createElement: () => makeEl("anon"),
+    createTextNode: (text) => ({ textContent: text }),
+  };
+  const NAM_SKY = {
+    sceneFor: () => Promise.resolve({ fake: true }),
+    paintChart: async () => {}, paintMoon: async () => {}, paintIllustration: async () => {},
+    reset() {}, needsReload: () => false, warm: async () => {},
+  };
+  const source = data + "\n" + `
+    let lang = "zh", ambientOn = false, currentSelection = null, encounter = 0,
+        lastDrawAt = 0, liveWorldTime = null, imageModalSel = null;
+    const appStorage = storage;
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const t = () => I18N[lang];
+    const postcardMetaParts = () => ({ pre: lang === "zh" ? "12月7日" : "Dec 7", time: null, post: "" });
+    const skySummary = () => ({ sig: null, moon: { illum: 100, age: 15, idx: 4 } });
+    const skyPlaceName = (place) => place && place.city
+      ? (lang === "zh" ? place.city.zh : place.city.en) : t().sky.hereLabel;
+    const postcardMetaText = () => lang === "zh" ? "12月7日" : "Dec 7";
+    const fullTextOf = () => "";
+    const captureKeepsake = () => {};
+  ` +
+    section("const MOON_GLYPHS", "/* ================= Night sky") +
+    section("let skyVisualGen", "/* ================= End night sky") +
+    section("function postcardDayKey(", "/* The meta line") +
+    section("/* ================= Picture cards: envelope & modal", '$("note-save").addEventListener') +
+    section("function esc(str)", "/* Dated note first") + `
+    return {
+      renderSelection, openImageModal, closeImageModal, imageModalOpen,
+      deliverPostcardGift, stageShowsEnvelope, isPictureCard, pictureInfo, moonPhase,
+      setAmbient: (v) => { ambientOn = v; },
+      setLang: (v) => { lang = v; },
+      get modalSel() { return imageModalSel; },
+    };
+  `;
+  const api = new Function("storage", "$", "document", "NAM_SKY", source)(
+    storage, $, documentStub, NAM_SKY);
+  return { api, $, storage };
+}
+
+const daxue = () => ({
+  cat: "postcard", key: "daxue", termIdx: 17, instantMs: null, lunarLabel: null,
+  gifted: true, giftStamp: "20261207",
+});
+const skySel = (form) => ({
+  cat: "sky", form, summary: null, skyError: null,
+  observer: { lat: 31, lon: 121, tz: "Asia/Shanghai", when: new Date(2026, 11, 7, 21) },
+  place: form === "illustration" ? { city: { zh: "耶路撒冷", en: "Jerusalem" } } : undefined,
+  ready: Promise.resolve({ fake: true }),
+});
+
+test("non-ambient picture cards render as envelopes on the stage, not the picture", () => {
+  const { api, $ } = harness();
+  // Postcard: identity, blurred glimpse of the real painting, CTA.
+  api.renderSelection(daxue());
+  let body = $("card-body").innerHTML;
+  assert.ok(body.includes("envelope"), "envelope markup");
+  assert.ok(body.includes("你收到一张图卡"), "received line");
+  assert.ok(body.includes("大雪"), "postcard title");
+  assert.ok(body.includes("点击查看"), "call to view");
+  assert.ok(body.includes("assets/special-dates/daxue.webp"), "real painting as the glimpse");
+  assert.ok(!body.includes('class="postcard"'), "the postcard itself is not on the stage");
+  assert.equal($("card").classList.contains("has-envelope"), true);
+  assert.equal($("card").classList.contains("has-postcard"), false);
+  assert.equal($("card-category").textContent, "今日明信片");
+
+  // Sky chart: named, with a motif panel — and no SDK canvas anywhere.
+  api.renderSelection(skySel("chart"));
+  body = $("card-body").innerHTML;
+  assert.ok(body.includes("envelope"));
+  assert.ok(body.includes("今夜星图"), "chart title");
+  assert.ok(body.includes("env-preview-sky"), "starfield motif preview");
+  assert.ok(!body.includes("sky-canvas"), "no sky canvas is painted for an envelope");
+
+  // Sky moon: the phase name comes from the site's own moonPhase().
+  const moon = skySel("moon");
+  api.renderSelection(moon);
+  body = $("card-body").innerHTML;
+  assert.ok(body.includes("此刻的月亮"), "moon title");
+  const phase = api.moonPhase(new Date(moon.observer.when)).idx;
+  assert.ok(body.includes(["新月", "娥眉月", "上弦月", "盈凸月", "满月", "亏凸月", "下弦月", "残月"][phase]),
+    "moon phase intro");
+
+  // Sky illustration: the envelope names its place.
+  api.renderSelection(skySel("illustration"));
+  body = $("card-body").innerHTML;
+  assert.ok(body.includes("耶路撒冷"), "illustration place");
+  assert.ok(!body.includes("sky-canvas"));
+
+  // English envelope follows the language.
+  api.setLang("en");
+  api.renderSelection(daxue());
+  body = $("card-body").innerHTML;
+  assert.ok(body.includes("You&#39;ve received a picture card")); // esc() escapes the apostrophe
+  assert.ok(body.includes("Daxue"));
+  assert.ok(body.includes("Tap to view"));
+});
+
+test("gifted postcard: envelope writes no receipt; opening the modal delivers it", () => {
+  const { api, $, storage } = harness();
+  const sel = daxue();
+  api.renderSelection(sel);
+  assert.equal(storage.getItem("nam-postcard-20261207"), null,
+    "rendering the envelope must not write the gift receipt");
+  assert.equal(api.imageModalOpen(), false);
+
+  api.openImageModal(sel);
+  assert.equal(api.imageModalOpen(), true);
+  assert.equal(api.modalSel, sel);
+  // The modal carries the picture itself, in its own composition.
+  assert.ok($("img-body").innerHTML.includes('class="postcard"'), "postcard renders inside the modal");
+  assert.ok($("img-body").innerHTML.includes("assets/special-dates/daxue.webp"));
+  assert.equal(storage.getItem("nam-postcard-20261207"), "1",
+    "opening the picture writes the gift receipt");
+
+  api.closeImageModal();
+  assert.equal(api.imageModalOpen(), false);
+  assert.equal(api.modalSel, null);
+
+  // A pool re-entry (not gifted) opens without any receipt.
+  const again = { cat: "postcard", key: "daxue", termIdx: 17, instantMs: null, lunarLabel: null };
+  api.openImageModal(again);
+  assert.equal(api.imageModalOpen(), true);
+  api.closeImageModal();
+
+  // A sky picture opens in the modal too, and touches no storage.
+  const before = storage.getItem("nam-postcard-20261207");
+  api.openImageModal(skySel("chart"));
+  assert.equal(api.imageModalOpen(), true);
+  assert.ok($("img-body").innerHTML.includes("sky-canvas"), "chart canvas lives in the modal");
+  api.closeImageModal();
+  assert.equal(storage.getItem("nam-postcard-20261207"), before);
+});
+
+test("ambient mode: picture cards render directly and the modal never opens", () => {
+  const { api, $ } = harness();
+  api.setAmbient(true);
+  api.renderSelection(daxue());
+  let body = $("card-body").innerHTML;
+  assert.ok(body.includes('class="postcard"'), "postcard renders directly in ambient");
+  assert.ok(!body.includes("envelope"), "no envelope in ambient");
+  assert.equal($("card").classList.contains("has-postcard"), true);
+
+  api.renderSelection(skySel("illustration"));
+  body = $("card-body").innerHTML;
+  assert.ok(body.includes("skyart"), "sky illustration renders directly in ambient");
+  assert.ok(body.includes("sky-canvas"));
+  assert.equal($("card").classList.contains("has-skyart"), true);
+
+  api.openImageModal(daxue());
+  assert.equal(api.imageModalOpen(), false, "the picture modal never opens in ambient");
+});
+
+test("draw and rotation stay inert while the picture modal is open", () => {
+  // The guard lives in drawCard itself: every draw path (minute tick,
+  // button, card, space) funnels through it.
+  assert.ok(app.includes("if (!drawsReady || drawGate.pending || imageModalSel) return false;"));
+  // Closing the modal restarts the visitor's minute.
+  const close = section("function closeImageModal()", '$("img-close-btn")');
+  assert.ok(close.includes("lastDrawAt = Date.now();"));
+  // The stage card opens an envelope instead of drawing past it.
+  assert.ok(app.includes('if (stageShowsEnvelope(currentSelection)) { openImageModal(currentSelection); return; }'));
+});
