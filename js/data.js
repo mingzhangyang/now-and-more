@@ -377,7 +377,7 @@ const CITIES = [
 ];
 
 /* Signature asterisms for the night-sky card.
-   Edges are real HYG catalog ids (hyg-N) from Sky Engine 0.1.0,
+   Edges are real HYG catalog ids (hyg-N) from Sky Engine 0.2.0,
    matched from the previous chart index list by J2000 position and
    magnitude (worst separation 0.008°). They are a product choice,
    not part of the engine. The engine places every star; this list

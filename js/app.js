@@ -175,7 +175,7 @@ function moonPhase(date) {
 
 /* ================= Night sky （星空） =================
    Positions and the watercolour illustration come from the pinned
-   Sky Engine SDK (vendor/sky-engine/0.1.0, see docs/sky-engine.md).
+   Sky Engine SDK (vendor/sky-engine/0.2.0, see docs/sky-engine.md).
    This file keeps the product rules: which evening to show, where the
    observer is, the approximation label, and which of NAM's own
    asterisms is tonight's highlight. The circular chart is a product

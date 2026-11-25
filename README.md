@@ -82,7 +82,7 @@ npx wrangler pages deploy . --project-name now-and-more
 │   ├── gossip.js     # 热点列表的浏览器侧处理 / client-side news handling
 │   ├── sky-engine-adapter.js  # 版本化 Sky Engine 加载与场景缓存 / pinned SDK loader
 │   └── app.js        # 时钟引擎、样式切换、随机轮转、产品星空规则 / engine
-├── vendor/sky-engine/0.1.0/  # 正式发布的 SDK 与星表（勿手改）/ published SDK, do not edit
+├── vendor/sky-engine/0.2.0/  # 正式发布的 SDK 与星表（勿手改）/ published SDK, do not edit
 ├── docs/sky-engine.md
 ├── assets/
 │   ├── fonts/        # 自托管字体切片（勿改回 CDN）/ self-hosted font slices

@@ -10,11 +10,11 @@ rule, the place guess, the clear-sky disclosure, and the signature asterisms.
 
 | | |
 | --- | --- |
-| Version | 0.1.0 |
-| Tag | `sky-engine-v0.1.0` |
-| Source commit | `6bd1b60f3ee63e357eb685175db8a8d99207fa32` (Elsewhere `main`) |
-| Release | https://github.com/mingzhangyang/elsewhere/releases/tag/sky-engine-v0.1.0 |
-| Files | `vendor/sky-engine/0.1.0/` |
+| Version | 0.2.0 |
+| Tag | `sky-engine-v0.2.0` |
+| Source commit | `c177b659cf1bc5200698c11d3ec408890fbcc297` (Elsewhere `main`) |
+| Release | https://github.com/mingzhangyang/elsewhere/releases/tag/sky-engine-v0.2.0 |
+| Files | `vendor/sky-engine/0.2.0/` |
 
 Those five files are the release artifacts, byte for byte. Do not reformat or
 patch `sky-engine.mjs` or `stars.json`. Licences travel with them:
@@ -24,12 +24,15 @@ notices). The page never fetches Elsewhere, GitHub, or an npm CDN at runtime.
 Check a checkout:
 
 ```sh
-cd vendor/sky-engine/0.1.0
+cd vendor/sky-engine/0.2.0
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
-`SHA256SUMS` also lists the npm tarball and the optional landscape archive.
-This site does not vendor those. It uses the procedural `ridge` landscape.
+`SHA256SUMS` also lists the npm tarball, the optional landscape archive, the
+optional Moon-texture archive, and `moon-lroc.jpg`. This site does not vendor
+those. Illustrations use the procedural `ridge` landscape. The moon card is
+still the synodic glyph, not `renderMoonPhase`, so the NASA texture stays out
+of the precache. `stars.json` is the same bytes as 0.1.0.
 
 ## Who does what
 
@@ -63,10 +66,11 @@ Sun, Moon, planets and stars cannot disagree between those surfaces.
 
 ## Service worker
 
-Cache name `nam-v29` precaches `sky-engine.mjs` and `stars.json` for this exact
+Cache name `nam-v30` precaches `sky-engine.mjs` and `stars.json` for this exact
 directory, plus the adapter. Activating the worker deletes every other cache
 name, so an older shell cannot pair a new module with an old catalog. The
-version lives in the path (`0.1.0`), not in `latest`.
+version lives in the path (`0.2.0`), not in `latest`. 0.1.0 was never on
+`main`; this branch replaces that directory instead of keeping both.
 
 ## Upgrade
 
@@ -101,5 +105,7 @@ build in `tests/sky-sdk.test.cjs`.
 Screenshots from the 0.1.0 browser pass (day, twilight, night, both
 hemispheres, a pattern across north, moon up and down, chart, illustration,
 keepsake, offline reload, failed fetch then retry) are in
-`docs/sky-engine/evidence/`.
+`docs/sky-engine/evidence/`. The 0.2.0 bundle keeps the same catalog and the
+same fixed-scene positions; those pictures still show this card. A later
+switch to `renderMoonPhase` would need `moon-lroc.jpg` and a new pass.
 

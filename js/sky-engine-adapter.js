@@ -6,10 +6,10 @@
 "use strict";
 
 (function () {
-  var VERSION = "0.1.0";
-  var SOURCE_COMMIT = "6bd1b60f3ee63e357eb685175db8a8d99207fa32";
-  var RELEASE_TAG = "sky-engine-v0.1.0";
-  var BASE = "vendor/sky-engine/0.1.0/";
+  var VERSION = "0.2.0";
+  var SOURCE_COMMIT = "c177b659cf1bc5200698c11d3ec408890fbcc297";
+  var RELEASE_TAG = "sky-engine-v0.2.0";
+  var BASE = "vendor/sky-engine/0.2.0/";
   var SCENE_LIMIT = 6;
 
   var enginePromise = null;

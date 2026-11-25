@@ -6,10 +6,10 @@ const path = require("node:path");
 const test = require("node:test");
 
 const root = path.join(__dirname, "..");
-const sdkDir = path.join(root, "vendor/sky-engine/0.1.0");
+const sdkDir = path.join(root, "vendor/sky-engine/0.2.0");
 const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
 
-test("vendored Sky Engine 0.1.0 matches the published checksums", () => {
+test("vendored Sky Engine 0.2.0 matches the published checksums", () => {
   const sums = fs.readFileSync(path.join(sdkDir, "SHA256SUMS"), "utf8").trim().split(/\n/);
   const expected = new Map();
   for (const line of sums) {
@@ -22,9 +22,10 @@ test("vendored Sky Engine 0.1.0 matches the published checksums", () => {
     assert.equal(hash, expected.get(name), name);
   }
   const manifest = JSON.parse(fs.readFileSync(path.join(sdkDir, "manifest.json"), "utf8"));
-  assert.equal(manifest.version, "0.1.0");
-  assert.equal(manifest.tag, "sky-engine-v0.1.0");
-  assert.equal(manifest.sourceCommit, "6bd1b60f3ee63e357eb685175db8a8d99207fa32");
+  assert.equal(manifest.version, "0.2.0");
+  assert.equal(manifest.tag, "sky-engine-v0.2.0");
+  assert.equal(manifest.sourceCommit, "c177b659cf1bc5200698c11d3ec408890fbcc297");
+  assert.equal(manifest.moonTexture.sha256, "f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170");
   const notices = fs.readFileSync(path.join(sdkDir, "sky-engine-NOTICES.txt"), "utf8");
   assert.match(notices, /CC BY-SA 4\.0|CC-BY-SA-4\.0|Creative Commons/i);
   assert.match(notices, /MIT/);
@@ -61,13 +62,13 @@ test("app keeps business astronomy and drops the ported illustration engine", ()
     assert.equal(app.includes(gone), false, gone);
   }
   const sw = read("sw.js");
-  assert.match(sw, /nam-v29/);
-  assert.match(sw, /vendor\/sky-engine\/0\.1\.0\/sky-engine\.mjs/);
-  assert.match(sw, /vendor\/sky-engine\/0\.1\.0\/stars\.json/);
+  assert.match(sw, /nam-v30/);
+  assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/sky-engine\.mjs/);
+  assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/stars\.json/);
   assert.doesNotMatch(read("js/sky-engine-adapter.js"), /cdn|jsdelivr|unpkg|elsewhere\.|github\.com/i);
 });
 
-test("fixed scenes match Sky Engine 0.1.0", async () => {
+test("fixed scenes match Sky Engine 0.2.0", async () => {
   const { createSkyScene, decodeStarColumns, starCatalogLoaded } = await import(
     path.join(sdkDir, "sky-engine.mjs")
   );

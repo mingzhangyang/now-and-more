@@ -306,18 +306,18 @@ test("midnight postcard receipt belongs to rendered day; next day's postcard is 
 
 test("HTML load order and offline precache match the new module", () => {
   const html = read("index.html"), sw = read("sw.js");
-  assert.ok(html.indexOf("js/dedup.js?v=29") > html.indexOf("js/data.js?v=29"));
-  assert.ok(html.indexOf("js/app.js?v=29") > html.indexOf("js/dedup.js?v=29"));
-  assert.ok(sw.includes('"/js/dedup.js?v=29"'));
-  assert.ok(html.indexOf("gossip-service/news-id.js?v=29") > html.indexOf("js/dedup.js?v=29"));
-  assert.ok(html.indexOf("js/gossip.js?v=29") > html.indexOf("gossip-service/news-id.js?v=29"));
-  assert.ok(html.indexOf("js/sky-engine-adapter.js?v=29") > html.indexOf("js/gossip.js?v=29"));
-  assert.ok(html.indexOf("js/app.js?v=29") > html.indexOf("js/sky-engine-adapter.js?v=29"));
-  assert.ok(sw.includes('"/gossip-service/news-id.js?v=29"'));
-  assert.ok(sw.includes('"/js/gossip.js?v=29"'));
-  assert.ok(sw.includes('"/js/sky-engine-adapter.js?v=29"'));
-  assert.ok(sw.includes('"/js/app.js?v=29"'));
-  assert.ok(sw.includes('"/vendor/sky-engine/0.1.0/sky-engine.mjs"'));
-  assert.ok(sw.includes('"/vendor/sky-engine/0.1.0/stars.json"'));
-  assert.ok(sw.includes('"nam-v29"'));
+  assert.ok(html.indexOf("js/dedup.js?v=30") > html.indexOf("js/data.js?v=30"));
+  assert.ok(html.indexOf("js/app.js?v=30") > html.indexOf("js/dedup.js?v=30"));
+  assert.ok(sw.includes('"/js/dedup.js?v=30"'));
+  assert.ok(html.indexOf("gossip-service/news-id.js?v=30") > html.indexOf("js/dedup.js?v=30"));
+  assert.ok(html.indexOf("js/gossip.js?v=30") > html.indexOf("gossip-service/news-id.js?v=30"));
+  assert.ok(html.indexOf("js/sky-engine-adapter.js?v=30") > html.indexOf("js/gossip.js?v=30"));
+  assert.ok(html.indexOf("js/app.js?v=30") > html.indexOf("js/sky-engine-adapter.js?v=30"));
+  assert.ok(sw.includes('"/gossip-service/news-id.js?v=30"'));
+  assert.ok(sw.includes('"/js/gossip.js?v=30"'));
+  assert.ok(sw.includes('"/js/sky-engine-adapter.js?v=30"'));
+  assert.ok(sw.includes('"/js/app.js?v=30"'));
+  assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/sky-engine.mjs"'));
+  assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/stars.json"'));
+  assert.ok(sw.includes('"nam-v30"'));
 });
