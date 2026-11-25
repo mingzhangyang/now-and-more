@@ -1,18 +1,51 @@
 /* Now, and More — stable-ID decks and shared render transactions.
-   v2 is isolated from legacy clients writing nam-decks-v1. */
+   v2 is isolated from legacy clients writing nam-decks-v1.
+   The daily history budget is further isolated from deployed clients
+   whose v2 serializer rebuilds {v,d,g,fp} and drops unknown fields.
+   A tab still running that build cannot enforce the cap until reloaded,
+   and it cannot erase the cap by rewriting nam-decks-v2. */
 "use strict";
 
 const NAM_DEDUP = (() => {
   const KEY = "nam-decks-v2";
   const LEGACY_KEY = "nam-decks-v1";
+  const HISTORY_KEY = "nam-history-daily-v1";
   const LOCK = "nam-decks-v2-write";
-  const fresh = () => ({ v: 2, d: {}, g: {}, fp: [] });
+  const HISTORY_DAILY_LIMIT = 3;
+  const HISTORY_DAY_RETENTION = 8;
+  const fresh = () => ({ v: 2, d: {}, g: {}, fp: [], historyDaily: [] });
   const object = x => !!x && typeof x === "object" && !Array.isArray(x);
   const validId = x => typeof x === "string" && x.length > 0 && x.length <= 128;
   const uniqueIds = x => [...new Set((Array.isArray(x) ? x : []).filter(validId))];
   const own = (o, key) => Object.prototype.hasOwnProperty.call(o, key);
   const parse = raw => { try { return JSON.parse(raw); } catch { return null; } };
   const safeKey = key => !["__proto__", "constructor", "prototype"].includes(key);
+  const validDay = day => typeof day === "string" && /^\d{8}$/.test(day);
+
+  function normalizeHistory(list) {
+    const days = new Map();
+    if (Array.isArray(list)) {
+      for (const entry of list) {
+        if (!object(entry) || !validDay(entry.day) || !Number.isInteger(entry.count) || entry.count < 1) continue;
+        days.set(entry.day, Math.min(HISTORY_DAILY_LIMIT, Math.max(days.get(entry.day) || 0, entry.count)));
+      }
+    }
+    return Array.from(days, ([day, count]) => ({ day, count })).slice(-HISTORY_DAY_RETENTION);
+  }
+
+  // Calendar order, then the newest dates. Used when combining the
+  // isolated key with a budget an older v42 snapshot left inside the
+  // deck document. A missing or smaller copy must not reset a larger one.
+  function mergeHistory(primary, extra) {
+    const days = new Map();
+    for (const entry of normalizeHistory(primary)) days.set(entry.day, entry.count);
+    for (const entry of normalizeHistory(extra)) {
+      days.set(entry.day, Math.max(days.get(entry.day) || 0, entry.count));
+    }
+    return Array.from(days, ([day, count]) => ({ day, count }))
+      .sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0)
+      .slice(-HISTORY_DAY_RETENTION);
+  }
 
   function baseFields(s) {
     const state = fresh();
@@ -20,7 +53,14 @@ const NAM_DEDUP = (() => {
       for (const lang of ["zh", "en"]) if (own(s.g, lang) && object(s.g[lang])) state.g[lang] = s.g[lang];
     }
     if (Array.isArray(s.fp)) state.fp = s.fp.filter(x => typeof x === "string" && x.length <= 1024).slice(-16);
+    state.historyDaily = normalizeHistory(s.historyDaily);
     return state;
+  }
+
+  // Deck document written for every version that shares nam-decks-v2.
+  // The history budget is intentionally absent.
+  function deckRecord(state) {
+    return { v: state.v, d: state.d, g: state.g, fp: state.fp };
   }
 
   function cleanBag(d) {
@@ -144,41 +184,81 @@ const NAM_DEDUP = (() => {
   }
 
   function createDeckState(storage, random = Math.random, { legacyIds = {}, locks = null } = {}) {
-    let lastRaw = null, initialized = false, active = false, held = false;
+    let lastRaw = null, lastHistoryRaw = null, initialized = false, active = false, held = false;
     let state = fresh();
 
-    // Refresh immediately before each mutation; storage events also update
-    // passive tabs. Never replace an in-flight render draft.
+    // Passive tabs reread both keys and never write. A sorted in-memory view
+    // of an older snapshot must not be published: another tab may already
+    // have spent the next slot under the lock. Copying a budget that still
+    // lives only inside nam-decks-v2 happens in commitHistory, after this
+    // read, and only while that lock is held.
     function sync() {
-      if (active || held) return;
+      if (active || held) return false;
       try {
         const raw = storage.getItem(KEY);
-        if (initialized && raw === lastRaw) return;
-        state = raw !== null ? decode(raw) : (!initialized ? migrate(storage.getItem(LEGACY_KEY), legacyIds) : fresh());
+        const historyRaw = storage.getItem(HISTORY_KEY);
+        // Unchanged bytes keep the in-memory state. That includes a v1
+        // migration that has not been persisted yet; replacing it with a
+        // fresh document here would drop news history on the next refresh.
+        if (initialized && raw === lastRaw && historyRaw === lastHistoryRaw) return true;
+        const decoded = raw !== null ? decode(raw) : (!initialized ? migrate(storage.getItem(LEGACY_KEY), legacyIds) : fresh());
+        const isolated = normalizeHistory(parse(historyRaw));
+        decoded.historyDaily = mergeHistory(isolated, decoded.historyDaily);
+        state = decoded;
         lastRaw = raw;
+        lastHistoryRaw = historyRaw;
         initialized = true;
-      } catch { /* Keep the last valid in-memory state. */ }
+        return true;
+      } catch { return false; /* Keep the last valid in-memory state. */ }
     }
     sync();
 
-    function persist() {
-      const raw = JSON.stringify(state);
-      if (raw === lastRaw) return;
+    // Publish only counts the stored key is missing. Equal counts in a
+    // different order are not a write: that rewrite raced with locked draws.
+    function historyCountsBehind(storedRaw, list) {
+      const have = new Map(normalizeHistory(parse(storedRaw)).map((entry) => [entry.day, entry.count]));
+      return list.some((entry) => (have.get(entry.day) || 0) < entry.count);
+    }
+
+    function commitHistory() {
+      if (!historyCountsBehind(lastHistoryRaw, state.historyDaily)) return;
+      const raw = JSON.stringify(state.historyDaily);
       try {
-        storage.setItem(KEY, raw);
-        lastRaw = raw;
+        storage.setItem(HISTORY_KEY, raw);
+        lastHistoryRaw = raw;
+      } catch { /* The in-memory budget still applies for this tab. */ }
+    }
+
+    function persist() {
+      const deck = JSON.stringify(deckRecord(state));
+      const history = JSON.stringify(state.historyDaily);
+      const writeHistory = historyCountsBehind(lastHistoryRaw, state.historyDaily);
+      if (deck === lastRaw && !writeHistory) return;
+      try {
+        // The budget first: a crash or a legacy rewrite of the deck
+        // document must not lose a count that already rendered.
+        if (writeHistory) {
+          storage.setItem(HISTORY_KEY, history);
+          lastHistoryRaw = history;
+        }
+        if (deck !== lastRaw) {
+          storage.setItem(KEY, deck);
+          lastRaw = deck;
+        }
         initialized = true;
       } catch { /* In-memory draw history is still committed. */ }
     }
 
-    // Browser Web Locks cover the complete synchronous choice/render/
-    // commit (including gift receipts) and D2 maintenance. Older browsers
-    // have best-effort reread, not a fake localStorage atomic mutex.
+    // Already inside the shared lock when the browser has one. Reread both
+    // keys here, then copy out an embedded budget before the draw mutates.
     function withLock(work) {
       const run = () => {
-        sync();
+        const readable = sync();
         held = true;
-        try { return work(); } finally { held = false; }
+        try {
+          if (readable) commitHistory();
+          return work();
+        } finally { held = false; }
       };
       return runShared(locks, run);
     }
@@ -234,6 +314,25 @@ const NAM_DEDUP = (() => {
       d.l = id;
     }
 
+    // A date-determined card is not a shuffle-bag member. Share its
+    // daily exposure budget across languages and tabs in the same render
+    // transaction: a failed render cannot consume a slot. Keep a few
+    // recent dates so crossing a time-zone boundary does not reset a day.
+    function historyAvailable(day) {
+      const entry = state.historyDaily.find(item => item.day === day);
+      return validDay(day) && (!entry || entry.count < HISTORY_DAILY_LIMIT);
+    }
+
+    function recordHistory(day) {
+      if (!active) throw new Error("History displays must be inside a render transaction");
+      if (!historyAvailable(day)) return false;
+      const entry = state.historyDaily.find(item => item.day === day);
+      state.historyDaily = state.historyDaily.filter(item => item.day !== day);
+      state.historyDaily.push({ day, count: (entry ? entry.count : 0) + 1 });
+      state.historyDaily = state.historyDaily.slice(-HISTORY_DAY_RETENTION);
+      return true;
+    }
+
     function updateGossip(language, update) {
       if (!["zh", "en"].includes(language)) return;
       if (active) throw new Error("News maintenance must be outside a render transaction");
@@ -268,7 +367,7 @@ const NAM_DEDUP = (() => {
       return selection;
     }
 
-    return { get state() { return state; }, draw, markSeen, transact, updateGossip, withLock, sync };
+    return { get state() { return state; }, draw, markSeen, historyAvailable, recordHistory, transact, updateGossip, withLock, sync };
   }
 
   function weightedCategory(available, last, random = Math.random) {
@@ -314,5 +413,5 @@ const NAM_DEDUP = (() => {
     return { get pending() { return pending; }, request, run: draw => request(draw, true) };
   }
 
-  return { KEY, LEGACY_KEY, safeStorage, browserLocks, runShared, createDeckState, weightedCategory, createDrawGate };
+  return { KEY, LEGACY_KEY, HISTORY_KEY, safeStorage, browserLocks, runShared, createDeckState, weightedCategory, createDrawGate };
 })();

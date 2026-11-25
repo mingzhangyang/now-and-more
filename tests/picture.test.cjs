@@ -55,7 +55,7 @@ function harness() {
       append() {},
       appendChild(child) { this.children.push(child); },
       replaceChildren(...children) { this.children = children; this.innerHTML = ""; },
-      style: { setProperty() {} },
+      style: { setProperty() {}, removeProperty() {} },
       decode: async () => {},
     };
     return el;
@@ -65,10 +65,14 @@ function harness() {
     return elements.get(id);
   };
   const documentStub = {
+    documentElement: Object.assign(makeEl("html"), { clientWidth: 390 }),
+    body: { children: [$("card"), $("img-overlay"), $("full-overlay")] },
     addEventListener() {},
     createElement: () => makeEl("anon"),
     createTextNode: (text) => ({ textContent: text }),
   };
+  const scrollCalls = [];
+  const windowStub = { scrollX: 0, scrollY: 123, scrollTo: (...args) => scrollCalls.push(args) };
   const paintCalls = [];
   const NAM_SKY = {
     sceneFor: () => Promise.resolve({ fake: true }),
@@ -86,6 +90,8 @@ function harness() {
   const source = data + "\n" + `
     let lang = "zh", ambientOn = false, currentSelection = null, encounter = 0,
         lastDrawAt = 0, liveWorldTime = null, imageModalSel = null;
+    let fabTouchStart = null;
+    const resetFab = () => {};
     const appStorage = storage;
     const DAY_MS = 24 * 60 * 60 * 1000;
     const t = () => I18N[lang];
@@ -110,20 +116,22 @@ function harness() {
     section("const MOON_GLYPHS", "/* ================= Night sky") +
     section("let skyVisualGen", "/* ================= End night sky") +
     section("function postcardDayKey(", "/* The meta line") +
+    section("let activeModal = null;", "function drawCard()") +
     section("/* ================= Picture cards: envelope & modal", '$("note-save").addEventListener') +
     section("function esc(str)", "/* Dated note first") + `
     return {
       renderSelection, openImageModal, closeImageModal, imageModalOpen,
       deliverPostcardGift, stageShowsEnvelope, isPictureCard, pictureInfo, moonPhase,
+      showModal, hideModal,
       setAmbient: (v) => { ambientOn = v; },
       setLang: (v) => { lang = v; },
       get modalSel() { return imageModalSel; },
       get picture() { return modalPicture; },
     };
   `;
-  const api = new Function("storage", "$", "document", "NAM_SKY", source)(
-    storage, $, documentStub, NAM_SKY);
-  return { api, $, storage, sky: NAM_SKY, paintCalls };
+  const api = new Function("storage", "$", "document", "NAM_SKY", "window", source)(
+    storage, $, documentStub, NAM_SKY, windowStub);
+  return { api, $, storage, sky: NAM_SKY, paintCalls, documentStub, scrollCalls };
 }
 
 const daxue = () => ({
@@ -255,21 +263,38 @@ test("ambient mode: picture cards render directly and the modal never opens", ()
   assert.equal(api.imageModalOpen(), false, "the picture modal never opens in ambient");
 });
 
-test("draw and rotation stay inert while the picture modal is open", () => {
-  // The guard lives in drawCard itself: every draw path (minute tick,
-  // button, card, space) funnels through it.
-  assert.ok(app.includes("if (!drawsReady || drawGate.pending || imageModalSel) return false;"));
-  // Closing the modal restarts the visitor's minute.
-  const close = section("function closeImageModal()", '$("img-close-btn")');
-  assert.ok(close.includes("lastDrawAt = Date.now();"));
-  // The stage card opens an envelope instead of drawing past it.
+test("draw and rotation stay inert while any modal is open", () => {
+  assert.ok(app.includes("if (!drawsReady || drawGate.pending || activeModal || imageModalSel) return false;"));
+  const close = section("function hideModal(id)", "function modalFocusables()");
+  assert.ok(close.includes("lastDrawAt = currentSelection ? Date.now() : Date.now() - 60000;"));
   assert.ok(app.includes('if (stageShowsEnvelope(currentSelection)) { openImageModal(currentSelection); return; }'));
+});
+
+test("shared modal manager preserves scroll and inert state and refuses overlap", () => {
+  const { api, $, documentStub, scrollCalls } = harness();
+  const root = documentStub.documentElement;
+  const background = $("card"), reading = $("full-overlay"), image = $("img-overlay");
+  image.inert = true; // Respect pre-existing inert state on unlock.
+  assert.equal(api.showModal("full-overlay"), true);
+  assert.equal(reading.hidden, false);
+  assert.equal(background.inert, true);
+  assert.equal(root.classList.contains("modal-open"), true);
+  assert.equal(api.showModal("img-overlay"), false);
+  assert.equal(api.hideModal("img-overlay"), false);
+  assert.equal(reading.hidden, false);
+  assert.equal(api.hideModal("full-overlay"), true);
+  assert.equal(reading.hidden, true);
+  assert.equal(background.inert, false);
+  assert.equal(image.inert, true);
+  assert.equal(root.classList.contains("modal-open"), false);
+  assert.deepEqual(scrollCalls, [[0, 123]]);
 });
 
 test("picture modal: the overlay unhides before the picture renders into it", () => {
   const open = section("function openImageModal(sel)", "function armSkyModalWatchdog");
   assert.ok(
-    open.indexOf('$("img-overlay").hidden = false') < open.indexOf("scheduleSkyVisual(sel, surface)"),
+    open.includes('showModal("img-overlay")') &&
+      open.indexOf('showModal("img-overlay")') < open.indexOf("scheduleSkyVisual(sel, surface)"),
     "a sky canvas must start painting in a visible layout, not under display:none");
   assert.ok(open.includes("armSkyModalWatchdog(sel)"), "sky openings arm the watchdog");
 });

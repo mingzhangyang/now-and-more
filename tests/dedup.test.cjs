@@ -52,7 +52,8 @@ test("commit after render, rollback on failure, reload resumes bag", () => {
     throw Error("render failed");
   }), /render failed/);
   assert.equal(storage.writes, count);
-  assert.equal(JSON.stringify(state.state), before);
+  assert.equal(JSON.stringify({ v: state.state.v, d: state.state.d, g: state.state.g, fp: state.state.fp }), before);
+  assert.deepEqual(state.state.historyDaily, []);
   assert.throws(() => state.draw("pool", ids(20)), /transaction/);
   state = api.createDeckState(storage, seeded(7));
   const remaining = Array.from({ length: 13 }, () => state.transact(() => state.draw("pool", ids(20))));
@@ -101,7 +102,7 @@ test("gate rejects overlapping requests and releases after errors", () => {
 // scheduler and tiny DOM/storage adapters. The browser is not mocked by
 // replacing selection logic. Extract named sections to avoid clock/Canvas
 // startup side effects; syntax-check the full script separately in CI.
-function harness() {
+function harness(storage = store()) {
   const source = core + "\n" + data + "\n" + `
     let lang = "zh", currentSelection = null, lastCategory = null, encounter = 0, lastDrawAt = 0;
     let notesList = [], userSign = "", ambientOn = false;
@@ -130,11 +131,12 @@ function harness() {
     const $ = () => el;
     const renderSelection = sel => { if (failRender) throw Error("render failed"); rendered.push(sel); };
   ` + section("function postcardDayKey(", "/* Today's postcard") +
-    section("function availableCategories()", "function esc(str)") +
+    section("function availableCategories(", "function esc(str)") +
     section("const POSTCARD_POOL_CHANCE", "/* ================= Clock engine") + `
     return {
-      state: deckState, drawCard, makeSelection, selectionForLanguage,
+      state: deckState, drawCard, makeSelection, selectionForLanguage, availableCategories, canRepaintSelection,
       ready: () => { drawsReady = true; },
+      setModal: open => { activeModal = open ? {} : null; if (open) modalEpoch++; },
       setLang: v => { lang = v; },
       fail: v => { failRender = v; },
       setGifts: (n, p) => { note = n; postcard = p; },
@@ -149,11 +151,212 @@ function harness() {
       })
     };
   `;
-  const storage = store(), queue = [], rendered = [];
-  const math = Object.create(Math); math.random = () => 0;
-  const h = new Function("storage", "rendered", "setTimeout", "Math", source)(storage, rendered, fn => queue.push(fn), math);
-  return { h, storage, queue, rendered };
+  const queue = [], rendered = [];
+  let random = 0, now = new Date(2026, 10, 25, 12).getTime();
+  class FakeDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+    static now() { return now; }
+  }
+  const math = Object.create(Math); math.random = () => random;
+  const h = new Function("storage", "rendered", "setTimeout", "Math", "Date", source)(storage, rendered, fn => queue.push(fn), math, FakeDate);
+  return { h, storage, queue, rendered, setRandom: value => { random = value; }, setNow: date => { now = date.getTime(); } };
 }
+
+test("history is capped at three actual draws per local day, including reload and language changes", () => {
+  const first = harness();
+  const { h, queue, setRandom, storage } = first;
+  const day = "20261125";
+  h.ready();
+  const draw = random => { setRandom(random); assert.equal(h.drawCard(), true); queue.shift()(); return h.current; };
+  assert.equal(draw(0.29).cat, "history");
+  assert.equal(draw(0).cat, "world");
+  assert.equal(draw(0.2).cat, "history");
+  assert.equal(draw(0).cat, "world");
+  const third = draw(0.2);
+  assert.equal(third.cat, "history");
+  assert.equal(third.today, true);
+  assert.equal(h.state.historyAvailable(day), false);
+  const before = storage.getItem(key);
+  h.setLang("en");
+  assert.equal(h.canRepaintSelection(third), true);
+  assert.equal(h.translate(third), third);
+  assert.equal(storage.getItem(key), before);
+  assert.ok(!h.availableCategories().some(c => c.key === "history"));
+  assert.notEqual(draw(0).cat, "history");
+  assert.notEqual(draw(0.2).cat, "history");
+
+  const reloaded = harness(storage);
+  reloaded.h.setLang("en");
+  assert.ok(!reloaded.h.availableCategories().some(c => c.key === "history"));
+  // Direct/stale selection is guarded too; it selects a different category.
+  assert.notEqual(reloaded.h.select("history").cat, "history");
+  reloaded.setNow(new Date(2026, 10, 26, 0, 0, 0));
+  assert.ok(reloaded.h.availableCategories().some(c => c.key === "history"));
+  const next = reloaded.h.select("history");
+  assert.equal(next.cat, "history");
+  assert.equal(next.key, "11-26");
+  assert.equal(reloaded.h.state.historyAvailable("20261126"), true);
+  // Travelling back across a date boundary must not reopen yesterday's budget.
+  reloaded.setNow(new Date(2026, 10, 25, 23, 59, 59));
+  assert.ok(!reloaded.h.availableCategories().some(c => c.key === "history"));
+});
+
+test("failed history render rolls back its slot, and old or malformed counts are safe", () => {
+  const { h, storage } = harness(store({v:2,d:{},g:{},fp:[]}));
+  const day = "20261125";
+  assert.equal(h.select("history").cat, "history");
+  assert.equal(h.select("history").cat, "history");
+  const before = storage.getItem(key);
+  const beforeHistory = storage.getItem(api.HISTORY_KEY);
+  h.fail(true);
+  assert.throws(() => h.select("history"), /render failed/);
+  assert.equal(storage.getItem(key), before);
+  assert.equal(storage.getItem(api.HISTORY_KEY), beforeHistory);
+  assert.equal(h.state.historyAvailable(day), true);
+  h.fail(false);
+  assert.equal(h.select("history").cat, "history");
+  assert.equal(h.state.historyAvailable(day), false);
+  const corrupt = api.createDeckState(store({v:2,d:{},g:{},fp:[],historyDaily:[
+    {day, count: 99}, {day, count: 1}, {day:"invalid",count:3}, {day:"20261126",count:-1}
+  ]}));
+  assert.equal(corrupt.historyAvailable(day), false);
+  assert.equal(corrupt.historyAvailable("20261126"), true);
+  assert.throws(() => corrupt.recordHistory(day), /transaction/);
+  for (let i = 1; i <= 20; i++) {
+    const stamp = "202612" + String(i).padStart(2, "0");
+    assert.equal(corrupt.transact(() => corrupt.recordHistory(stamp)), true);
+  }
+  assert.ok(corrupt.state.historyDaily.length <= 8);
+});
+
+test("shared-lock tabs cannot spend more than three history slots combined", async () => {
+  const storage = store();
+  let tail = Promise.resolve();
+  const locks = { request(name, options, work) {
+    assert.equal(name, "nam-decks-v2-write");
+    assert.equal(options.mode, "exclusive");
+    const next = tail.then(work);
+    tail = next.catch(() => {});
+    return next;
+  } };
+  const a = api.createDeckState(storage, Math.random, { locks });
+  const b = api.createDeckState(storage, Math.random, { locks });
+  const day = "20261125";
+  const results = await Promise.all(Array.from({length:20}, (_, i) => {
+    const tab = i % 2 ? a : b;
+    return tab.withLock(() => tab.transact(() => tab.recordHistory(day)));
+  }));
+  assert.equal(results.filter(Boolean).length, 3);
+  assert.equal(api.createDeckState(storage).historyAvailable(day), false);
+});
+
+// Deployed v40 rebuilds {v,d,g,fp} and drops every other field on nam-decks-v2.
+function rewriteLikeV40(storage, mutate) {
+  const parsed = JSON.parse(storage.getItem(key));
+  const legacy = {
+    v: 2,
+    d: parsed && parsed.d && typeof parsed.d === "object" ? parsed.d : {},
+    g: parsed && parsed.g && typeof parsed.g === "object" ? parsed.g : {},
+    fp: parsed && Array.isArray(parsed.fp) ? parsed.fp : [],
+  };
+  if (mutate) mutate(legacy);
+  storage.setItem(key, JSON.stringify(legacy));
+}
+
+test("a v40 writer cannot erase the daily history budget", () => {
+  const day = "20261125";
+  const storage = store();
+  const writer = api.createDeckState(storage, () => 0);
+  assert.ok(writer.transact(() => writer.draw("pool", ids(4))) >= 0);
+  for (let i = 0; i < 3; i++) assert.equal(writer.transact(() => writer.recordHistory(day)), true);
+  assert.equal(writer.historyAvailable(day), false);
+  const isolated = storage.getItem(api.HISTORY_KEY);
+  assert.match(isolated, /20261125/);
+  assert.equal(JSON.parse(storage.getItem(key)).historyDaily, undefined);
+  const seen = JSON.parse(storage.getItem(key)).d.pool.s.slice();
+  assert.equal(seen.length, 1);
+  rewriteLikeV40(storage, (legacy) => {
+    legacy.d.pool.s.push("id:legacy");
+  });
+  assert.equal(storage.getItem(api.HISTORY_KEY), isolated);
+  writer.sync();
+  assert.equal(writer.historyAvailable(day), false);
+  assert.ok(writer.state.d.pool.s.includes(seen[0]));
+  assert.ok(writer.state.d.pool.s.includes("id:legacy"));
+  const reader = api.createDeckState(storage);
+  assert.equal(reader.historyAvailable(day), false);
+  assert.equal(reader.transact(() => reader.recordHistory(day)), false);
+  assert.deepEqual(reader.state.d.pool.s, writer.state.d.pool.s);
+
+  // A pre-fix snapshot kept the budget only inside nam-decks-v2.
+  // The copy out runs under the lock, after a fresh read — not from passive sync.
+  const embedded = store({ v: 2, d: { pool: { s: ["id:0"], r: ["id:1"], l: "id:0" } }, g: {}, fp: [], historyDaily: [
+    { day, count: 3 }, { day: "20261124", count: 1 },
+  ] });
+  const migrated = api.createDeckState(embedded);
+  assert.equal(migrated.historyAvailable(day), false);
+  assert.equal(embedded.getItem(api.HISTORY_KEY), null);
+  migrated.withLock(() => {});
+  assert.match(embedded.getItem(api.HISTORY_KEY), /20261125/);
+  rewriteLikeV40(embedded);
+  migrated.sync();
+  assert.equal(migrated.historyAvailable(day), false);
+  assert.equal(migrated.historyAvailable("20261124"), true);
+  const afterWipe = api.createDeckState(embedded);
+  assert.equal(afterWipe.historyAvailable(day), false);
+  assert.equal(afterWipe.transact(() => afterWipe.recordHistory(day)), false);
+});
+
+test("passive history sync does not clobber a locked spend", () => {
+  const dayA = "20261125";
+  const dayB = "20261126";
+  // Day B, then back to day A: recordHistory persists [B, A]. Sorting that
+  // snapshot yields [A, B]. Publishing the sorted copy is what races a draw.
+  const snapshot = JSON.stringify([{ day: dayB, count: 1 }, { day: dayA, count: 1 }]);
+  const memory = new Map([
+    [key, JSON.stringify({ v: 2, d: {}, g: {}, fp: [] })],
+    [api.HISTORY_KEY, snapshot],
+  ]);
+  let armed = false;
+  let spentDuringStaleWrite = false;
+  const storage = {
+    getItem: (k) => memory.get(k) ?? null,
+    setItem(k, v) {
+      if (armed && k === api.HISTORY_KEY && !spentDuringStaleWrite) {
+        spentDuringStaleWrite = true;
+        memory.set(api.HISTORY_KEY, snapshot);
+        active.sync();
+        active.transact(() => active.recordHistory(dayA));
+      }
+      memory.set(k, String(v));
+    },
+  };
+  const active = api.createDeckState(storage);
+  const passive = api.createDeckState(storage);
+  // Force a real reread. The history bytes stay the pre-spend snapshot.
+  memory.set(key, JSON.stringify({ v: 2, d: {}, g: {}, fp: ["reread"] }));
+  memory.set(api.HISTORY_KEY, snapshot);
+  armed = true;
+  passive.sync();
+  armed = false;
+  assert.equal(spentDuringStaleWrite, false);
+  assert.equal(JSON.parse(memory.get(api.HISTORY_KEY)).find((entry) => entry.day === dayA).count, 1);
+  active.sync();
+  assert.equal(active.transact(() => active.recordHistory(dayA)), true);
+  assert.equal(JSON.parse(memory.get(api.HISTORY_KEY)).find((entry) => entry.day === dayA).count, 2);
+  passive.sync();
+  assert.equal(JSON.parse(memory.get(api.HISTORY_KEY)).find((entry) => entry.day === dayA).count, 2);
+  assert.equal(passive.state.historyDaily.find((entry) => entry.day === dayA).count, 2);
+});
+
+test("ambient shortcut stays outside an open modal", () => {
+  const entry = section("function enterAmbient()", "function exitAmbient()");
+  assert.match(entry, /if \(ambientOn \|\| activeModal\) return;/);
+  assert.doesNotMatch(entry, /closeImageModal/);
+  const keys = section('/* ================= Ambient mode ================= */', "/* ================= Keepsake capture");
+  assert.match(keys, /if \(activeModal\) return;\n  if \(e\.key === "Escape" && ambientOn\)/);
+  assert.match(app, /e\.key === NAM_DEDUP\.KEY \|\| e\.key === NAM_DEDUP\.HISTORY_KEY \|\| e\.key === null/);
+});
 
 test("actual poem/quote selection consumes only shown language and caches variants", () => {
   const { h } = harness();
@@ -174,6 +377,31 @@ test("actual poem/quote selection consumes only shown language and caches varian
   assert.equal(h.state.state.d["quotes:zh"], undefined);
   h.setLang("zh");
   assert.ok(h.translate(q).quoteZh);
+});
+
+test("modal isolation cancels a queued draw and blocks draws until closed", () => {
+  const { h, queue, storage, rendered } = harness();
+  h.ready();
+  assert.equal(h.drawCard(), true);
+  h.setModal(true);
+  assert.equal(h.drawCard(), false);
+  queue.shift()();
+  assert.equal(h.count, 0);
+  assert.equal(rendered.length, 0);
+  assert.equal(storage.writes, 0);
+  assert.equal(h.drawCard(), false);
+  h.setModal(false);
+  assert.equal(h.drawCard(), true);
+  // Even opening and closing before the scheduled callback invalidates it.
+  h.setModal(true);
+  h.setModal(false);
+  queue.shift()();
+  assert.equal(h.count, 0);
+  assert.equal(storage.writes, 0);
+  assert.equal(h.drawCard(), true);
+  queue.shift()();
+  assert.equal(h.count, 1);
+  assert.equal(rendered.length, 1);
 });
 
 test("actual draw waits for startup, then one accepted render/commit per transition", () => {

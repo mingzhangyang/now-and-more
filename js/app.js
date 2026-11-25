@@ -81,6 +81,10 @@ const sharedLocks = NAM_DEDUP.browserLocks();
 const deckState = NAM_DEDUP.createDeckState(appStorage, () => Math.random(), {
   legacyIds: NAM_LEGACY_DECK_IDS, locks: sharedLocks,
 });
+// Copy a budget an older build left inside nam-decks-v2. Passive sync
+// must not do this write; the shared lock rereads both keys first.
+const historyMigration = deckState.withLock(() => {});
+if (historyMigration && typeof historyMigration.then === "function") historyMigration.catch(() => {});
 const deckDraw = key => deckState.draw(key, NAM_DECK_IDS[key]);
 
 /* Dynamic news is eligible only if unseen or cooled down. Keep history
@@ -1478,18 +1482,18 @@ function renderMyDaysList() {
    opened it sits inside the now-closed panel. */
 let myDaysOpener = null;
 function openMyDaysModal(opener) {
-  if (ambientOn) return; // no managing days in ambient mode
+  if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   setSettingsOpen(false);
   myDaysOpener = opener || null;
   renderMyDaysList();
-  $("mydays-overlay").hidden = false;
+  showModal("mydays-overlay");
   $("myday-name").focus();
 }
 function closeMyDaysModal() {
   if ($("mydays-overlay").hidden) return;
-  $("mydays-overlay").hidden = true;
-  if (myDaysOpener && myDaysOpener.isConnected && !settingsPanel.hidden) myDaysOpener.focus();
-  else settingsBtn.focus();
+  hideModal("mydays-overlay");
+  if (myDaysOpener && myDaysOpener.isConnected && !settingsPanel.hidden) myDaysOpener.focus({ preventScroll: true });
+  else settingsBtn.focus({ preventScroll: true });
   myDaysOpener = null;
 }
 function buildMyDaysForm() {
@@ -2084,7 +2088,7 @@ function updateNoteCount() {
   $("note-save").disabled = len === 0;
 }
 function openNoteModal(opener) {
-  if (ambientOn) return; // no writing in ambient mode
+  if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   setSettingsOpen(false);
   noteOpener = opener || null;
   noteType = "reflection";
@@ -2096,13 +2100,13 @@ function openNoteModal(opener) {
   $("note-error").hidden = true;
   updateNoteCount();
   hideFabNow();
-  $("note-overlay").hidden = false;
+  showModal("note-overlay");
   $("note-text").focus();
 }
 function closeNoteModal() {
   if ($("note-overlay").hidden) return;
-  $("note-overlay").hidden = true;
-  if (noteOpener && noteOpener.isConnected) noteOpener.focus();
+  hideModal("note-overlay");
+  if (noteOpener && noteOpener.isConnected) noteOpener.focus({ preventScroll: true });
   noteOpener = null;
 }
 $("note-type-reflection").addEventListener("click", () => { noteType = "reflection"; syncNoteTypeSeg(); });
@@ -2139,7 +2143,7 @@ function fullTextOf(item) {
 }
 
 function openFullText(item, opener, cat) {
-  if (ambientOn) return; // no reading modal in ambient mode
+  if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   const full = fullTextOf(item);
   if (!full) return;
   fullOpener = opener || null;
@@ -2150,14 +2154,14 @@ function openFullText(item, opener, cat) {
     .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
     .join("");
   $("full-source").textContent = item.source || "";
-  $("full-overlay").hidden = false;
+  showModal("full-overlay");
   document.querySelector(".full-dialog").scrollTop = 0;
   $("full-close").focus();
 }
 function closeFullText() {
   if ($("full-overlay").hidden) return;
-  $("full-overlay").hidden = true;
-  if (fullOpener && fullOpener.isConnected) fullOpener.focus();
+  hideModal("full-overlay");
+  if (fullOpener && fullOpener.isConnected) fullOpener.focus({ preventScroll: true });
   fullOpener = null;
 }
 $("full-text-btn").addEventListener("click", (e) => {
@@ -2419,10 +2423,10 @@ async function renderModalPostcard(sel) {
 
 /* The gift receipt is still written when the envelope is opened. */
 function openImageModal(sel) {
-  if (ambientOn || !isPictureCard(sel) || imageModalOpen()) return;
+  if (ambientOn || activeModal || !isPictureCard(sel) || imageModalOpen()) return;
   imageModalSel = sel;
   imageOpener = $("card");
-  $("img-overlay").hidden = false;
+  showModal("img-overlay");
   const surface = modalSurface();
   const info = pictureInfo(sel);
   surface.cat.textContent = info.category;
@@ -2460,7 +2464,7 @@ function armSkyModalWatchdog(sel) {
 
 function closeImageModal() {
   if (!imageModalOpen()) return;
-  $("img-overlay").hidden = true;
+  hideModal("img-overlay");
   if (imageModalSel && imageModalSel._abort) imageModalSel._abort.abort();
   imageModalSel = null;
   clearModalPicture();
@@ -2471,10 +2475,7 @@ function closeImageModal() {
   skyVisualGen++;
   delete $("img-card").dataset.skyGen;
   delete $("img-card").dataset.skyState;
-  // The stage rotation was paused while the modal was open; give the
-  // visitor a full minute with the stage again from the close.
-  lastDrawAt = Date.now();
-  if (imageOpener && imageOpener.isConnected) imageOpener.focus();
+  if (imageOpener && imageOpener.isConnected) imageOpener.focus({ preventScroll: true });
   imageOpener = null;
 }
 $("img-close-btn").addEventListener("click", closeImageModal);
@@ -2536,8 +2537,7 @@ let fabStickyUntil = 0;
 let fabSyncTimer = null;
 
 function fabShouldShow() {
-  if (ambientOn) return false;
-  if (!$("note-overlay").hidden) return false;
+  if (ambientOn || activeModal) return false;
   return fabInCorner || fabHovered || fabFocused || Date.now() < fabStickyUntil;
 }
 function syncFab() {
@@ -2567,6 +2567,7 @@ function resetFab() {
    headless or unusual pointers that report neither fine nor coarse
    still reveal the button the way a mouse would). */
 document.addEventListener("mousemove", (e) => {
+  if (activeModal) return;
   const inCorner = e.clientX >= window.innerWidth - 140 && e.clientY >= window.innerHeight - 140;
   if (inCorner === fabInCorner) return;
   fabInCorner = inCorner;
@@ -2593,6 +2594,7 @@ $("note-fab").addEventListener("blur", () => {
 });
 let fabTouchStart = null;
 document.addEventListener("touchstart", (e) => {
+  if (activeModal) { fabTouchStart = null; return; }
   const tch = e.changedTouches && e.changedTouches[0];
   if (!tch) { fabTouchStart = null; return; }
   fabTouchStart = {
@@ -2603,7 +2605,7 @@ document.addEventListener("touchstart", (e) => {
 document.addEventListener("touchend", (e) => {
   const start = fabTouchStart;
   fabTouchStart = null;
-  if (!start || !start.inBottom) return;
+  if (activeModal || !start || !start.inBottom) return;
   const tch = e.changedTouches && e.changedTouches[0];
   if (!tch) return;
   if (tch.clientY - start.y <= -40) {
@@ -2619,11 +2621,12 @@ $("note-fab").addEventListener("click", () => openNoteModal($("note-fab")));
 /* Categories available in the current language. almanac + classics are
    zh-only; proverbs + word are en-only; gossip joins only when its feed
    has actually delivered headlines. */
-function availableCategories() {
+function availableCategories(now = new Date()) {
   const base = lang === "zh"
     ? ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "classics", "almanac", "astro", "chance", "memory"]
     : ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "proverbs", "word", "astro", "chance", "memory"];
-  const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key));
+  const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key) &&
+    (c.key !== "history" || deckState.historyAvailable(postcardDayKey(now))));
   if (gossipCandidates().length) {
     const g = CATEGORY_WEIGHTS.find((c) => c.key === "gossip");
     if (g) list.push(g);
@@ -2637,8 +2640,8 @@ function availableCategories() {
   return list;
 }
 
-function weightedCategory() {
-  return NAM_DEDUP.weightedCategory(availableCategories(), lastCategory, Math.random);
+function weightedCategory(now = new Date()) {
+  return NAM_DEDUP.weightedCategory(availableCategories(now), lastCategory, Math.random);
 }
 
 /* Only consume the language actually rendered. Keep the rendered variant
@@ -2653,7 +2656,7 @@ function selectionForLanguage(sel) {
   return { ...sel, [key]: pool[deckDraw(sel.cat + ":" + lang)] };
 }
 
-function makeSelection(cat) {
+function makeSelection(cat, now = new Date()) {
   switch (cat) {
     case "world":
       return { cat, city: CITIES[deckDraw("world")] };
@@ -2687,10 +2690,17 @@ function makeSelection(cat) {
     case "poem":
       return selectionForLanguage({ cat });
     case "history": {
-      const now = new Date();
+      // Recheck at selection as well as eligibility. Count the new
+      // encounter in the render draft; language/ambient repaints do not
+      // call makeSelection. Use the same local day as the eligibility check.
+      if (!deckState.recordHistory(postcardDayKey(now))) {
+        const fallback = NAM_DEDUP.weightedCategory(
+          availableCategories(now).filter(c => c.key !== "history"), lastCategory, Math.random);
+        return makeSelection(fallback, now);
+      }
       const key = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      // Today's entry is date-determined (the certainty side of the site);
-      // the deck governs only the random-day fallback pool.
+      // Today's entry is date-determined; the deck governs only the
+      // random-day fallback pool. Both consume the daily history budget.
       if (HISTORY[key]) return { cat, key, entry: HISTORY[key], today: true };
       const keys = Object.keys(HISTORY);
       const rk = keys[deckDraw("history")];
@@ -2742,8 +2752,8 @@ function makeSelection(cat) {
       // selection. Recondition the original category weights, not a fixed
       // fallback that might repeat the last category.
       const fallback = NAM_DEDUP.weightedCategory(
-        availableCategories().filter(c => c.key !== "gossip"), lastCategory, Math.random);
-      return makeSelection(fallback);
+        availableCategories(now).filter(c => c.key !== "gossip"), lastCategory, Math.random);
+      return makeSelection(fallback, now);
     }
     case "memory":
       return { cat, item: MEMORY_PROMPTS[deckDraw("memory")] };
@@ -2751,8 +2761,8 @@ function makeSelection(cat) {
       const entry = notesCurrent() ? drawNoteEntry() : null;
       if (entry) return { cat, note: entry };
       const fallback = NAM_DEDUP.weightedCategory(
-        availableCategories().filter(c => c.key !== "mine"), lastCategory, Math.random);
-      return makeSelection(fallback);
+        availableCategories(now).filter(c => c.key !== "mine"), lastCategory, Math.random);
+      return makeSelection(fallback, now);
     }
     case "chance": {
       const kinds = NAM_DECK_IDS["chance:kind"];
@@ -3141,35 +3151,114 @@ function nextSelection(retryNotes = true) {
         if (retryNotes) return null;
         // A bounded refresh failed: keep the stage usable without consuming
         // the postcard receipt. A later draw can still deliver both in order.
-        return makeSelection(weightedCategory());
+        return makeSelection(weightedCategory(now), now);
       }
       return { ...pc, gifted: true, giftStamp: stamp };
     }
     if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) return pc;
   }
-  return makeSelection(weightedCategory());
+  return makeSelection(weightedCategory(now), now);
 }
 
 let drawsReady = false;
 const drawGate = NAM_DEDUP.createDrawGate((task) => setTimeout(task, 180));
 
-/* The picture modal's selection, while it is open. While it is set,
-   every draw path (the minute tick, the button, the card, the space
-   bar) is inert: the visitor is looking at a picture, and the stage
-   waits. Closing the modal clears it and restarts the minute. */
+/* All five stage dialogs share one isolation boundary. Keep the body at
+   the saved viewport offset (including older iOS Safari), make its
+   other direct children inert, and contain keyboard focus. The clock
+   keeps ticking; new encounters wait until the reader closes the modal. */
 let imageModalSel = null;
+let activeModal = null;
+let modalEpoch = 0;
+let modalScroll = null;
+
+function showModal(id) {
+  if (activeModal) return false;
+  const overlay = $(id);
+  const root = document.documentElement;
+  const siblings = Array.from(document.body.children)
+    .filter(el => el !== overlay && !el.inert);
+  modalScroll = { x: window.scrollX, y: window.scrollY, siblings };
+  activeModal = overlay;
+  modalEpoch++;
+  overlay.hidden = false;
+  root.style.setProperty("--modal-page-top", `-${modalScroll.y}px`);
+  root.style.setProperty("--modal-page-left", `-${modalScroll.x}px`);
+  // Preserve the background's original width on desktop scrollbars.
+  root.style.setProperty("--modal-page-width", `${root.clientWidth}px`);
+  root.classList.add("modal-open");
+  for (const el of siblings) el.inert = true;
+  fabTouchStart = null;
+  resetFab();
+  return true;
+}
+
+function hideModal(id) {
+  if (activeModal !== $(id)) return false;
+  const { x, y, siblings } = modalScroll;
+  activeModal.hidden = true;
+  activeModal = null;
+  modalScroll = null;
+  for (const el of siblings) el.inert = false;
+  const root = document.documentElement;
+  root.classList.remove("modal-open");
+  root.style.removeProperty("--modal-page-top");
+  root.style.removeProperty("--modal-page-left");
+  root.style.removeProperty("--modal-page-width");
+  window.scrollTo(x, y);
+  // If a deep link opened a note before the first draw, allow startup
+  // to finish on the next tick rather than leaving an empty stage.
+  lastDrawAt = currentSelection ? Date.now() : Date.now() - 60000;
+  return true;
+}
+
+function modalFocusables() {
+  return Array.from(activeModal.querySelectorAll(
+    "a[href], button, input, select, textarea, [tabindex]"
+  )).filter(el => el.tabIndex >= 0 && !el.matches(":disabled") && el.getClientRects().length);
+}
+
+function focusInsideModal(last = false) {
+  const items = modalFocusables();
+  const target = (last ? items[items.length - 1] : items[0]) ||
+    activeModal.querySelector('[role="dialog"]');
+  if (target) {
+    if (!items.length) target.tabIndex = -1;
+    target.focus();
+  }
+}
+
+function trapModalTab(e) {
+  if (!activeModal || e.key !== "Tab") return;
+  const items = modalFocusables();
+  const index = items.indexOf(document.activeElement);
+  if (!items.length || index < 0 ||
+      (e.shiftKey ? index === 0 : index === items.length - 1)) {
+    e.preventDefault();
+    focusInsideModal(e.shiftKey);
+  }
+}
+
+function retainModalFocus(e) {
+  if (activeModal && !activeModal.contains(e.target)) focusInsideModal();
+}
 
 function drawCard() {
-  if (!drawsReady || drawGate.pending || imageModalSel) return false;
+  if (!drawsReady || drawGate.pending || activeModal || imageModalSel) return false;
+  const epoch = modalEpoch;
   const card = $("card");
   card.classList.add("leaving");
   return drawGate.request(() => {
-    if (gossipEndpoint()) refreshGossip();
     const finish = () => card.classList.remove("leaving");
+    if (activeModal || epoch !== modalEpoch) { finish(); return; }
+    if (gossipEndpoint()) refreshGossip();
     try {
       // Serialize choice, synchronous render, commit and daily receipt.
       const attempt = retriesLeft => {
         const result = deckState.withLock(() => {
+          // The modal can open while waiting for a shared lock or note
+          // refresh. Treat that attempt as finished without a draw/retry.
+          if (activeModal || epoch !== modalEpoch) return true;
           const selected = deckState.transact(() => {
             const sel = nextSelection(retriesLeft > 0);
             if (!sel) return null;
@@ -3216,7 +3305,8 @@ function drawCard() {
 }
 
 function canRepaintSelection(sel) {
-  if (sel.cat === "postcard") return true;
+  // The cap excludes new history encounters, not the current bilingual card.
+  if (sel.cat === "postcard" || sel.cat === "history") return true;
   if (sel.cat === "gossip") return sel.newsLang === lang;
   return availableCategories().some(c => c.key === sel.cat);
 }
@@ -3524,7 +3614,7 @@ $("card").addEventListener("keydown", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !e.repeat && e.target === document.body) {
+  if (!activeModal && e.code === "Space" && !e.repeat && e.target === document.body) {
     e.preventDefault();
     drawCard();
   }
@@ -3619,8 +3709,7 @@ function repaintCurrentSelection() {
 }
 
 function enterAmbient() {
-  if (ambientOn) return;
-  if (imageModalOpen()) closeImageModal(); // no picture modal in ambient mode
+  if (ambientOn || activeModal) return;
   ambientOn = true;
   document.body.classList.add("ambient");
   setSettingsOpen(false);
@@ -3676,6 +3765,10 @@ document.addEventListener("visibilitychange", () => {
   if (ambientOn && document.visibilityState === "visible") acquireWakeLock();
 });
 document.addEventListener("keydown", (e) => {
+  // Keys inside a dialog belong to that dialog. F must not enter ambient
+  // (which would also dismiss a picture) and Escape must not be treated
+  // as leaving a mode the reader never entered.
+  if (activeModal) return;
   if (e.key === "Escape" && ambientOn) {
     exitAmbient();
     return;
@@ -4372,6 +4465,8 @@ let captureUrl = null;
 let captureFile = null;
 
 function showCapture(blob, frozen) {
+  // A delayed stage capture must not interrupt a newer reading/editing modal.
+  if (activeModal) return;
   if (captureUrl) URL.revokeObjectURL(captureUrl);
   captureUrl = URL.createObjectURL(blob);
   const fname = `now-and-more-${frozen.getFullYear()}${pad(frozen.getMonth() + 1)}${pad(frozen.getDate())}` +
@@ -4385,21 +4480,21 @@ function showCapture(blob, frozen) {
   } catch (e) { captureFile = null; }
   const canShare = !!(captureFile && navigator.canShare && navigator.canShare({ files: [captureFile] }));
   $("capture-share").hidden = !canShare;
-  $("capture-overlay").hidden = false;
+  showModal("capture-overlay");
   $("capture-close-btn").focus();
 }
 
 function closeCapture() {
   if ($("capture-overlay").hidden) return;
-  $("capture-overlay").hidden = true;
+  hideModal("capture-overlay");
   if (captureUrl) {
     URL.revokeObjectURL(captureUrl);
     captureUrl = null;
   }
   captureFile = null;
   // Return focus to the surface the keepsake was taken from.
-  if (imageModalOpen()) $("img-close-btn").focus();
-  else $("capture-btn").focus();
+  if (imageModalOpen()) $("img-close-btn").focus({ preventScroll: true });
+  else $("capture-btn").focus({ preventScroll: true });
 }
 
 /* A sky chart / moon whose picture is NOT on the stage right now —
@@ -4536,6 +4631,8 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ================= Init ================= */
+document.addEventListener("keydown", trapModalTab, true);
+document.addEventListener("focusin", retainModalFocus);
 buildAnalogTicks();
 buildStyleChips();
 buildSignSelector();
@@ -4557,7 +4654,7 @@ function initialDraw() {
   drawCard();
 }
 window.addEventListener("storage", e => {
-  if (e.key === NAM_DEDUP.KEY || e.key === null) deckState.sync();
+  if (e.key === NAM_DEDUP.KEY || e.key === NAM_DEDUP.HISTORY_KEY || e.key === null) deckState.sync();
   if (e.key === NOTES_REVISION_KEY || e.key === null) notesLoadAll();
 });
 window.addEventListener("focus", () => { deckState.sync(); notesLoadAll(); });
