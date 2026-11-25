@@ -263,13 +263,14 @@ const flush = async () => {
 test("sky modal watchdog: a paint that never lands is re-scheduled exactly once", async () => {
   mock.timers.enable({ apis: ["setTimeout"] });
   try {
-    const { api, sky, paintCalls } = harness();
+    const { api, $, sky, paintCalls } = harness();
     sky.hang = true; // the first paint starts but never lands (the live blank)
     const sel = skySel("illustration");
     api.openImageModal(sel);
     await flush();
     assert.deepEqual(paintCalls, ["illustration"]);
     assert.equal(sel._paintedGen, undefined, "nothing has painted yet");
+    assert.equal($("img-card").dataset.skyState, "loading");
 
     mock.timers.tick(2800); // the watchdog fires
     await flush();
@@ -280,6 +281,7 @@ test("sky modal watchdog: a paint that never lands is re-scheduled exactly once"
     sky.release(); // the re-scheduled paint lands
     await flush();
     assert.equal(sel._paintedGen, sel._skyGen, "the re-scheduled generation is the painted one");
+    assert.equal($("img-card").dataset.skyState, "ready");
 
     mock.timers.tick(60000); // one-shot: no third schedule, however long the modal stays open
     await flush();
@@ -305,6 +307,13 @@ test("wide layout: the split-grid card rule is scoped to the stage card only", (
     "the wide split-layout rule targets the stage card by id");
   assert.ok(/\.capture-dialog\.img-dialog \{\s*width: min\(680px/.test(css),
     "the picture dialog keeps its 680px width over the generic capture dialog");
+  assert.ok(!css.includes("--img-height") && !css.includes("max(180px"),
+    "the lightbox must not reserve a fixed chrome height or a 180px composition floor");
+  assert.match(css, /#img-card \.img-fit \{[\s\S]*container-type: size;/);
+  assert.match(css, /width: min\(100cqw, 100cqh\)/);
+  assert.match(css, /width: min\(100cqw, calc\(100cqh \* 0\.75\)\)/);
+  assert.match(app, /className = "img-fit"/);
+  assert.match(app, /fact-row skyart-status/);
 });
 
 test("sky modal watchdog: closing the modal disarms it", async () => {
@@ -323,4 +332,38 @@ test("sky modal watchdog: closing the modal disarms it", async () => {
   } finally {
     mock.timers.reset();
   }
+});
+
+test("lightbox tracks sky failure, successful paint and close", async () => {
+  const { api, $ } = harness();
+  const sel = skySel("chart");
+  sel.ready = Promise.reject(new Error("offline"));
+  api.openImageModal(sel);
+  assert.equal($("img-card").dataset.skyState, "loading");
+  await sel.painted;
+  assert.equal($("img-card").dataset.skyState, "error");
+  api.closeImageModal();
+  assert.equal($("img-card").dataset.skyState, undefined);
+  const next = skySel("moon");
+  api.openImageModal(next);
+  await next.painted;
+  assert.equal($("img-card").dataset.skyState, "ready");
+  api.closeImageModal();
+  assert.equal($("img-card").dataset.skyState, undefined);
+});
+
+
+test("near-full moon doubles lunar portrait odds without changing ordinary sky odds", () => {
+  const choose = new Function("DAY_MS", section("const MOON_GLYPHS", "/* ================= Night sky") + "\nreturn chooseSkyForm;")(86400000);
+  const epoch = Date.UTC(2000, 0, 6, 18, 14);
+  const atAge = age => new Date(epoch + age * 86400000);
+  const odds = date => Array.from({length: 600}, (_, i) => choose(date, () => (i + 0.5) / 600))
+    .reduce((counts, form) => ({...counts, [form]: (counts[form] || 0) + 1}), {});
+  for (const age of [14, 14.765, 16]) {
+    assert.deepEqual(odds(atAge(age)), {chart:100, illustration:100, moon:400});
+  }
+  for (const age of [0, 7, 12, 18, 22]) {
+    assert.deepEqual(odds(atAge(age)), {chart:200, illustration:200, moon:200});
+  }
+  assert.match(app, /const now = new Date\(\);\s*const form = chooseSkyForm\(now\);/);
 });

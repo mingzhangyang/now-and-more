@@ -173,6 +173,16 @@ function moonPhase(date) {
   return { age: Math.floor(age), illum, idx, glyph: MOON_GLYPHS[idx] };
 }
 
+// Use the existing synchronous approximate illumination calculation.
+// At >= 98% (roughly three days around full moon), give the moon
+// four tickets and each other form one; otherwise keep equal odds.
+function chooseSkyForm(date, random = Math.random) {
+  const forms = moonPhase(date).illum >= 98
+    ? ["chart", "illustration", "moon", "moon", "moon", "moon"]
+    : ["chart", "illustration", "moon"];
+  return forms[Math.floor(random() * forms.length)];
+}
+
 /* ================= Night sky （星空） =================
    Positions and the watercolour illustration come from the pinned
    Sky Engine SDK (vendor/sky-engine/0.2.0, see docs/sky-engine.md).
@@ -444,7 +454,17 @@ function updateSkyCopy(sel) {
     const head = text && text.querySelector(".sa-head");
     if (!text || !head) return;
     [...text.children].forEach((el) => { if (el !== head) el.remove(); });
-    head.insertAdjacentHTML("afterend", skyArtFactsHtml(sel));
+    const external = surface.body.querySelector(":scope > .skyart-status");
+    if (external) external.remove();
+    // The paper strip clips overflow. On the lightbox a failed
+    // illustration keeps its retry outside that strip, where the
+    // fixed-height control cannot be cut off.
+    if (!surface.stage && sel.skyError) {
+      surface.body.insertAdjacentHTML("beforeend",
+        `<div class="fact-row skyart-status"><span>${esc(t().sky.error)}</span><span>${skyRetryButtonHtml()}</span></div>`);
+    } else {
+      head.insertAdjacentHTML("afterend", skyArtFactsHtml(sel));
+    }
   } else if (sel.form === "chart") {
     const row = surface.body.querySelector(".fact-row");
     if (row) row.innerHTML = skyChartFactsHtml(sel);
@@ -471,6 +491,7 @@ function scheduleSkyVisual(sel, surface) {
   const ctrl = new AbortController();
   sel._abort = ctrl;
   surface.card.dataset.skyGen = String(gen);
+  if (!surface.stage) surface.card.dataset.skyState = "loading";
   sel.skyError = null;
   const job = Promise.resolve(sel.ready || (sel.ready = NAM_SKY.sceneFor(sel.observer)))
     .then(async (scene) => {
@@ -491,7 +512,10 @@ function scheduleSkyVisual(sel, surface) {
       // The paint for this generation actually landed. The picture
       // modal's watchdog compares against this stamp: a scheduled
       // generation that never reaches it gets one re-schedule.
+      if (gen !== skyVisualGen || ctrl.signal.aborted ||
+          surface.card.dataset.skyGen !== String(gen)) return;
       sel._paintedGen = gen;
+      if (!surface.stage) surface.card.dataset.skyState = "ready";
     })
     .catch((err) => {
       // A superseded job stays silent — its abort was deliberate. But
@@ -500,6 +524,7 @@ function scheduleSkyVisual(sel, surface) {
       // affordance appears instead of a silently blank canvas.
       if (gen !== skyVisualGen) return;
       sel.skyError = err;
+      if (!surface.stage) surface.card.dataset.skyState = "error";
       sel.summary = null;
       updateSkyCopy(sel);
     });
@@ -2246,6 +2271,19 @@ function imageModalOpen() {
   return !$("img-overlay").hidden;
 }
 
+/* The lightbox sizes .img-fit from the space left after the status
+   and action rows. Only the art goes in that slot; stage cards are
+   left as renderers wrote them. */
+function mountModalArt(surface) {
+  if (!surface || surface.stage) return;
+  const art = surface.body.querySelector(":scope > .sky-canvas, :scope > .postcard, :scope > .skyart");
+  if (!art || typeof art.before !== "function") return;
+  const fit = document.createElement("div");
+  fit.className = "img-fit";
+  art.before(fit);
+  fit.appendChild(art);
+}
+
 /* Open the picture itself in the modal. A gifted postcard is
    delivered by this opening (see deliverPostcardGift) — the envelope
    on the stage was only its announcement. */
@@ -2259,6 +2297,7 @@ function openImageModal(sel) {
   // a reopen painted instantly). Paint into a visible layout.
   $("img-overlay").hidden = false;
   renderSelection(sel, modalSurface());
+  mountModalArt(modalSurface());
   if (sel.cat === "sky") armSkyModalWatchdog(sel);
   $("img-capture-btn").textContent = t().capture;
   $("img-close-btn").textContent = t().captureClose;
@@ -2293,6 +2332,7 @@ function closeImageModal() {
   // the late job a no-op (it re-checks the stamp before painting).
   skyVisualGen++;
   delete $("img-card").dataset.skyGen;
+  delete $("img-card").dataset.skyState;
   // The stage rotation was paused while the modal was open; give the
   // visitor a full minute with the stage again from the close.
   lastDrawAt = Date.now();
@@ -2301,7 +2341,7 @@ function closeImageModal() {
 }
 $("img-close-btn").addEventListener("click", closeImageModal);
 $("img-overlay").addEventListener("click", (e) => {
-  if (e.target === $("img-overlay")) closeImageModal();
+  if (e.target === $("img-overlay") || e.target === $("img-overlay").querySelector(".img-dialog")) closeImageModal();
 });
 $("img-capture-btn").addEventListener("click", (e) => {
   e.stopPropagation();
@@ -2481,11 +2521,11 @@ function makeSelection(cat) {
     case "world":
       return { cat, city: CITIES[deckDraw("world")] };
     case "sky": {
-      // No deck: the sky is computed per draw, like the almanac. Its
-      // three forms — chart, illustration, moon — are equally likely.
-      // The scene itself is async (SDK); the draw lock does not wait.
-      const form = ["chart", "illustration", "moon"][Math.floor(Math.random() * 3)];
+      // No deck: the sky is computed per draw, like the almanac.
+      // Near full moon, favour the lunar portrait without changing the
+      // category weights or waiting for the asynchronous SDK scene.
       const now = new Date();
+      const form = chooseSkyForm(now);
       if (form === "moon") {
         // Right now, not 21:00. The zone's city (or latitude 35) only
         // orients the portrait. No geolocation prompt on this card.
