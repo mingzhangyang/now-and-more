@@ -807,12 +807,16 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .card.has-envelope:hover .env-cta, .card.has-envelope:focus-visible .env-cta { border-color: var(--accent); }
 
-/* Narrow phones: a slimmer thumbnail and title keep the row in
-   proportion instead of squeezing the words. */
+/* Narrow phones: a slimmer thumbnail leaves a column wide enough for
+   the name and the call to action. Titles and the call wrap inside
+   that column instead of painting past the card. */
 @media (max-width: 380px) {
-  .env-preview { flex-basis: 60%; min-height: 100px; }
-  .envelope .env-title { font-size: 24px; }
+  .env-preview { flex-basis: 48%; min-height: 96px; }
+  .envelope .env-title { font-size: 22px; }
+  .env-cta { letter-spacing: 0.06em; padding: 5px 10px; }
 }
+.envelope .env-title, .env-intro, .env-glimpse { overflow-wrap: anywhere; }
+.env-cta { max-width: 100%; box-sizing: border-box; white-space: normal; text-align: center; }
 
 /* The chart envelope uses a wide, compact glimpse above a single
    text/action row. Keep the action intact even on narrow phones. */
@@ -863,7 +867,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   align-self: stretch;
   min-width: 0;
   min-height: 0;
-  padding: 0;
+  box-sizing: border-box;
+  /* Room for the 2px focus ring (outline-offset 2px) inside overflow. */
+  padding: 4px;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -911,12 +917,14 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   justify-content: center;
   container-type: size;
 }
-/* Preserve semantic copy and credits for assistive technology and export.
-   Keep status and retry visible until the current generation paints. */
+/* Category, approximate-position notes and credits stay available to
+   assistive technology and to keepsake export, but they are not part
+   of the picture. The moon's phase name (.big) and a ready chart or
+   moon fact line stay on screen — without them the disc is anonymous.
+   Status and retry stay visible until the current generation paints,
+   and remain visible when it fails. */
 #img-card:not(.has-postcard):not(.has-skyart) .card-head,
-#img-card:not(.has-postcard):not(.has-skyart) .card-body > .big,
-#img-card:not(.has-postcard):not(.has-skyart) .card-body > .sub,
-#img-card:not(.has-postcard):not(.has-skyart)[data-sky-state="ready"] .card-body > .fact-row {
+#img-card:not(.has-postcard):not(.has-skyart) .card-body > .sub {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -926,6 +934,16 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   clip-path: inset(50%);
   white-space: nowrap;
 }
+#img-card:not(.has-postcard):not(.has-skyart) .card-body > .big {
+  flex: none;
+  color: #fff;
+  font-size: clamp(18px, 4.2vw, 26px);
+  line-height: 1.3;
+  text-align: center;
+  max-width: 100%;
+  margin: 0;
+  pointer-events: none;
+}
 #img-card .img-fit > .sky-canvas {
   width: min(100cqw, 100cqh);
   height: auto;
@@ -934,6 +952,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   max-height: 100%;
   margin: 0;
   pointer-events: auto;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.32), 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 #img-card .img-fit > .postcard,
 #img-card .img-fit > .skyart {
@@ -943,6 +962,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   max-width: 100%;
   max-height: 100%;
   pointer-events: auto;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.32), 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 #img-card .card-body > .fact-row {
   flex: none;
@@ -957,7 +977,13 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   border-color: rgba(255, 255, 255, 0.6);
   min-height: 44px;
 }
-#img-card .postcard, #img-card .skyart { box-shadow: none; }
+/* Stage and ambient illustration failures sit under the composition.
+   The stage card's own background is transparent, so the row uses the
+   page ink and must not be clipped by .skyart. */
+#card.has-skyart .skyart-status {
+  margin: 12px 16px 2px;
+  justify-content: center;
+}
 .img-dialog .capture-actions {
   align-self: center;
   flex: none;

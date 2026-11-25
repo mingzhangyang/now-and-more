@@ -456,10 +456,11 @@ function updateSkyCopy(sel) {
     [...text.children].forEach((el) => { if (el !== head) el.remove(); });
     const external = surface.body.querySelector(":scope > .skyart-status");
     if (external) external.remove();
-    // The paper strip clips overflow. On the lightbox a failed
-    // illustration keeps its retry outside that strip, where the
-    // fixed-height control cannot be cut off.
-    if (!surface.stage && sel.skyError) {
+    // .skyart clips overflow, and the retry control is a fixed height
+    // while the paper strip scales with the card. Keep a failed
+    // illustration's retry outside that strip on every surface — the
+    // lightbox and the stage, including ambient mode.
+    if (sel.skyError) {
       surface.body.insertAdjacentHTML("beforeend",
         `<div class="fact-row skyart-status"><span>${esc(t().sky.error)}</span><span>${skyRetryButtonHtml()}</span></div>`);
     } else {

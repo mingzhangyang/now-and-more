@@ -124,6 +124,7 @@ def check(browser, width, lang):
             fit = page.evaluate("""() => {
               const r=s=>document.querySelector(s).getBoundingClientRect();
               const c=r("#img-body canvas"), b=r("#img-body"), d=document.querySelector(".img-dialog");
+              const canvas=document.querySelector("#img-body canvas");
               return {
                 left:c.left>=b.left-0.5,
                 right:c.right<=b.right+0.5,
@@ -136,9 +137,13 @@ def check(browser, width, lang):
                   getComputedStyle(d).borderTopWidth==="0px" &&
                   getComputedStyle(d).boxShadow==="none" &&
                   getComputedStyle(document.querySelector("#img-card")).backgroundColor==="rgba(0, 0, 0, 0)",
-                factsHidden:r("#img-card .fact-row").width<=1 &&
-                  r("#img-card .card-head").width<=1 &&
+                chromeHidden:r("#img-card .card-head").width<=1 &&
                   r("#img-card .sub").width<=1,
+                captionShown:r("#img-card .fact-row").width>8 &&
+                  r("#img-card .fact-row").bottom<=innerHeight &&
+                  r("#img-card .fact-row").top>=0,
+                edged:getComputedStyle(canvas).boxShadow!=="none",
+                focusRoom:parseFloat(getComputedStyle(d).paddingBottom)>=4,
                 buttonsFit:r("#img-close-btn").bottom<=innerHeight &&
                   r("#img-close-btn").height>=44 &&
                   r("#img-capture-btn").bottom<=innerHeight &&
@@ -183,6 +188,7 @@ def check_lightbox(browser, width, height, lang):
         {"kind": "chart", "skyState": "loading", "message": copy["loading"], "label": ""},
         {"kind": "chart", "skyState": "error", "message": copy["error"], "label": copy["retry"]},
         {"kind": "moon", "skyState": "error", "message": copy["error"], "label": copy["reload"]},
+        {"kind": "moon", "skyState": "ready", "message": "about 100% lit", "label": ""},
         {"kind": "postcard", "skyState": "ready", "message": "", "label": ""},
         {"kind": "skyart", "skyState": "error", "message": copy["error"], "label": copy["retry"]},
         {"kind": "skyart", "skyState": "error", "message": copy["error"], "label": copy["reload"]},
@@ -247,21 +253,122 @@ def check_lightbox(browser, width, height, lang):
                 scroll: d.scrollHeight <= d.clientHeight + 1 && d.scrollWidth <= d.clientWidth + 1,
                 square: art.matches("canvas") ? Math.abs(a.width - a.height) < 1 : true,
                 ratio: art.matches("canvas") ? true : Math.abs(a.height - a.width * 4 / 3) < 1,
-                factsHidden: state.skyState === "ready" && state.kind !== "skyart" && state.kind !== "postcard"
-                  ? box(document.querySelector("#img-card .fact-row")).width <= 1 : true
+                edged: getComputedStyle(art).boxShadow !== "none",
+                chromeHidden: state.kind === "chart" || state.kind === "moon"
+                  ? box(document.querySelector("#img-card .card-head")).width <= 1 &&
+                    box(document.querySelector("#img-card .sub")).width <= 1
+                  : true,
+                captionShown: (state.kind === "chart" || state.kind === "moon") && state.skyState === "ready"
+                  ? box(document.querySelector("#img-card .fact-row")).width > 8 &&
+                    box(document.querySelector("#img-card .fact-row")).bottom <= innerHeight + 0.5
+                  : true,
+                phaseShown: state.kind === "moon" && state.skyState === "ready"
+                  ? box(document.querySelector("#img-card .big")).width > 8 &&
+                    box(document.querySelector("#img-card .big")).bottom <= innerHeight + 0.5
+                  : true
               };
             }""", state)
             where = (width, height, lang, state["kind"], state["skyState"], state["label"], fit)
             assert fit["artW"] > 40 and fit["artH"] > 40, where
             assert 0 <= fit["artTop"] and fit["artBottom"] <= height + 0.5, where
             assert fully_inside(fit["actions"]["capture"]) and fully_inside(fit["actions"]["close"]), where
-            assert fit["scroll"] and fit["square"] and fit["ratio"] and fit["factsHidden"], where
+            assert fit["scroll"] and fit["square"] and fit["ratio"] and fit["chromeHidden"], where
+            assert fit["captionShown"] and fit["phaseShown"] and fit["edged"], where
             if state["label"]:
                 assert fully_inside(fit["retry"]), where
                 if state["kind"] == "skyart":
                     assert fit["retryInArt"] is False, where
             else:
                 assert fit["retry"] is None, where
+    finally:
+        page.close()
+
+
+def check_row_envelopes(browser, width, lang):
+    """Horizontal postcard / sky envelopes keep their words inside the card."""
+    samples = {
+        "zh": [
+            ("明信片", "你收到一张图卡", "中秋 · 一轮圆月挂在城上", "宜窗边", "长街灯火与远处的潮声都停在这一夜里", "点击查看"),
+            ("星空", "你收到一张图卡", "布宜诺斯艾利斯", "今夜的星空插画", "", "点击查看"),
+            ("星空", "你收到一张图卡", "AntananarivoObservatoryNight", "满月 · 照亮约 100%", "", "点击查看"),
+        ],
+        "en": [
+            ("Postcard", "You've received a picture card", "Mid-Autumn Festival", "A round moon over the city", "The tide and the street lamps pause for this one night", "Tap to view"),
+            ("Sky", "You've received a picture card", "Buenos Aires", "Tonight's illustrated sky", "", "Tap to view"),
+            ("Sky", "You've received a picture card", "AntananarivoObservatoryNight", "Full moon · about 100% lit", "", "Tap to view"),
+        ],
+    }[lang]
+    page = browser.new_page(viewport={"width": width, "height": 844})
+    try:
+        page.set_content(HTML)
+        page.add_style_tag(content=CSS)
+        for sample in samples:
+            page.evaluate("""(sample) => {
+              const [cat, received, title, intro, glimpse, view] = sample;
+              document.querySelector("#card").className = "card has-envelope";
+              document.querySelector("#card-category").textContent = cat;
+              document.querySelector("#card-body").innerHTML =
+                '<div class="envelope env-postcard">' +
+                '<div class="env-preview env-preview-sky"></div>' +
+                '<div class="env-text">' +
+                '<p class="env-received">' + received + '</p>' +
+                '<span class="big env-title">' + title + '</span>' +
+                '<div class="sub env-intro">' + intro + '</div>' +
+                (glimpse ? '<div class="sub env-glimpse">' + glimpse + '</div>' : '') +
+                '<p class="env-cta">' + view + ' <span aria-hidden="true">›</span></p>' +
+                '</div></div>';
+            }""", list(sample))
+            fit = page.evaluate("""() => {
+              const r = s => document.querySelector(s).getBoundingClientRect();
+              const body = r("#card-body");
+              const card = document.querySelector("#card");
+              const title = r(".env-title"), intro = r(".env-intro"), cta = r(".env-cta"), preview = r(".env-preview");
+              const inside = b => b.left >= body.left - 0.5 && b.right <= body.right + 0.5 &&
+                b.top >= body.top - 0.5 && b.bottom <= body.bottom + 0.5;
+              return {
+                noCardOverflow: card.scrollWidth <= card.clientWidth + 1,
+                previewInside: inside(preview),
+                titleInside: inside(title),
+                introInside: inside(intro),
+                ctaInside: inside(cta),
+                row: preview.right <= title.left + 1,
+                titleVisible: title.width > 8 && title.height > 8
+              };
+            }""")
+            assert all(fit.values()), (width, lang, sample[2], fit)
+    finally:
+        page.close()
+
+
+def check_stage_illustration_retry(browser):
+    """A failed illustration on the stage keeps Try again outside the clipped paper."""
+    page = browser.new_page(viewport={"width": 390, "height": 844})
+    try:
+        page.set_content(HTML)
+        page.add_style_tag(content=CSS)
+        page.evaluate("""() => {
+          const card = document.querySelector("#card");
+          card.className = "card has-skyart";
+          document.querySelector("#card-body").innerHTML =
+            '<div class="skyart"><div class="sa-photo"></div>' +
+            '<div class="sa-text"><div class="sa-head"><h3 class="sa-title">Where you are</h3></div></div></div>' +
+            '<div class="fact-row skyart-status"><span>The sky did not load this time.</span>' +
+            '<span><button type="button" class="sky-retry">Try again</button></span></div>';
+        }""")
+        fit = page.evaluate("""() => {
+          const sky = document.querySelector(".skyart");
+          const btn = document.querySelector(".sky-retry");
+          const br = btn.getBoundingClientRect();
+          const sr = sky.getBoundingClientRect();
+          return {
+            outside: !sky.contains(btn),
+            below: br.top >= sr.bottom - 1,
+            tall: br.height >= 24,
+            wide: br.width > 8,
+            artClips: getComputedStyle(sky).overflow === "hidden"
+          };
+        }""")
+        assert all(fit.values()), fit
     finally:
         page.close()
 
@@ -275,8 +382,12 @@ if __name__ == "__main__":
         for width in (320, 375, 390, 430, 768, 1199, 1200, 1440):
             for lang in ("zh", "en"):
                 check(browser, width, lang)
+        for width in (320, 375, 390):
+            for lang in ("zh", "en"):
+                check_row_envelopes(browser, width, lang)
+        check_stage_illustration_retry(browser)
         for width, height in ((390, 844), (320, 844), (844, 390), (667, 320)):
             for lang in ("zh", "en"):
                 check_lightbox(browser, width, height, lang)
         browser.close()
-    print("16 envelope layouts, tall lightbox canvases, and portrait/landscape ready/loading/error controls passed")
+    print("envelope rows, stage retry, tall lightbox canvases, and portrait/landscape controls passed")

@@ -314,6 +314,8 @@ test("wide layout: the split-grid card rule is scoped to the stage card only", (
   assert.match(css, /width: min\(100cqw, calc\(100cqh \* 0\.75\)\)/);
   assert.match(app, /className = "img-fit"/);
   assert.match(app, /fact-row skyart-status/);
+  assert.match(app, /if \(sel\.skyError\) \{[\s\S]*?skyart-status/);
+  assert.doesNotMatch(app, /if \(!surface\.stage && sel\.skyError\)/);
 });
 
 test("sky modal watchdog: closing the modal disarms it", async () => {
