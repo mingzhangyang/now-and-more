@@ -3,19 +3,21 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v44";
+var CACHE_NAME = "nam-v45";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=44",
-  "/js/data.js?v=44",
-  "/js/dedup.js?v=44",
-  "/gossip-service/news-id.js?v=44",
-  "/js/gossip.js?v=44",
-  "/js/sky-engine-adapter.js?v=44",
-  "/js/app.js?v=44",
+  "/css/style.css?v=45",
+  "/css/pwa-update.css?v=45",
+  "/js/pwa-update.js?v=45",
+  "/js/data.js?v=45",
+  "/js/dedup.js?v=45",
+  "/gossip-service/news-id.js?v=45",
+  "/js/gossip.js?v=45",
+  "/js/sky-engine-adapter.js?v=45",
+  "/js/app.js?v=45",
   "/vendor/sky-engine/0.2.0/sky-engine.mjs",
   "/vendor/sky-engine/0.2.0/stars.json",
   "/vendor/sky-engine/0.2.0/manifest.json",
@@ -32,15 +34,20 @@ self.addEventListener("install", function (event) {
     caches
       .open(CACHE_NAME)
       .then(function (cache) {
-        return cache.addAll(APP_SHELL);
-      })
-      .then(function () {
-        return self.skipWaiting();
-      })
-      .catch(function () {
-        /* precache failed (e.g. offline during install): carry on regardless */
+        // Do not activate a partially downloaded update or reuse stale HTTP bytes.
+        return cache.addAll(APP_SHELL.map(function (url) {
+          return new Request(url, { cache: "reload" });
+        }));
       })
   );
+});
+
+// A first install activates normally. An update waits for user confirmation
+// (or for all clients of the old worker to close).
+self.addEventListener("message", function (event) {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    event.waitUntil(self.skipWaiting());
+  }
 });
 
 self.addEventListener("activate", function (event) {
@@ -50,7 +57,10 @@ self.addEventListener("activate", function (event) {
       .then(function (keys) {
         return Promise.all(
           keys.map(function (key) {
-            return key === CACHE_NAME ? undefined : caches.delete(key);
+            // Never delete a newer waiting worker's cache or unrelated caches.
+            var match = /^nam-v(\d+)$/.exec(key);
+            return match && Number(match[1]) < Number(CACHE_NAME.slice(5))
+              ? caches.delete(key) : undefined;
           })
         );
       })
@@ -121,9 +131,23 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
-  /* Page navigations: fresh HTML when online, shell from cache when not. */
+  /* Serve known pages from this worker's own versioned shell. Otherwise an
+     online navigation could load newer HTML while its worker is still waiting.
+     Pages also supports extensionless URLs for the three secondary pages. */
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request, "/index.html"));
+    var page = url.origin === self.location.origin &&
+      /^\/(index|library|about|privacy)(?:\.html)?$/.exec(url.pathname);
+    var shell = url.origin === self.location.origin && url.pathname === "/"
+      ? "/" : page ? "/" + page[1] + ".html" : null;
+    if (shell) {
+      event.respondWith(caches.open(CACHE_NAME).then(function (cache) {
+        return cache.match(shell);
+      }).catch(function () {}).then(function (hit) {
+        return hit || networkFirst(request, "/index.html");
+      }));
+    } else {
+      event.respondWith(networkFirst(request, "/index.html"));
+    }
     return;
   }
 
