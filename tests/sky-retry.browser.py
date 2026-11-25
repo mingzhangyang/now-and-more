@@ -1,5 +1,6 @@
 """Focused real-Chromium regression for the production retry handlers."""
 import os
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
@@ -12,6 +13,7 @@ MODULE = "/vendor/sky-engine/0.2.0/sky-engine.mjs"
 ADAPTER = (ROOT / "js/sky-engine-adapter.js").read_text()
 APP = (ROOT / "js/app.js").read_text()
 SW = (ROOT / "sw.js").read_text()
+CACHE_NAME = re.search(r'var CACHE_NAME = "(nam-v\d+)";', SW).group(1)
 SDK = "export function starCatalogLoaded(){return true;} export async function createSkyScene(){return {ok:true};}"
 
 
@@ -150,7 +152,11 @@ def offline_case(browser, origin):
         assert Server.requests == [], Server.requests
         ctx.set_offline(False)
         # A recovered response must also populate the canonical cache key.
-        page.evaluate("(url) => caches.open('nam-v32').then(c => c.delete(url))", MODULE)
+        assert page.evaluate(
+            "([name, url]) => caches.open(name).then(c => c.delete(url))",
+            [CACHE_NAME, MODULE],
+        )
+        assert not page.evaluate("(url) => caches.match(url).then(Boolean)", MODULE)
         assert page.evaluate("(url) => import(url).then(m => m.starCatalogLoaded())",
                              MODULE + "?retry=2")
         page.wait_for_function("(url) => caches.match(url).then(Boolean)", arg=MODULE)

@@ -321,21 +321,41 @@ test("midnight postcard receipt belongs to the opened day; next day's postcard i
   assert.equal(rendered[2].cat, "world");
 });
 
-test("HTML load order and offline precache match the new module", () => {
-  const html = read("index.html"), sw = read("sw.js");
-  assert.ok(html.indexOf("js/dedup.js?v=35") > html.indexOf("js/data.js?v=35"));
-  assert.ok(html.indexOf("js/app.js?v=35") > html.indexOf("js/dedup.js?v=35"));
-  assert.ok(sw.includes('"/js/dedup.js?v=35"'));
-  assert.ok(html.indexOf("gossip-service/news-id.js?v=35") > html.indexOf("js/dedup.js?v=35"));
-  assert.ok(html.indexOf("js/gossip.js?v=35") > html.indexOf("gossip-service/news-id.js?v=35"));
-  assert.ok(html.indexOf("js/sky-engine-adapter.js?v=35") > html.indexOf("js/gossip.js?v=35"));
-  assert.ok(html.indexOf("js/app.js?v=35") > html.indexOf("js/sky-engine-adapter.js?v=35"));
-  assert.ok(sw.includes('"/gossip-service/news-id.js?v=35"'));
-  assert.ok(sw.includes('"/js/gossip.js?v=35"'));
-  assert.ok(sw.includes('"/js/sky-engine-adapter.js?v=35"'));
-  assert.ok(sw.includes('"/js/app.js?v=35"'));
-  assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/sky-engine.mjs"'));
-  assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/stars.json"'));
-  assert.ok(sw.includes('"/vendor/sky-engine/0.2.0/moon-lroc.jpg"'));
-  assert.ok(sw.includes('"nam-v35"'));
+test("HTML load order and offline precache match the release version", () => {
+  const sw = read("sw.js");
+  const version = /var CACHE_NAME = "nam-v(\d+)";/.exec(sw);
+  assert.ok(version, "service worker cache version");
+  const stamp = version[1];
+  const shell = /var APP_SHELL = \[([\s\S]*?)\];/.exec(sw);
+  assert.ok(shell, "offline shell");
+  const cached = new Set([...shell[1].matchAll(/"([^"\n]+)"/g)].map(m => m[1]));
+  const scripts = [
+    "js/data.js", "js/dedup.js", "gossip-service/news-id.js",
+    "js/gossip.js", "js/sky-engine-adapter.js", "js/app.js",
+  ];
+  const html = read("index.html");
+  let previous = -1;
+  for (const script of scripts) {
+    const index = html.indexOf('src="' + script + "?v=" + stamp + '"');
+    assert.ok(index > previous, script + " must load in order");
+    previous = index;
+  }
+  for (const page of ["index.html", "about.html", "privacy.html", "library.html"]) {
+    const refs = [...read(page).matchAll(/(?:src|href)="([^"?]+)\?v=(\d+)"/g)];
+    assert.ok(refs.length, page + ": versioned assets");
+    for (const [, asset, v] of refs) {
+      assert.equal(v, stamp, page + ": " + asset);
+      // Fonts remain runtime-cached by design.
+      if (asset !== "assets/fonts/fonts.css") {
+        assert.ok(cached.has("/" + asset + "?v=" + v), asset + " missing from offline shell");
+      }
+    }
+  }
+  for (const url of cached) {
+    const v = /\?v=(\d+)$/.exec(url);
+    if (v) assert.equal(v[1], stamp, url);
+  }
+  for (const asset of ["sky-engine.mjs", "stars.json", "moon-lroc.jpg"]) {
+    assert.ok(cached.has("/vendor/sky-engine/0.2.0/" + asset));
+  }
 });

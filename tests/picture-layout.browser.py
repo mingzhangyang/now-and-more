@@ -17,8 +17,10 @@ def section(source, start, end):
 
 HTML = (
     '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
-    + section(INDEX, '<section id="card"', '</section>') + '</section>'
+    + '<body data-clock-style="paper">'
+    + section(INDEX, '<main class="stage">', '</main>') + '</main>'
     + section(INDEX, '<div id="img-overlay"', '<!-- Keepsake capture result')
+    + '</body>'
 )
 SCRIPT = """
 let liveWorldTime = null;
@@ -53,8 +55,18 @@ def check(browser, width, lang):
         layout = page.evaluate("""() => {
           const r = s => document.querySelector(s).getBoundingClientRect();
           const p=r(".env-preview"), t=r(".env-text"), c=r(".env-copy"), b=r(".env-cta");
+          const stage=document.querySelector(".stage"), card=document.querySelector("#card");
+          const sr=stage.getBoundingClientRect(), cr=card.getBoundingClientRect(), body=r("#card-body");
+          const grid=getComputedStyle(stage), columns=grid.gridTemplateColumns.split(" ").map(parseFloat);
+          const desktop=innerWidth>=1200;
           const cta=document.querySelector(".env-cta");
           return {
+            stageMode: grid.display === (desktop ? "grid" : "flex"),
+            rightColumn: !desktop || (columns.length===2 &&
+              getComputedStyle(card).gridColumnStart==="2" &&
+              Math.abs(cr.left-(sr.right-columns[1]))<1 && Math.abs(cr.right-sr.right)<1),
+            previewInside: p.left>=body.left-0.5 && p.right<=body.right+0.5 &&
+              t.left>=body.left-0.5 && t.right<=body.right+0.5,
             vertical: t.top >= p.bottom,
             fullWidth: Math.abs(p.width-t.width) < 1,
             copyLeft: c.right <= b.left+0.5,
@@ -100,8 +112,8 @@ if __name__ == "__main__":
         if os.getenv("CHROMIUM_PATH"):
             options["executable_path"] = os.environ["CHROMIUM_PATH"]
         browser = p.chromium.launch(**options)
-        for width in (320, 375, 390, 430, 768, 1440):
+        for width in (320, 375, 390, 430, 768, 1199, 1200, 1440):
             for lang in ("zh", "en"):
                 check(browser, width, lang)
         browser.close()
-    print("12 envelope layouts and 24 modal canvas layouts passed")
+    print("16 envelope layouts and 32 modal canvas layouts passed")
