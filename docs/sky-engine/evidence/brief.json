@@ -1,0 +1,383 @@
+{
+  "console": [],
+  "startupSdk": [
+    {
+      "name": "/js/sky-engine-adapter.js?v=29",
+      "start": 31.100000000093132,
+      "dur": 37.60000000009313
+    }
+  ],
+  "repeat": {
+    "firstScene": 11.199999999953434,
+    "firstPaint": 156.30000000004657,
+    "repeatScene": 0,
+    "repeatPaint": 153.60000000009313,
+    "sameScene": true,
+    "heap": 27122532
+  },
+  "scenes": [
+    {
+      "name": "gaithersburg-night",
+      "form": "chart",
+      "ms": 268,
+      "error": null,
+      "sig": {
+        "key": "cassiopeia",
+        "az": 359.20549135166243,
+        "alt": 68.22772037018169,
+        "dir": 0
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": null,
+      "pix": {
+        "mean": 16.8942736911206,
+        "variance": 589,
+        "bright": 793,
+        "gold": 186,
+        "pale": 364
+      },
+      "approx": true
+    },
+    {
+      "name": "gaithersburg-night",
+      "form": "illustration",
+      "ms": 244,
+      "error": null,
+      "sig": {
+        "key": "cassiopeia",
+        "az": 359.20549135166243,
+        "alt": 68.22772037018169,
+        "dir": 0
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "cassiopeia",
+        "az": [
+          8,
+          13,
+          342,
+          350,
+          358
+        ],
+        "crossesNorth": true
+      },
+      "pix": {
+        "mean": 53.177118354050734,
+        "variance": 2813,
+        "bright": 22439,
+        "gold": 2,
+        "pale": 176
+      },
+      "approx": false
+    },
+    {
+      "name": "Gaithersburg noon",
+      "form": "illustration",
+      "ms": 85,
+      "error": null,
+      "sig": {
+        "key": "cassiopeia",
+        "az": 21.762490198065166,
+        "alt": 16.57036868184686,
+        "dir": 0
+      },
+      "astro": null,
+      "wrap": {
+        "key": "cassiopeia",
+        "az": [
+          14,
+          19,
+          22,
+          26,
+          28
+        ],
+        "crossesNorth": false
+      },
+      "pix": {
+        "mean": 173.9841300784782,
+        "variance": 1742,
+        "bright": 105633,
+        "gold": 574,
+        "pale": 65153
+      },
+      "approx": false
+    },
+    {
+      "name": "reykjavik-summer",
+      "form": "illustration",
+      "ms": 45,
+      "error": null,
+      "sig": {
+        "key": "triangle",
+        "az": 174.65884187551137,
+        "alt": 55.63078024313117,
+        "dir": 4
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "triangle",
+        "az": [
+          143,
+          173,
+          203
+        ],
+        "crossesNorth": false
+      },
+      "pix": {
+        "mean": 163.95565211131387,
+        "variance": 838,
+        "bright": 22745,
+        "gold": 14356,
+        "pale": 209
+      },
+      "approx": false
+    },
+    {
+      "name": "sydney-winter-evening",
+      "form": "illustration",
+      "ms": 201,
+      "error": null,
+      "sig": {
+        "key": "crux",
+        "az": 203.0349291433226,
+        "alt": 59.96553416590552,
+        "dir": 5
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "crux",
+        "az": [
+          199,
+          200,
+          206,
+          207
+        ],
+        "crossesNorth": false
+      },
+      "pix": {
+        "mean": 64.69569020777126,
+        "variance": 2564,
+        "bright": 22452,
+        "gold": 1,
+        "pale": 608
+      },
+      "approx": false
+    },
+    {
+      "name": "quito-midnight",
+      "form": "illustration",
+      "ms": 209,
+      "error": null,
+      "sig": {
+        "key": "triangle",
+        "az": 343.52491503821705,
+        "alt": 55.286228426151524,
+        "dir": 0
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "triangle",
+        "az": [
+          4,
+          318,
+          331
+        ],
+        "crossesNorth": true
+      },
+      "pix": {
+        "mean": 54.390599193341636,
+        "variance": 2785,
+        "bright": 22124,
+        "gold": 2,
+        "pale": 331
+      },
+      "approx": false
+    },
+    {
+      "name": "anchorage-solstice",
+      "form": "illustration",
+      "ms": 206,
+      "error": null,
+      "sig": {
+        "key": "cassiopeia",
+        "az": 280.2916006299046,
+        "alt": 75.52998235980559,
+        "dir": 6
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "cassiopeia",
+        "az": [
+          271,
+          276,
+          282,
+          284,
+          296
+        ],
+        "crossesNorth": false
+      },
+      "pix": {
+        "mean": 51.43947783930055,
+        "variance": 2867,
+        "bright": 21913,
+        "gold": 1,
+        "pale": 205
+      },
+      "approx": false
+    },
+    {
+      "name": "johannesburg-equinox",
+      "form": "chart",
+      "ms": 18,
+      "error": null,
+      "sig": {
+        "key": "orion",
+        "az": 304.0114678572296,
+        "alt": 49.96660974321664,
+        "dir": 7
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "orion",
+        "az": [
+          290,
+          296,
+          304,
+          309,
+          318
+        ],
+        "crossesNorth": false
+      },
+      "pix": {
+        "mean": 17.026385185955363,
+        "variance": 562,
+        "bright": 458,
+        "gold": 179,
+        "pale": 642
+      },
+      "approx": true
+    },
+    {
+      "name": "singapore-evening",
+      "form": "illustration",
+      "ms": 202,
+      "error": null,
+      "sig": {
+        "key": "orion",
+        "az": 92.81873996837038,
+        "alt": 44.106595223726536,
+        "dir": 2
+      },
+      "astro": {
+        "sun": true,
+        "moon": true,
+        "stars": true,
+        "clear": true
+      },
+      "wrap": {
+        "key": "orion",
+        "az": [
+          82,
+          92,
+          93,
+          94,
+          104
+        ],
+        "crossesNorth": false
+      },
+      "pix": {
+        "mean": 98.65651358938618,
+        "variance": 2153,
+        "bright": 22321,
+        "gold": 30,
+        "pale": 528
+      },
+      "approx": false
+    }
+  ],
+  "product": [
+    {
+      "moon": "🌕Full Moon\n100% illuminated\nMoon age 14 days",
+      "hasCanvas": false
+    },
+    {
+      "world": "Beijing\nSunrise 07:11\nSunset 16:54\nDay length 9h 43m"
+    },
+    {
+      "almanac": "己巳日\n节气 冬至 · 今日交节 20:50\n值神 执\n冲猪煞西北\nGood for 开光 · 开池 · 栽种 · 赴任 · 治病\nAvoid 破土 · 作灶 · 造船 · 置产\n吉神 民日（主安民宜事） · 月德（主和顺吉祥） · 母仓（主积蓄丰盈）\n凶神 玄武（主盗失暗昧） · 天牢（主束缚困顿）\n彭祖百忌 己不破券，二比并亡；巳不远行，财物伏藏\nA playful almanac, for reference only"
+    },
+    {
+      "keepsake": {
+        "w": 1080,
+        "h": 1700
+      }
+    }
+  ],
+  "retry": {
+    "failedError": "Failed to fetch dynamically imported module: http://127.0.0.1:8099/vendor/sky-engine/0.1.0/sky-engine.mjs",
+    "failedText": "Gaithersburg\n\nTonight's sky\n\nThe sky did not load this time.\n\nTry again",
+    "retried": {
+      "clicked": false,
+      "text": "时\nNow, and More\n⚙\nPress Esc to exit ambient mode\n\nThe time is certain. What comes next is not.\n\nTuesday, November 24, 2026\n\n21:48:35\nScience\nIce floats because, as water freezes, its molecules lock in"
+    }
+  },
+  "offline": {
+    "cached": [
+      "/js/sky-engine-adapter.js",
+      "/vendor/sky-engine/0.1.0/sky-engine.mjs",
+      "/vendor/sky-engine/0.1.0/stars.json",
+      "/vendor/sky-engine/0.1.0/manifest.json"
+    ],
+    "keys": [
+      "nam-v29"
+    ],
+    "error": null,
+    "stars": 5070,
+    "sig": {
+      "key": "cassiopeia",
+      "az": 359.20549135166243,
+      "alt": 68.22772037018169,
+      "dir": 0
+    },
+    "pix": {
+      "mean": 53.177118354050734,
+      "variance": 2813,
+      "bright": 22439
+    }
+  }
+}

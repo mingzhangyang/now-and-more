@@ -3,18 +3,23 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v28";
+var CACHE_NAME = "nam-v32";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=28",
-  "/js/data.js?v=28",
-  "/js/dedup.js?v=28",
-  "/gossip-service/news-id.js?v=28",
-  "/js/gossip.js?v=28",
-  "/js/app.js?v=28",
+  "/css/style.css?v=32",
+  "/js/data.js?v=32",
+  "/js/dedup.js?v=32",
+  "/gossip-service/news-id.js?v=32",
+  "/js/gossip.js?v=32",
+  "/js/sky-engine-adapter.js?v=32",
+  "/js/app.js?v=32",
+  "/vendor/sky-engine/0.2.0/sky-engine.mjs",
+  "/vendor/sky-engine/0.2.0/stars.json",
+  "/vendor/sky-engine/0.2.0/manifest.json",
+  "/vendor/sky-engine/0.2.0/moon-lroc.jpg",
   "/privacy.html",
   "/about.html",
   "/library.html",
@@ -90,11 +95,12 @@ function networkFirst(request, fallbackUrl) {
     });
 }
 
-function cacheFirst(request) {
-  return caches.match(request).then(function (hit) {
+function cacheFirst(request, cacheKey) {
+  var key = cacheKey || request;
+  return caches.match(key).then(function (hit) {
     if (hit) return hit;
     return fetch(request).then(function (response) {
-      cachePut(request, response);
+      cachePut(key, response);
       return response;
     });
   });
@@ -143,6 +149,16 @@ self.addEventListener("fetch", function (event) {
      available offline afterwards. */
   if (url.origin === self.location.origin && url.pathname.indexOf("/assets/fonts/") === 0) {
     event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  /* Retry URLs bypass a document's failed module map entry, but reference
+     the same immutable, version-pinned bytes. Reuse the canonical cache
+     entry offline and store recovered responses under that one key. */
+  if (url.origin === self.location.origin &&
+      /^\/vendor\/sky-engine\/[^/]+\/sky-engine\.mjs$/.test(url.pathname) &&
+      /^\?retry=[1-3]$/.test(url.search)) {
+    event.respondWith(cacheFirst(request, url.origin + url.pathname));
     return;
   }
 

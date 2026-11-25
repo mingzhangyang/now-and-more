@@ -476,7 +476,31 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .card-body .moon-glyph { font-size: 44px; margin-right: 12px; vertical-align: middle; }
 .card-body .sky-canvas { display: block; margin: 2px auto 10px; }
+.card-body .sky-canvas { background: #10182e; }
+.sky-retry {
+  appearance: none;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+  border-radius: 999px;
+  padding: 0.15em 0.75em;
+  cursor: pointer;
+}
+.skyart .sky-retry {
+  color: #2b2620;
+  border-color: rgba(43, 38, 32, 0.28);
+  background: transparent;
+}
 .card-body .sky-chart { width: min(350px, 82vw); height: auto; }
+.card-body .sky-moon {
+  width: min(260px, 68vw);
+  height: auto;
+  border-radius: 50%;
+  margin-bottom: 8px;
+}
 .card-body .sky-illustration { width: 100%; height: auto; border-radius: 10px; }
 .card-body a.gossip-link {
   color: inherit;

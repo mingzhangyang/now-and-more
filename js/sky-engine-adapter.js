@@ -1,0 +1,240 @@
+/* Now, and More — Sky Engine adapter (M4).
+   Loads the pinned, same-origin Sky Engine SDK and its matching catalog.
+   The site owns time, place, disclosure and which signature asterism to
+   draw. The SDK owns positions and the illustration. A failed load is
+   reported to the caller; this file does not keep a second sky engine. */
+"use strict";
+
+(function () {
+  var VERSION = "0.2.0";
+  var SOURCE_COMMIT = "c177b659cf1bc5200698c11d3ec408890fbcc297";
+  var RELEASE_TAG = "sky-engine-v0.2.0";
+  var BASE = "vendor/sky-engine/0.2.0/";
+  var SCENE_LIMIT = 6;
+
+  var enginePromise = null;
+  var engineAttempt = 0;
+  var ENGINE_RETRY_LIMIT = 3;
+  var catalogJson = null;
+  var catalogFlight = null;
+  var moonBitmap = null;
+  var moonFlight = null;
+  var scenes = new Map();
+
+  function asset(name) {
+    return new URL(BASE + name, document.baseURI).href;
+  }
+
+  function needsReload() {
+    return engineAttempt > ENGINE_RETRY_LIMIT;
+  }
+
+  function reset() {
+    // Keep the current module flight/instance: the browser retains its module map.
+    catalogJson = null;
+    catalogFlight = null;
+    moonBitmap = null;
+    moonFlight = null;
+    scenes.clear();
+  }
+
+  function loadEngine() {
+    if (!enginePromise) {
+      if (needsReload()) return Promise.reject(new Error("Sky Engine module retry limit reached."));
+      // A failed module URL can remain rejected in this document's module map.
+      // Advance only after an actual import failure, not a catalog/texture failure.
+      var url = new URL(asset("sky-engine.mjs"));
+      if (engineAttempt) url.searchParams.set("retry", String(engineAttempt));
+      enginePromise = import(url.href).catch(function (err) {
+        engineAttempt += 1;
+        enginePromise = null;
+        throw err;
+      });
+    }
+    return enginePromise;
+  }
+
+  /* One catalog flight for every caller. The SDK bounds each caller; this
+     fetch is not tied to one caller's abort, so a timeout does not throw
+     away a download another card still needs. A failed flight is cleared
+     and the next call tries again. */
+  function loadCatalog() {
+    if (catalogJson) return Promise.resolve(catalogJson);
+    if (catalogFlight) return catalogFlight;
+    catalogFlight = fetch(asset("stars.json"))
+      .then(function (res) {
+        if (!res.ok) throw new Error("Star catalog unavailable (" + res.status + ")");
+        return res.json();
+      })
+      .then(function (json) {
+        catalogJson = json;
+        catalogFlight = null;
+        return json;
+      })
+      .catch(function (err) {
+        catalogFlight = null;
+        throw err;
+      });
+    return catalogFlight;
+  }
+
+  /* One decoded NASA map for every moon portrait. A caller's abort does
+     not cancel this download; a failed flight is cleared and retried. */
+  function loadMoon() {
+    if (moonBitmap) return Promise.resolve(moonBitmap);
+    if (moonFlight) return moonFlight;
+    moonFlight = fetch(asset("moon-lroc.jpg"))
+      .then(function (res) {
+        if (!res.ok) throw new Error("Moon texture unavailable (" + res.status + ")");
+        return res.blob();
+      })
+      .then(function (blob) { return createImageBitmap(blob); })
+      .then(function (bitmap) {
+        moonBitmap = bitmap;
+        moonFlight = null;
+        return bitmap;
+      })
+      .catch(function (err) {
+        moonFlight = null;
+        throw err;
+      });
+    return moonFlight;
+  }
+
+  function sceneKey(obs) {
+    var when = obs.when instanceof Date ? obs.when.getTime() : Number(obs.when);
+    return [
+      Number(obs.lat).toFixed(4),
+      Number(obs.lon).toFixed(4),
+      String(obs.tz || ""),
+      String(Math.floor(when / 60000)),
+    ].join("|");
+  }
+
+  function sceneFor(obs) {
+    if (!obs || typeof obs.lat !== "number" || typeof obs.lon !== "number" || !obs.tz || !obs.when) {
+      return Promise.reject(new Error("Sky observer is incomplete."));
+    }
+    var key = sceneKey(obs);
+    var hit = scenes.get(key);
+    if (hit) return hit;
+    var pending = loadEngine().then(function (engine) {
+      return engine.createSkyScene({
+        latitude: obs.lat,
+        longitude: obs.lon,
+        timezone: obs.tz,
+        elevation: 0,
+        locationName: obs.name || "",
+        instant: obs.when instanceof Date ? obs.when : new Date(obs.when),
+        weather: "clear",
+        skyBrightness: "dark",
+        /* Product view when no signature asterism is framed. Not the
+           engine's automatic postcard framing. */
+        view: { heading: obs.lat >= 0 ? 180 : 0, altitude: 30, fov: 66 },
+        aspect: 1,
+        layers: { stars: true, lines: false, labels: false },
+        loadCatalog: engine.starCatalogLoaded()
+          ? undefined
+          : function () {
+            return loadCatalog().then(function (json) { return engine.decodeStarColumns(json); });
+          },
+      });
+    }).catch(function (err) {
+      scenes.delete(key);
+      throw err;
+    });
+    scenes.set(key, pending);
+    while (scenes.size > SCENE_LIMIT) {
+      var oldest = scenes.keys().next().value;
+      if (oldest === key) break;
+      scenes.delete(oldest);
+    }
+    return pending;
+  }
+
+  function aimedScene(scene, sig) {
+    if (!sig) return scene;
+    var alt = sig.alt - 15;
+    if (alt < 12) alt = 12;
+    if (alt > 52) alt = 52;
+    return Object.assign({}, scene, {
+      view: { heading: sig.az, altitude: alt, fov: 66 },
+    });
+  }
+
+  /* Paint one whole canvas. `sig` is a product asterism ({ lines, az, alt })
+     or null. Null keeps the scene view and draws no constellation lines.
+     An empty pattern list suppresses the engine's built-in patterns. */
+  function paintIllustration(canvas, scene, sig, signal) {
+    return loadEngine().then(function (engine) {
+      var options = sig
+        ? {
+          composition: { pattern: "signature" },
+          patterns: [{ id: "signature", lines: sig.lines }],
+          layers: { stars: true, lines: true, labels: false },
+        }
+        : {
+          composition: "current",
+          patterns: [],
+          layers: { stars: true, lines: false, labels: false },
+        };
+      options.landscape = "ridge";
+      options.milkyWay = true;
+      options.paintFinish = true;
+      if (signal) options.signal = signal;
+      return engine.renderIllustration(canvas, aimedScene(scene, sig), options);
+    });
+  }
+
+  /* Whole-canvas circular chart. The engine owns the disc, planets and
+     the attribution footer. Locale is "en" or "zh-Hans". */
+  function paintChart(canvas, scene, locale) {
+    return loadEngine().then(function (engine) {
+      return engine.renderSkyChart(canvas, scene, {
+        theme: "midnight",
+        limitingMagnitude: 6,
+        locale: locale === "zh-Hans" ? "zh-Hans" : "en",
+      });
+    });
+  }
+
+  /* Whole-canvas lunar portrait. The texture is the vendored NASA map. */
+  function paintMoon(canvas, scene, signal) {
+    return loadEngine().then(function (engine) {
+      return loadMoon().then(function (bitmap) {
+        if (signal && signal.aborted) {
+          var err = new Error("Moon portrait cancelled.");
+          err.name = "AbortError";
+          throw err;
+        }
+        engine.installMoonTexture(bitmap);
+        return engine.renderMoonPhase(canvas, scene, {
+          style: "realistic",
+          orientation: "observer",
+          background: "dark",
+          earthshine: true,
+          signal: signal,
+        });
+      });
+    });
+  }
+
+  function warm() {
+    return loadEngine().then(function () {
+      return Promise.all([loadCatalog(), loadMoon()]);
+    }).then(function () { return true; });
+  }
+
+  window.NAM_SKY = {
+    version: VERSION,
+    sourceCommit: SOURCE_COMMIT,
+    releaseTag: RELEASE_TAG,
+    sceneFor: sceneFor,
+    paintIllustration: paintIllustration,
+    paintChart: paintChart,
+    paintMoon: paintMoon,
+    warm: warm,
+    reset: reset,
+    needsReload: needsReload,
+  };
+})();

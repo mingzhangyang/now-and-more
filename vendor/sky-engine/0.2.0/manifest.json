@@ -1,0 +1,57 @@
+{
+  "name": "@orangely/sky-engine",
+  "version": "0.2.0",
+  "tag": "sky-engine-v0.2.0",
+  "sourceCommit": "c177b659cf1bc5200698c11d3ec408890fbcc297",
+  "bundle": {
+    "rawBytes": 404573,
+    "gzipBytes": 116388
+  },
+  "catalog": {
+    "rawBytes": 236177,
+    "gzipBytes": 95470,
+    "license": "CC-BY-SA-4.0"
+  },
+  "moonTexture": {
+    "rawBytes": 457942,
+    "sha256": "f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170",
+    "license": "NASA public-domain imagery"
+  },
+  "files": [
+    {
+      "name": "moon-lroc.jpg",
+      "bytes": 457942,
+      "sha256": "f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170"
+    },
+    {
+      "name": "orangely-sky-engine-0.2.0.tgz",
+      "bytes": 245548,
+      "sha256": "5bedb1c96a2fa061539d0b283740fc416572957782e69ea1d5d81aedb79bbcd1"
+    },
+    {
+      "name": "orangely-sky-engine-landscapes-0.2.0.tgz",
+      "bytes": 3592839,
+      "sha256": "8866ba2cd7746357a05a0c232842a16c1fdd0cc8ff93f92c7ea2c5f8922873a1"
+    },
+    {
+      "name": "orangely-sky-engine-moon-texture-0.2.0.tgz",
+      "bytes": 449398,
+      "sha256": "d60f96bf4162cc5af2fe6a3ab39089d00d9616acdcbf2b6ef4a386a43e83cf6f"
+    },
+    {
+      "name": "sky-engine-NOTICES.txt",
+      "bytes": 34726,
+      "sha256": "0ded5563355c88372bed2fc0a2111aeccf4c1a2cd6d648c82dc7c50c1ccf2cb5"
+    },
+    {
+      "name": "sky-engine.mjs",
+      "bytes": 404573,
+      "sha256": "f46bfd352d626786d8be4e2e9210e1ed83f3f7cad9af22202123f3750b9db890"
+    },
+    {
+      "name": "stars.json",
+      "bytes": 236177,
+      "sha256": "01bd7a9f0fb20e269b18fb9548b6076ead6decac876f310b7d018ad3855af999"
+    }
+  ]
+}
