@@ -15,3 +15,15 @@ jobs:
           node-version: '22'
       - run: node --check js/dedup.js && node --check js/gossip.js && node --check gossip-service/news-id.js && node --check gossip-service/worker.js && node --check js/app.js && node --check js/data.js && node --check js/sky-engine-adapter.js && node --check sw.js && node --check scripts/update-sky-engine.mjs
       - run: node --test tests/*.test.cjs
+  picture-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.57.0
+      - run: python -m playwright install --with-deps chromium
+      - run: python tests/picture-layout.browser.py
+      - run: python tests/picture-production.browser.py
