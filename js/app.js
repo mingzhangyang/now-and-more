@@ -454,7 +454,17 @@ function updateSkyCopy(sel) {
     const head = text && text.querySelector(".sa-head");
     if (!text || !head) return;
     [...text.children].forEach((el) => { if (el !== head) el.remove(); });
-    head.insertAdjacentHTML("afterend", skyArtFactsHtml(sel));
+    const external = surface.body.querySelector(":scope > .skyart-status");
+    if (external) external.remove();
+    // The paper strip clips overflow. On the lightbox a failed
+    // illustration keeps its retry outside that strip, where the
+    // fixed-height control cannot be cut off.
+    if (!surface.stage && sel.skyError) {
+      surface.body.insertAdjacentHTML("beforeend",
+        `<div class="fact-row skyart-status"><span>${esc(t().sky.error)}</span><span>${skyRetryButtonHtml()}</span></div>`);
+    } else {
+      head.insertAdjacentHTML("afterend", skyArtFactsHtml(sel));
+    }
   } else if (sel.form === "chart") {
     const row = surface.body.querySelector(".fact-row");
     if (row) row.innerHTML = skyChartFactsHtml(sel);
@@ -2261,6 +2271,19 @@ function imageModalOpen() {
   return !$("img-overlay").hidden;
 }
 
+/* The lightbox sizes .img-fit from the space left after the status
+   and action rows. Only the art goes in that slot; stage cards are
+   left as renderers wrote them. */
+function mountModalArt(surface) {
+  if (!surface || surface.stage) return;
+  const art = surface.body.querySelector(":scope > .sky-canvas, :scope > .postcard, :scope > .skyart");
+  if (!art || typeof art.before !== "function") return;
+  const fit = document.createElement("div");
+  fit.className = "img-fit";
+  art.before(fit);
+  fit.appendChild(art);
+}
+
 /* Open the picture itself in the modal. A gifted postcard is
    delivered by this opening (see deliverPostcardGift) — the envelope
    on the stage was only its announcement. */
@@ -2274,6 +2297,7 @@ function openImageModal(sel) {
   // a reopen painted instantly). Paint into a visible layout.
   $("img-overlay").hidden = false;
   renderSelection(sel, modalSurface());
+  mountModalArt(modalSurface());
   if (sel.cat === "sky") armSkyModalWatchdog(sel);
   $("img-capture-btn").textContent = t().capture;
   $("img-close-btn").textContent = t().captureClose;

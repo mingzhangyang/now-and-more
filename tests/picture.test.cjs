@@ -307,6 +307,13 @@ test("wide layout: the split-grid card rule is scoped to the stage card only", (
     "the wide split-layout rule targets the stage card by id");
   assert.ok(/\.capture-dialog\.img-dialog \{\s*width: min\(680px/.test(css),
     "the picture dialog keeps its 680px width over the generic capture dialog");
+  assert.ok(!css.includes("--img-height") && !css.includes("max(180px"),
+    "the lightbox must not reserve a fixed chrome height or a 180px composition floor");
+  assert.match(css, /#img-card \.img-fit \{[\s\S]*container-type: size;/);
+  assert.match(css, /width: min\(100cqw, 100cqh\)/);
+  assert.match(css, /width: min\(100cqw, calc\(100cqh \* 0\.75\)\)/);
+  assert.match(app, /className = "img-fit"/);
+  assert.match(app, /fact-row skyart-status/);
 });
 
 test("sky modal watchdog: closing the modal disarms it", async () => {
