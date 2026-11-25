@@ -105,6 +105,44 @@ function networkFirst(request, fallbackUrl) {
     });
 }
 
+// cache.addAll follows redirects (e.g. Cloudflare Pages strips .html).
+// A navigation has redirect mode "manual" and cannot use a response whose
+// URL list records a followed redirect. Rebuild only those readable responses;
+// real manual network redirects (opaqueredirect) pass through untouched.
+function navigationResponse(response) {
+  if (response && response.redirected) {
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  }
+  return response;
+}
+
+function navigate(request, shell) {
+  return caches.open(CACHE_NAME).catch(function () { return null; }).then(function (cache) {
+    function match(key) {
+      return cache ? cache.match(key).catch(function () {}) : Promise.resolve();
+    }
+    return (shell ? match(shell) : Promise.resolve()).then(function (hit) {
+      if (hit) return hit;
+      return fetch(request).then(function (response) {
+        cachePut(request, response);
+        return response;
+      }).catch(function (error) {
+        // Never read a waiting worker's cache, even for offline fallbacks.
+        return match(request).then(function (hit) {
+          return hit || match("/");
+        }).then(function (hit) {
+          if (hit) return hit;
+          throw error;
+        });
+      });
+    }).then(navigationResponse);
+  });
+}
+
 function cacheFirst(request, cacheKey) {
   var key = cacheKey || request;
   return caches.match(key).then(function (hit) {
@@ -137,17 +175,10 @@ self.addEventListener("fetch", function (event) {
   if (request.mode === "navigate") {
     var page = url.origin === self.location.origin &&
       /^\/(index|library|about|privacy)(?:\.html)?$/.exec(url.pathname);
-    var shell = url.origin === self.location.origin && url.pathname === "/"
+    var shell = url.origin === self.location.origin &&
+      (url.pathname === "/" || (page && page[1] === "index"))
       ? "/" : page ? "/" + page[1] + ".html" : null;
-    if (shell) {
-      event.respondWith(caches.open(CACHE_NAME).then(function (cache) {
-        return cache.match(shell);
-      }).catch(function () {}).then(function (hit) {
-        return hit || networkFirst(request, "/index.html");
-      }));
-    } else {
-      event.respondWith(networkFirst(request, "/index.html"));
-    }
+    event.respondWith(navigate(request, shell));
     return;
   }
 
