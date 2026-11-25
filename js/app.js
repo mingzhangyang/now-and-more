@@ -3705,8 +3705,7 @@ function repaintCurrentSelection() {
 }
 
 function enterAmbient() {
-  if (ambientOn) return;
-  if (imageModalOpen()) closeImageModal(); // no picture modal in ambient mode
+  if (ambientOn || activeModal) return;
   ambientOn = true;
   document.body.classList.add("ambient");
   setSettingsOpen(false);
@@ -3762,6 +3761,10 @@ document.addEventListener("visibilitychange", () => {
   if (ambientOn && document.visibilityState === "visible") acquireWakeLock();
 });
 document.addEventListener("keydown", (e) => {
+  // Keys inside a dialog belong to that dialog. F must not enter ambient
+  // (which would also dismiss a picture) and Escape must not be treated
+  // as leaving a mode the reader never entered.
+  if (activeModal) return;
   if (e.key === "Escape" && ambientOn) {
     exitAmbient();
     return;
@@ -4647,7 +4650,7 @@ function initialDraw() {
   drawCard();
 }
 window.addEventListener("storage", e => {
-  if (e.key === NAM_DEDUP.KEY || e.key === null) deckState.sync();
+  if (e.key === NAM_DEDUP.KEY || e.key === NAM_DEDUP.HISTORY_KEY || e.key === null) deckState.sync();
   if (e.key === NOTES_REVISION_KEY || e.key === null) notesLoadAll();
 });
 window.addEventListener("focus", () => { deckState.sync(); notesLoadAll(); });

@@ -206,6 +206,13 @@ def check_modal_isolation(browser, origin):
         assert overlay.is_visible()
         assert page.evaluate("() => document.querySelector('main.stage').inert")
         assert close.evaluate("(e) => e === document.activeElement")
+        # F is handled on document even when the focused control is a
+        # dialog button. It must not enter ambient or move the stage.
+        page.keyboard.press("f")
+        assert overlay.is_visible()
+        assert close.evaluate("(e) => e === document.activeElement")
+        assert not page.evaluate("() => document.body.classList.contains('ambient') || document.fullscreenElement")
+        assert abs(page.evaluate("() => document.querySelector('main.stage').getBoundingClientRect().top") - before["stage"]) <= 1
         page.wait_for_function("() => !drawGate.pending")
         assert page.evaluate("() => encounter") == before["count"]
         assert page.evaluate("() => localStorage.getItem(NAM_DEDUP.KEY)") == before["deck"]
@@ -267,6 +274,12 @@ def check_modal_isolation(browser, origin):
             page.locator(selector).wait_for(state="visible", timeout=5000)
             assert page.evaluate("() => document.documentElement.classList.contains('modal-open') && document.querySelector('main.stage').inert"), selector
             assert not page.evaluate("() => drawCard()"), selector
+            if selector == "#img-overlay":
+                assert page.evaluate("() => document.activeElement === $('img-close-btn')")
+                page.keyboard.press("f")
+                assert page.locator(selector).is_visible()
+                assert not page.evaluate("() => document.body.classList.contains('ambient')")
+                assert abs(page.evaluate("() => document.querySelector('main.stage').getBoundingClientRect().top") - before["stage"]) <= 1
             page.keyboard.press("Escape")
             assert not page.locator(selector).is_visible(), selector
             assert not page.evaluate("() => document.documentElement.classList.contains('modal-open') || document.querySelector('main.stage').inert"), selector

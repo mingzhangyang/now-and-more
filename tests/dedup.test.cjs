@@ -52,7 +52,8 @@ test("commit after render, rollback on failure, reload resumes bag", () => {
     throw Error("render failed");
   }), /render failed/);
   assert.equal(storage.writes, count);
-  assert.equal(JSON.stringify(state.state), before);
+  assert.equal(JSON.stringify({ v: state.state.v, d: state.state.d, g: state.state.g, fp: state.state.fp }), before);
+  assert.deepEqual(state.state.historyDaily, []);
   assert.throws(() => state.draw("pool", ids(20)), /transaction/);
   state = api.createDeckState(storage, seeded(7));
   const remaining = Array.from({ length: 13 }, () => state.transact(() => state.draw("pool", ids(20))));
@@ -206,9 +207,11 @@ test("failed history render rolls back its slot, and old or malformed counts are
   assert.equal(h.select("history").cat, "history");
   assert.equal(h.select("history").cat, "history");
   const before = storage.getItem(key);
+  const beforeHistory = storage.getItem(api.HISTORY_KEY);
   h.fail(true);
   assert.throws(() => h.select("history"), /render failed/);
   assert.equal(storage.getItem(key), before);
+  assert.equal(storage.getItem(api.HISTORY_KEY), beforeHistory);
   assert.equal(h.state.historyAvailable(day), true);
   h.fail(false);
   assert.equal(h.select("history").cat, "history");
@@ -245,6 +248,70 @@ test("shared-lock tabs cannot spend more than three history slots combined", asy
   }));
   assert.equal(results.filter(Boolean).length, 3);
   assert.equal(api.createDeckState(storage).historyAvailable(day), false);
+});
+
+// Deployed v40 rebuilds {v,d,g,fp} and drops every other field on nam-decks-v2.
+function rewriteLikeV40(storage, mutate) {
+  const parsed = JSON.parse(storage.getItem(key));
+  const legacy = {
+    v: 2,
+    d: parsed && parsed.d && typeof parsed.d === "object" ? parsed.d : {},
+    g: parsed && parsed.g && typeof parsed.g === "object" ? parsed.g : {},
+    fp: parsed && Array.isArray(parsed.fp) ? parsed.fp : [],
+  };
+  if (mutate) mutate(legacy);
+  storage.setItem(key, JSON.stringify(legacy));
+}
+
+test("a v40 writer cannot erase the daily history budget", () => {
+  const day = "20261125";
+  const storage = store();
+  const writer = api.createDeckState(storage, () => 0);
+  assert.ok(writer.transact(() => writer.draw("pool", ids(4))) >= 0);
+  for (let i = 0; i < 3; i++) assert.equal(writer.transact(() => writer.recordHistory(day)), true);
+  assert.equal(writer.historyAvailable(day), false);
+  const isolated = storage.getItem(api.HISTORY_KEY);
+  assert.match(isolated, /20261125/);
+  assert.equal(JSON.parse(storage.getItem(key)).historyDaily, undefined);
+  const seen = JSON.parse(storage.getItem(key)).d.pool.s.slice();
+  assert.equal(seen.length, 1);
+  rewriteLikeV40(storage, (legacy) => {
+    legacy.d.pool.s.push("id:legacy");
+  });
+  assert.equal(storage.getItem(api.HISTORY_KEY), isolated);
+  writer.sync();
+  assert.equal(writer.historyAvailable(day), false);
+  assert.ok(writer.state.d.pool.s.includes(seen[0]));
+  assert.ok(writer.state.d.pool.s.includes("id:legacy"));
+  const reader = api.createDeckState(storage);
+  assert.equal(reader.historyAvailable(day), false);
+  assert.equal(reader.transact(() => reader.recordHistory(day)), false);
+  assert.deepEqual(reader.state.d.pool.s, writer.state.d.pool.s);
+
+  // A pre-fix snapshot kept the budget only inside nam-decks-v2.
+  // Loading the new build copies it out; a later v40 rewrite cannot restore the slots.
+  const embedded = store({ v: 2, d: { pool: { s: ["id:0"], r: ["id:1"], l: "id:0" } }, g: {}, fp: [], historyDaily: [
+    { day, count: 3 }, { day: "20261124", count: 1 },
+  ] });
+  const migrated = api.createDeckState(embedded);
+  assert.equal(migrated.historyAvailable(day), false);
+  assert.match(embedded.getItem(api.HISTORY_KEY), /20261125/);
+  rewriteLikeV40(embedded);
+  migrated.sync();
+  assert.equal(migrated.historyAvailable(day), false);
+  assert.equal(migrated.historyAvailable("20261124"), true);
+  const afterWipe = api.createDeckState(embedded);
+  assert.equal(afterWipe.historyAvailable(day), false);
+  assert.equal(afterWipe.transact(() => afterWipe.recordHistory(day)), false);
+});
+
+test("ambient shortcut stays outside an open modal", () => {
+  const entry = section("function enterAmbient()", "function exitAmbient()");
+  assert.match(entry, /if \(ambientOn \|\| activeModal\) return;/);
+  assert.doesNotMatch(entry, /closeImageModal/);
+  const keys = section('/* ================= Ambient mode ================= */', "/* ================= Keepsake capture");
+  assert.match(keys, /if \(activeModal\) return;\n  if \(e\.key === "Escape" && ambientOn\)/);
+  assert.match(app, /e\.key === NAM_DEDUP\.KEY \|\| e\.key === NAM_DEDUP\.HISTORY_KEY \|\| e\.key === null/);
 });
 
 test("actual poem/quote selection consumes only shown language and caches variants", () => {

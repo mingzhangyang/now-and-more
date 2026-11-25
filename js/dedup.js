@@ -1,10 +1,15 @@
 /* Now, and More — stable-ID decks and shared render transactions.
-   v2 is isolated from legacy clients writing nam-decks-v1. */
+   v2 is isolated from legacy clients writing nam-decks-v1.
+   The daily history budget is further isolated from deployed clients
+   whose v2 serializer rebuilds {v,d,g,fp} and drops unknown fields.
+   A tab still running that build cannot enforce the cap until reloaded,
+   and it cannot erase the cap by rewriting nam-decks-v2. */
 "use strict";
 
 const NAM_DEDUP = (() => {
   const KEY = "nam-decks-v2";
   const LEGACY_KEY = "nam-decks-v1";
+  const HISTORY_KEY = "nam-history-daily-v1";
   const LOCK = "nam-decks-v2-write";
   const HISTORY_DAILY_LIMIT = 3;
   const HISTORY_DAY_RETENTION = 8;
@@ -17,21 +22,45 @@ const NAM_DEDUP = (() => {
   const safeKey = key => !["__proto__", "constructor", "prototype"].includes(key);
   const validDay = day => typeof day === "string" && /^\d{8}$/.test(day);
 
+  function normalizeHistory(list) {
+    const days = new Map();
+    if (Array.isArray(list)) {
+      for (const entry of list) {
+        if (!object(entry) || !validDay(entry.day) || !Number.isInteger(entry.count) || entry.count < 1) continue;
+        days.set(entry.day, Math.min(HISTORY_DAILY_LIMIT, Math.max(days.get(entry.day) || 0, entry.count)));
+      }
+    }
+    return Array.from(days, ([day, count]) => ({ day, count })).slice(-HISTORY_DAY_RETENTION);
+  }
+
+  // Calendar order, then the newest dates. Used when combining the
+  // isolated key with a budget an older v42 snapshot left inside the
+  // deck document. A missing or smaller copy must not reset a larger one.
+  function mergeHistory(primary, extra) {
+    const days = new Map();
+    for (const entry of normalizeHistory(primary)) days.set(entry.day, entry.count);
+    for (const entry of normalizeHistory(extra)) {
+      days.set(entry.day, Math.max(days.get(entry.day) || 0, entry.count));
+    }
+    return Array.from(days, ([day, count]) => ({ day, count }))
+      .sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0)
+      .slice(-HISTORY_DAY_RETENTION);
+  }
+
   function baseFields(s) {
     const state = fresh();
     if (object(s.g)) {
       for (const lang of ["zh", "en"]) if (own(s.g, lang) && object(s.g[lang])) state.g[lang] = s.g[lang];
     }
     if (Array.isArray(s.fp)) state.fp = s.fp.filter(x => typeof x === "string" && x.length <= 1024).slice(-16);
-    if (Array.isArray(s.historyDaily)) {
-      const days = new Map();
-      for (const entry of s.historyDaily) {
-        if (!object(entry) || !validDay(entry.day) || !Number.isInteger(entry.count) || entry.count < 1) continue;
-        days.set(entry.day, Math.min(HISTORY_DAILY_LIMIT, Math.max(days.get(entry.day) || 0, entry.count)));
-      }
-      state.historyDaily = Array.from(days, ([day, count]) => ({ day, count })).slice(-HISTORY_DAY_RETENTION);
-    }
+    state.historyDaily = normalizeHistory(s.historyDaily);
     return state;
+  }
+
+  // Deck document written for every version that shares nam-decks-v2.
+  // The history budget is intentionally absent.
+  function deckRecord(state) {
+    return { v: state.v, d: state.d, g: state.g, fp: state.fp };
   }
 
   function cleanBag(d) {
@@ -155,7 +184,7 @@ const NAM_DEDUP = (() => {
   }
 
   function createDeckState(storage, random = Math.random, { legacyIds = {}, locks = null } = {}) {
-    let lastRaw = null, initialized = false, active = false, held = false;
+    let lastRaw = null, lastHistoryRaw = null, initialized = false, active = false, held = false;
     let state = fresh();
 
     // Refresh immediately before each mutation; storage events also update
@@ -164,20 +193,43 @@ const NAM_DEDUP = (() => {
       if (active || held) return;
       try {
         const raw = storage.getItem(KEY);
-        if (initialized && raw === lastRaw) return;
-        state = raw !== null ? decode(raw) : (!initialized ? migrate(storage.getItem(LEGACY_KEY), legacyIds) : fresh());
+        const historyRaw = storage.getItem(HISTORY_KEY);
+        if (initialized && raw === lastRaw && historyRaw === lastHistoryRaw) return;
+        const decoded = raw !== null ? decode(raw) : (!initialized ? migrate(storage.getItem(LEGACY_KEY), legacyIds) : fresh());
+        const embedded = decoded.historyDaily;
+        const isolated = normalizeHistory(parse(historyRaw));
+        decoded.historyDaily = mergeHistory(isolated, embedded);
+        state = decoded;
         lastRaw = raw;
+        lastHistoryRaw = historyRaw;
         initialized = true;
+        // Copy a budget that an earlier build stored inside the deck
+        // document before a legacy writer can drop that field.
+        const merged = JSON.stringify(state.historyDaily);
+        if (merged !== (historyRaw ?? "[]")) {
+          storage.setItem(HISTORY_KEY, merged);
+          lastHistoryRaw = merged;
+        }
       } catch { /* Keep the last valid in-memory state. */ }
     }
     sync();
 
     function persist() {
-      const raw = JSON.stringify(state);
-      if (raw === lastRaw) return;
+      const deck = JSON.stringify(deckRecord(state));
+      const history = JSON.stringify(state.historyDaily);
+      const historySame = history === (lastHistoryRaw ?? "[]");
+      if (deck === lastRaw && historySame) return;
       try {
-        storage.setItem(KEY, raw);
-        lastRaw = raw;
+        // The budget first: a crash or a legacy rewrite of the deck
+        // document must not lose a count that already rendered.
+        if (!historySame) {
+          storage.setItem(HISTORY_KEY, history);
+          lastHistoryRaw = history;
+        }
+        if (deck !== lastRaw) {
+          storage.setItem(KEY, deck);
+          lastRaw = deck;
+        }
         initialized = true;
       } catch { /* In-memory draw history is still committed. */ }
     }
@@ -344,5 +396,5 @@ const NAM_DEDUP = (() => {
     return { get pending() { return pending; }, request, run: draw => request(draw, true) };
   }
 
-  return { KEY, LEGACY_KEY, safeStorage, browserLocks, runShared, createDeckState, weightedCategory, createDrawGate };
+  return { KEY, LEGACY_KEY, HISTORY_KEY, safeStorage, browserLocks, runShared, createDeckState, weightedCategory, createDrawGate };
 })();
