@@ -29,10 +29,11 @@ sha256sum -c SHA256SUMS --ignore-missing
 ```
 
 `SHA256SUMS` also lists the npm tarball, the optional landscape archive, the
-optional Moon-texture archive, and `moon-lroc.jpg`. This site does not vendor
-those. Illustrations use the procedural `ridge` landscape. The moon card is
-still the synodic glyph, not `renderMoonPhase`, so the NASA texture stays out
-of the precache. `stars.json` is the same bytes as 0.1.0.
+optional Moon-texture archive, and `moon-lroc.jpg`. This site vendors the
+browser module, the catalog, the notices, and `moon-lroc.jpg` (NASA public
+domain, sha256 `f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170`).
+It does not vendor the npm tarball or the landscape archive. Illustrations
+use the procedural `ridge` landscape. `stars.json` is the same bytes as 0.1.0.
 
 ## Who does what
 
@@ -56,21 +57,25 @@ fall back to a second engine.
   pattern can cross azimuth 0°) stays here. If none qualifies, the illustration
   keeps a fixed view (south in the north, north in the south, altitude 30°,
   fov 66°) instead of Elsewhere's automatic framing.
-- The circular chart is a product planisphere. It plots SDK altitudes and
-  azimuths. It does not recompute them.
-- Moon-glyph card, sunrise/sunset on world cards, solar terms, and tropical
-  astrology are unchanged and are not the SDK.
+- The circular chart is `renderSkyChart` (midnight theme, magnitude 6,
+  north up, east left). It is not a second ephemeris. Signature lines stay
+  in the caption; the engine draws the disc, the planets, and its own
+  calculated-position footer.
+- The moon card is `renderMoonPhase` of the same scene kind, for the current
+  time rather than 21:00, oriented from the time-zone estimate. It uses the
+  vendored NASA texture. Sunrise, solar terms, and tropical astrology are
+  still not the SDK. `moonPhase()` remains in the file and is not the card.
 
 Chart and illustration for one draw share one `createSkyScene` result, so the
 Sun, Moon, planets and stars cannot disagree between those surfaces.
 
 ## Service worker
 
-Cache name `nam-v30` precaches `sky-engine.mjs` and `stars.json` for this exact
-directory, plus the adapter. Activating the worker deletes every other cache
-name, so an older shell cannot pair a new module with an old catalog. The
-version lives in the path (`0.2.0`), not in `latest`. 0.1.0 was never on
-`main`; this branch replaces that directory instead of keeping both.
+Cache name `nam-v31` precaches `sky-engine.mjs`, `stars.json`, and
+`moon-lroc.jpg` for this exact directory, plus the adapter. Activating the
+worker deletes every other cache name, so an older shell cannot pair a new
+module with an old catalog or an old lunar map. The version lives in the
+path (`0.2.0`), not in `latest`.
 
 ## Upgrade
 
@@ -105,7 +110,8 @@ build in `tests/sky-sdk.test.cjs`.
 Screenshots from the 0.1.0 browser pass (day, twilight, night, both
 hemispheres, a pattern across north, moon up and down, chart, illustration,
 keepsake, offline reload, failed fetch then retry) are in
-`docs/sky-engine/evidence/`. The 0.2.0 bundle keeps the same catalog and the
-same fixed-scene positions; those pictures still show this card. A later
-switch to `renderMoonPhase` would need `moon-lroc.jpg` and a new pass.
+`docs/sky-engine/evidence/`. The 0.2.0 bundle keeps the same catalog and the same fixed-scene positions.
+The circular chart and the moon card are now `renderSkyChart` and
+`renderMoonPhase`. A new browser pass for those two surfaces is in
+`docs/sky-engine/evidence/` (`17-chart-v020.png`, `18-moon-v020.png`).
 

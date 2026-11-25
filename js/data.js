@@ -58,6 +58,7 @@ const I18N = {
       loading: "星空正在计算…",
       error: "星空这次没有载入。",
       retry: "重试",
+      moonCredit: "月面影像：NASA / LROC",
       asterisms: {
         dipper: { name: "北斗七星", line: "斗柄所指，古人拿它定四季" },
         orion: { name: "猎户座", line: "三星一线，是猎户的腰带" },
@@ -220,6 +221,7 @@ const I18N = {
       loading: "Computing the sky…",
       error: "The sky did not load this time.",
       retry: "Try again",
+      moonCredit: "Surface: NASA / LROC",
       asterisms: {
         dipper: { name: "the Big Dipper", line: "Its handle once told the seasons" },
         orion: { name: "Orion", line: "Three stars in a row make the Hunter's belt" },

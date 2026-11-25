@@ -15,6 +15,8 @@
   var enginePromise = null;
   var catalogJson = null;
   var catalogFlight = null;
+  var moonBitmap = null;
+  var moonFlight = null;
   var scenes = new Map();
 
   function asset(name) {
@@ -25,6 +27,8 @@
     enginePromise = null;
     catalogJson = null;
     catalogFlight = null;
+    moonBitmap = null;
+    moonFlight = null;
     scenes.clear();
   }
 
@@ -61,6 +65,29 @@
         throw err;
       });
     return catalogFlight;
+  }
+
+  /* One decoded NASA map for every moon portrait. A caller's abort does
+     not cancel this download; a failed flight is cleared and retried. */
+  function loadMoon() {
+    if (moonBitmap) return Promise.resolve(moonBitmap);
+    if (moonFlight) return moonFlight;
+    moonFlight = fetch(asset("moon-lroc.jpg"))
+      .then(function (res) {
+        if (!res.ok) throw new Error("Moon texture unavailable (" + res.status + ")");
+        return res.blob();
+      })
+      .then(function (blob) { return createImageBitmap(blob); })
+      .then(function (bitmap) {
+        moonBitmap = bitmap;
+        moonFlight = null;
+        return bitmap;
+      })
+      .catch(function (err) {
+        moonFlight = null;
+        throw err;
+      });
+    return moonFlight;
   }
 
   function sceneKey(obs) {
@@ -148,8 +175,43 @@
     });
   }
 
+  /* Whole-canvas circular chart. The engine owns the disc, planets and
+     the attribution footer. Locale is "en" or "zh-Hans". */
+  function paintChart(canvas, scene, locale) {
+    return loadEngine().then(function (engine) {
+      return engine.renderSkyChart(canvas, scene, {
+        theme: "midnight",
+        limitingMagnitude: 6,
+        locale: locale === "zh-Hans" ? "zh-Hans" : "en",
+      });
+    });
+  }
+
+  /* Whole-canvas lunar portrait. The texture is the vendored NASA map. */
+  function paintMoon(canvas, scene, signal) {
+    return loadEngine().then(function (engine) {
+      return loadMoon().then(function (bitmap) {
+        if (signal && signal.aborted) {
+          var err = new Error("Moon portrait cancelled.");
+          err.name = "AbortError";
+          throw err;
+        }
+        engine.installMoonTexture(bitmap);
+        return engine.renderMoonPhase(canvas, scene, {
+          style: "realistic",
+          orientation: "observer",
+          background: "dark",
+          earthshine: true,
+          signal: signal,
+        });
+      });
+    });
+  }
+
   function warm() {
-    return loadEngine().then(function () { return loadCatalog(); }).then(function () { return true; });
+    return loadEngine().then(function () {
+      return Promise.all([loadCatalog(), loadMoon()]);
+    }).then(function () { return true; });
   }
 
   window.NAM_SKY = {
@@ -158,6 +220,8 @@
     releaseTag: RELEASE_TAG,
     sceneFor: sceneFor,
     paintIllustration: paintIllustration,
+    paintChart: paintChart,
+    paintMoon: paintMoon,
     warm: warm,
     reset: reset,
   };

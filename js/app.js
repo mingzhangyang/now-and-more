@@ -178,10 +178,9 @@ function moonPhase(date) {
    Sky Engine SDK (vendor/sky-engine/0.2.0, see docs/sky-engine.md).
    This file keeps the product rules: which evening to show, where the
    observer is, the approximation label, and which of NAM's own
-   asterisms is tonight's highlight. The circular chart is a product
-   planisphere drawn from those SDK positions — it is not a second
-   ephemeris. The moon-phase glyph card and the almanac/sunrise math
-   above stay as they are; they are not the illustration engine. */
+   asterisms is tonight's highlight. The circular chart and the moon
+   portrait are the SDK's own pictures of that same scene. The almanac
+   and sunrise math above stay as they are. */
 const SKY_SIG_MONTHS = {
   dipper: [2, 3, 4], cassiopeia: [8, 9, 10, 11, 0], orion: [10, 11, 0, 1, 2],
   triangle: [5, 6, 7, 8, 9], scorpius: [4, 5, 6, 7], crux: [1, 2, 3, 4, 5],
@@ -190,7 +189,7 @@ const SKY_PHASE_INDEX = {
   new: 0, "waxing-crescent": 1, "first-quarter": 2, "waxing-gibbous": 3,
   full: 4, "waning-gibbous": 5, "last-quarter": 6, "waning-crescent": 7,
 };
-const SKY_CHART_MAG = 3.5;
+const SKY_SYNODIC = 29.530588853;
 
 function skyLocalTz() {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }
@@ -352,136 +351,21 @@ function chooseSignature(starsById, when, tz) {
   }
   return sig;
 }
-function skyStarColor(bv) {
-  const stops = [[0.62, 0.72, 1.0], [0.85, 0.89, 1.0], [1.0, 0.98, 0.94], [1.0, 0.85, 0.62], [1.0, 0.62, 0.36]];
-  const x = Math.max(0, Math.min(1, ((bv == null ? 0.6 : bv) + 0.35) / 2.1)) * (stops.length - 1);
-  const i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
-  return stops[i].map((v, k) => Math.round((v + (stops[i + 1][k] - v) * f) * 255));
-}
-const skyRgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 function skySummary(scene, observer) {
   const sky = scene.sky;
   const byId = new Map(sky.stars.map((s) => [s.id, s]));
   const sig = chooseSignature(byId, observer.when, observer.tz);
-  const memberIds = new Set();
-  for (const pattern of Object.values(SKY_PATTERNS)) {
-    for (const line of pattern.lines) { memberIds.add(line[0]); memberIds.add(line[1]); }
-  }
-  const stars = [];
-  for (const s of sky.stars) {
-    if (s.magnitude > SKY_CHART_MAG && !memberIds.has(s.id)) continue;
-    stars.push({
-      id: s.id, alt: s.altitude, az: s.azimuth, mag: s.magnitude,
-      c: skyStarColor(s.colorIndex),
-    });
-  }
   const moon = sky.moon;
   return {
-    sig, stars,
+    sig,
     moon: {
       alt: moon.altitude, az: moon.azimuth,
       illum: Math.round(moon.illumination * 100),
       idx: SKY_PHASE_INDEX[moon.phase] ?? 0,
       waxing: moon.waxing,
+      age: Math.max(0, Math.round((moon.phaseAngle / 360) * SKY_SYNODIC)),
     },
-    sunAlt: sky.sunAltitude, sunAz: sky.sun.azimuth,
   };
-}
-
-function skySans(px, weight) {
-  const fam = getComputedStyle(document.body).getPropertyValue("--sans").trim() || "sans-serif";
-  return `${weight || 400} ${px}px ${fam}`;
-}
-function drawSkyMoon(ctx, cx, cy, r, moon) {
-  ctx.save();
-  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.8);
-  g.addColorStop(0, "rgba(240,238,220,0.30)");
-  g.addColorStop(1, "rgba(240,238,220,0)");
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(cx, cy, r * 2.8, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = "#f2ecd8";
-  ctx.fill();
-  ctx.clip();
-  const waxing = moon.waxing != null ? moon.waxing : moon.idx <= 4;
-  const dx = (waxing ? -1 : 1) * 2 * r * (moon.illum / 100);
-  ctx.beginPath(); ctx.arc(cx + dx, cy - r * 0.18, r * 1.02, 0, Math.PI * 2);
-  ctx.fillStyle = "#232c49";
-  ctx.fill();
-  ctx.restore();
-}
-/* Chart projection: azimuthal equidistant — zenith at the centre,
-   horizon at the rim, north up and east to the LEFT. */
-function skyChartXY(alt, az, cx, cy, R) {
-  const r = ((90 - alt) / 90) * R;
-  const a = az * RAD;
-  return [cx - r * Math.sin(a), cy - r * Math.cos(a)];
-}
-function drawSkyChart(ctx, scene, x, y, w, h) {
-  const side = Math.min(w, h);
-  const cx = x + w / 2, cy = y + h / 2, R = side / 2 - 6;
-  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-  grad.addColorStop(0, "#111b3a");
-  grad.addColorStop(0.7, "#0a1128");
-  grad.addColorStop(1, "#060a1c");
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
-  ctx.fill();
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
-  ctx.strokeStyle = "rgba(160,180,230,0.13)";
-  ctx.lineWidth = 1;
-  for (const ringAlt of [30, 60]) {
-    ctx.beginPath(); ctx.arc(cx, cy, ((90 - ringAlt) / 90) * R, 0, Math.PI * 2); ctx.stroke();
-  }
-  if (scene.sig) {
-    const byId = new Map(scene.stars.map((s) => [s.id, s]));
-    ctx.strokeStyle = "rgba(232,184,96,0.8)";
-    ctx.lineWidth = Math.max(1.2, side * 0.004);
-    ctx.beginPath();
-    for (const [a, b] of scene.sig.lines) {
-      const A = byId.get(a), B = byId.get(b);
-      if (!A || !B || A.alt <= 0 || B.alt <= 0) continue;
-      const [x1, y1] = skyChartXY(A.alt, A.az, cx, cy, R);
-      const [x2, y2] = skyChartXY(B.alt, B.az, cx, cy, R);
-      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-    }
-    ctx.stroke();
-  }
-  for (const st of scene.stars) {
-    if (st.alt <= 0) continue;
-    const [sx, sy] = skyChartXY(st.alt, st.az, cx, cy, R);
-    const r = Math.max(0.7, 3.6 - st.mag * 0.62) * (side / 340);
-    if (st.mag < 0.8) {
-      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 4);
-      g.addColorStop(0, skyRgba(st.c, 0.35));
-      g.addColorStop(1, skyRgba(st.c, 0));
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(sx, sy, r * 4, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalAlpha = Math.max(0.25, Math.min(1, 1.15 - st.mag * 0.18)) * (0.45 + 0.55 * Math.min(1, st.alt / 40));
-    ctx.fillStyle = skyRgba(st.c, 1);
-    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  if (scene.moon.alt > 0) {
-    const [mx, my] = skyChartXY(scene.moon.alt, scene.moon.az, cx, cy, R);
-    drawSkyMoon(ctx, mx, my, side * 0.032, scene.moon);
-  }
-  ctx.restore();
-  ctx.strokeStyle = "rgba(150,170,220,0.5)";
-  ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
-  const rim = t().sky.rim;
-  ctx.fillStyle = "rgba(205,216,248,0.92)";
-  ctx.font = skySans(Math.max(11, Math.round(side * 0.042)), 600);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  const inset = side * 0.038;
-  ctx.fillText(rim[0], cx, cy - R + inset);
-  ctx.fillText(rim[2], cx, cy + R - inset);
-  ctx.fillText(rim[1], cx - R + inset, cy);
-  ctx.fillText(rim[3], cx + R - inset, cy);
 }
 
 let skyVisualGen = 0;
@@ -498,6 +382,15 @@ function skyFactsInner(sel) {
     };
   }
   return { error: false, look: K.fallback, line: "" };
+}
+function skyMoonFactsHtml(sel) {
+  if (sel.skyError) {
+    return `<span>${esc(t().sky.error)}</span><span><button type="button" class="sky-retry">${esc(t().sky.retry)}</button></span>`;
+  }
+  if (!sel.summary) return `<span>${esc(t().sky.loading)}</span>`;
+  const W = t().world;
+  const moon = sel.summary.moon;
+  return `<span>${esc(W.moonIllum(moon.illum))}</span><span>${esc(W.moonAge(moon.age))}</span>`;
 }
 function skyChartFactsHtml(sel) {
   const bits = skyFactsInner(sel);
@@ -545,6 +438,11 @@ function updateSkyCopy(sel) {
   } else if (sel.form === "chart") {
     const row = document.querySelector("#card-body .fact-row");
     if (row) row.innerHTML = skyChartFactsHtml(sel);
+  } else if (sel.form === "moon") {
+    const row = document.querySelector("#card-body .fact-row");
+    if (row) row.innerHTML = skyMoonFactsHtml(sel);
+    const big = document.querySelector("#card-body .big");
+    if (big) big.textContent = sel.summary ? t().world.phases[sel.summary.moon.idx] : t().sky.loading;
   }
   bindSkyRetry(sel);
 }
@@ -572,9 +470,9 @@ function scheduleSkyVisual(sel) {
       const cv = document.querySelector("#card-body canvas.sky-canvas");
       if (!cv || $("card").dataset.skyGen !== String(gen)) return;
       if (sel.form === "chart") {
-        const ctx = cv.getContext("2d");
-        ctx.clearRect(0, 0, cv.width, cv.height);
-        drawSkyChart(ctx, sel.summary, 0, 0, cv.width, cv.height);
+        await NAM_SKY.paintChart(cv, scene, lang === "zh" ? "zh-Hans" : "en");
+      } else if (sel.form === "moon") {
+        await NAM_SKY.paintMoon(cv, scene, ctrl.signal);
       } else {
         await NAM_SKY.paintIllustration(cv, scene, sel.summary.sig, ctrl.signal);
       }
@@ -2355,8 +2253,16 @@ function makeSelection(cat) {
       // three forms — chart, illustration, moon — are equally likely.
       // The scene itself is async (SDK); the draw lock does not wait.
       const form = ["chart", "illustration", "moon"][Math.floor(Math.random() * 3)];
-      if (form === "moon") return { cat, form, summary: null };
       const now = new Date();
+      if (form === "moon") {
+        // Right now, not 21:00. The zone's city (or latitude 35) only
+        // orients the portrait. No geolocation prompt on this card.
+        const loc = skyLocation();
+        const observer = { lat: loc.lat, lon: loc.lon, tz: loc.tz, when: now, name: "" };
+        const sel = { cat, form, observer, summary: null, skyError: null };
+        sel.ready = NAM_SKY.sceneFor(observer);
+        return sel;
+      }
       if (form === "chart") {
         const observer = skyObserverFor(now, null);
         const sel = { cat, form, observer, summary: null, skyError: null };
@@ -2524,7 +2430,7 @@ function renderSkyArt(sel) {
 }
 
 function renderSelection(sel) {
-  const skyVisual = sel.cat === "sky" && (sel.form === "chart" || sel.form === "illustration");
+  const skyVisual = sel.cat === "sky" && (sel.form === "chart" || sel.form === "illustration" || sel.form === "moon");
   if (!skyVisual) {
     // Drop a sky paint that is still in flight so it cannot write into the next card.
     skyVisualGen++;
@@ -2564,11 +2470,11 @@ function renderSelection(sel) {
   if (sel.cat === "sky") {
     const K = s.sky;
     if (sel.form === "moon") {
-      // The moon card, unchanged — a synodic glyph, not the SDK painting.
-      const mp = moonPhase(now);
       meta = s.world.moonTitle;
-      body = `<span class="moon-glyph">${mp.glyph}</span><span class="big">${s.world.phases[mp.idx]}</span>` +
-        `<div class="fact-row"><span>${s.world.moonIllum(mp.illum)}</span><span>${s.world.moonAge(mp.age)}</span></div>`;
+      body = `<canvas class="sky-canvas sky-moon" data-form="moon" width="720" height="720"></canvas>` +
+        `<span class="big">${esc(s.sky.loading)}</span>` +
+        `<div class="fact-row">${skyMoonFactsHtml(sel)}</div>` +
+        `<div class="sub">${K.approx}</div><div class="sub">${esc(K.moonCredit)}</div>`;
     } else {
       meta = sel.form === "chart" ? K.chartMeta : K.illusMeta;
       const size = sel.form === "chart"
@@ -2750,7 +2656,7 @@ function renderSelection(sel) {
 
   // Chart and the in-card illustration paint after the SDK scene
   // resolves. The deck lock has already been released by then.
-  if (sel.cat === "sky" && sel.form !== "moon" && sel.form !== "illustration") {
+  if (sel.cat === "sky" && (sel.form === "chart" || sel.form === "moon")) {
     scheduleSkyVisual(sel);
   }
 
@@ -3498,7 +3404,7 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
       continue;
     }
     if (b.type === "sky") {
-      const h = Math.round((b.form === "chart" ? 300 : 225) * scale);
+      const h = Math.round((b.form === "chart" || b.form === "moon" ? 300 : 225) * scale);
       if (y + h > maxHeight) { truncated = true; break; }
       items.push({ type: "sky", form: b.form, yOff: y, h });
       y += h + Math.round(10 * scale);
@@ -3651,8 +3557,9 @@ function renderKeepsakeCanvas(snap, pal) {
 
   for (const it of layout.items) {
     if (it.type === "sky") {
-      if (snap.sky && it.form === "chart") {
-        drawSkyChart(ctx, snap.sky, textX, bodyTop + it.yOff, textW, it.h);
+      if (snap.skyCanvas && (it.form === "chart" || it.form === "moon")) {
+        const side = Math.min(textW, it.h);
+        ctx.drawImage(snap.skyCanvas, textX + (textW - side) / 2, bodyTop + it.yOff, side, side);
       }
       continue;
     }
@@ -3988,7 +3895,9 @@ async function captureKeepsake() {
       if (blobSa) showCapture(blobSa, frozen);
       return;
     }
-    if (currentSelection && currentSelection.cat === "sky" && currentSelection.form === "chart" && currentSelection.painted) {
+    if (currentSelection && currentSelection.cat === "sky" &&
+        (currentSelection.form === "chart" || currentSelection.form === "moon") &&
+        currentSelection.painted) {
       await currentSelection.painted;
     }
     const s = t();
@@ -3999,8 +3908,9 @@ async function captureKeepsake() {
       category: $("card-category").textContent,
       meta: $("card-meta").textContent,
       blocks: extractCardBlocks(),
-      sky: currentSelection && currentSelection.cat === "sky" && currentSelection.form === "chart"
-        ? currentSelection.summary : null,
+      skyCanvas: currentSelection && currentSelection.cat === "sky" &&
+        (currentSelection.form === "chart" || currentSelection.form === "moon")
+        ? document.querySelector("#card-body canvas.sky-canvas") : null,
       brand: lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有",
       footer: enc ? `${enc} · now.orangely.xyz` : "now.orangely.xyz",
     };

@@ -495,6 +495,12 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   background: transparent;
 }
 .card-body .sky-chart { width: min(350px, 82vw); height: auto; }
+.card-body .sky-moon {
+  width: min(260px, 68vw);
+  height: auto;
+  border-radius: 50%;
+  margin-bottom: 8px;
+}
 .card-body .sky-illustration { width: 100%; height: auto; border-radius: 10px; }
 .card-body a.gossip-link {
   color: inherit;

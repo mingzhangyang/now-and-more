@@ -41,6 +41,16 @@ for (const name of names) {
     throw new Error(`${name} sha256 ${hash} != published ${expected.get(name)}`);
   }
 }
+if (expected.has("moon-lroc.jpg") && !files.has("moon-lroc.jpg")) {
+  const res = await fetch(base + "moon-lroc.jpg");
+  if (!res.ok) throw new Error(`moon-lroc.jpg HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  const hash = createHash("sha256").update(buf).digest("hex");
+  if (expected.get("moon-lroc.jpg") !== hash) {
+    throw new Error(`moon-lroc.jpg sha256 ${hash} != published ${expected.get("moon-lroc.jpg")}`);
+  }
+  files.set("moon-lroc.jpg", buf);
+}
 const manifest = JSON.parse(files.get("manifest.json").toString("utf8"));
 if (manifest.version !== version || manifest.tag !== tag) {
   throw new Error(`manifest ${manifest.version} / ${manifest.tag} does not match ${tag}`);

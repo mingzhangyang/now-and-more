@@ -17,7 +17,7 @@ test("vendored Sky Engine 0.2.0 matches the published checksums", () => {
     assert.ok(match, line);
     expected.set(match[2], match[1]);
   }
-  for (const name of ["sky-engine.mjs", "stars.json", "sky-engine-NOTICES.txt", "manifest.json"]) {
+  for (const name of ["sky-engine.mjs", "stars.json", "sky-engine-NOTICES.txt", "manifest.json", "moon-lroc.jpg"]) {
     const hash = createHash("sha256").update(fs.readFileSync(path.join(sdkDir, name))).digest("hex");
     assert.equal(hash, expected.get(name), name);
   }
@@ -49,9 +49,13 @@ test("app keeps business astronomy and drops the ported illustration engine", ()
   assert.match(app, /function planetPositions/);
   assert.match(app, /NAM_SKY\.sceneFor/);
   assert.match(app, /NAM_SKY\.paintIllustration/);
+  assert.match(app, /NAM_SKY\.paintChart/);
+  assert.match(app, /NAM_SKY\.paintMoon/);
   assert.match(read("js/sky-engine-adapter.js"), /weather: "clear"/);
   for (const gone of [
     "function drawSkyIllustration",
+    "function drawSkyChart",
+    "function drawSkyMoon",
     "function skyMilkyWay",
     "function skyPlanets",
     "function computeSkyScene",
@@ -62,9 +66,10 @@ test("app keeps business astronomy and drops the ported illustration engine", ()
     assert.equal(app.includes(gone), false, gone);
   }
   const sw = read("sw.js");
-  assert.match(sw, /nam-v30/);
+  assert.match(sw, /nam-v31/);
   assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/sky-engine\.mjs/);
   assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/stars\.json/);
+  assert.match(sw, /vendor\/sky-engine\/0\.2\.0\/moon-lroc\.jpg/);
   assert.doesNotMatch(read("js/sky-engine-adapter.js"), /cdn|jsdelivr|unpkg|elsewhere\.|github\.com/i);
 });
 

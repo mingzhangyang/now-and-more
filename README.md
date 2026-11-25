@@ -96,7 +96,7 @@ npx wrangler pages deploy . --project-name now-and-more
 ## 说明 / Notes
 
 - 日出、日落与昼长由页面内嵌的紧凑太阳位置算法现场计算（基于太阳黄经、赤纬与时角），不是查表。世界卡片与节气历法仍用这套，不走 Sky Engine。
-- 月相卡片的月龄、照亮比例与月相名称仍由朔望月周期现场计算。星图和星空插画里的太阳、月亮、行星与恒星则来自 Sky Engine SDK，见 `docs/sky-engine.md`。
+- 月相卡片是 Sky Engine 的月面肖像（当前时刻，朝向按时间区估算），月龄与照亮比例取自同一次计算。星图是 SDK 的圆形星图。星空插画仍是 SDK 的水彩。日出、日落与节气不走 Sky Engine。见 `docs/sky-engine.md`。
 - 字体已自托管（思源宋体/黑体，unicode-range 切片 woff2 在 `assets/fonts/`，OFL 许可同目录），随站点一同提供，不向任何第三方发出请求；用过的切片由 Service Worker 缓存，离线可用。
 - 诗歌均为公有领域作品。
 

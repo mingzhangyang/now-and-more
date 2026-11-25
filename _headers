@@ -14,3 +14,7 @@
 /vendor/sky-engine/0.2.0/sky-engine-NOTICES.txt
   Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=31536000, immutable
+
+/vendor/sky-engine/0.2.0/moon-lroc.jpg
+  Content-Type: image/jpeg
+  Cache-Control: public, max-age=31536000, immutable

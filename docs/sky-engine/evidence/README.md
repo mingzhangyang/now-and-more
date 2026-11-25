@@ -9,7 +9,8 @@ within 0.02°, phase and visibility exact, provenance `clear`, 5070 stars.
 The pictures were taken on 0.1.0 (`nam-v29`). Sky Engine 0.2.0 keeps the same
 `stars.json` and the same seven scenes (the fixture test now runs against
 0.2.0). The watercolor card was painted again from that bundle and still
-matches these shots. The live cache is `nam-v30`.
+matches these shots. The live cache is `nam-v31`. The circular chart and the
+moon card now use `renderSkyChart` and `renderMoonPhase` (`17`, `18`, `19`).
 
 | Shot | What it shows |
 | --- | --- |
@@ -29,6 +30,9 @@ matches these shots. The live cache is `nam-v30`.
 | 14 after Try again | Same card, Cassiopeia, 5070 stars (473 ms from the click) |
 | 15 offline reload | After the `nam-v29` precache, airplane mode, same night painting |
 | 16 v0.2.0 night | Same Gaithersburg instant painted by `sky-engine.mjs` 0.2.0 |
+| 17 SDK chart | `renderSkyChart`, midnight, Cassiopeia caption, calculated-position footer |
+| 18 full moon | `renderMoonPhase`, NASA texture, 99% illuminated |
+| 19 thin crescent | Johannesburg equinox evening, 4% illuminated, earthshine on the dark side |
 
 Startup did not request `sky-engine.mjs` or `stars.json`. Only the 5 KB adapter
 is a script tag. The module and catalog load with the first sky card, and the
