@@ -730,10 +730,10 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
    stacked layout it replaced, with no dead air on the right. */
 .envelope { display: flex; gap: 14px; align-items: stretch; }
 .env-preview {
-  flex: none;
-  width: 104px;
+  flex: 0 0 65%;
+  width: auto;
   height: auto;
-  min-height: 104px;
+  min-height: 118px;
   margin: 0;
   border-radius: 10px;
   overflow: hidden;
@@ -810,7 +810,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 /* Narrow phones: a slimmer thumbnail and title keep the row in
    proportion instead of squeezing the words. */
 @media (max-width: 380px) {
-  .env-preview { width: 88px; min-height: 88px; }
+  .env-preview { flex-basis: 60%; min-height: 100px; }
   .envelope .env-title { font-size: 24px; }
 }
 
@@ -821,7 +821,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
    itself is never rescaled or cropped. The card inside is a stage
    card in every respect but its cursor: clicking it must not read
    as a draw, so it keeps the default cursor. */
-.img-dialog {
+.capture-dialog.img-dialog {
   width: min(680px, 94vw);
   align-items: stretch;
 }
@@ -1296,7 +1296,7 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
   body:not(.ambient) .date-line { grid-column: 1; grid-row: 2; }
   body:not(.ambient) .clock { grid-column: 1; grid-row: 3; }
   body:not(.ambient) .progress-track { grid-column: 1; grid-row: 4; }
-  body:not(.ambient) .card {
+  body:not(.ambient) #card {
     grid-column: 2;
     grid-row: 1 / 5; /* spans the whole clock column… */
     align-self: center; /* …and centers against it */

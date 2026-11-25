@@ -3,19 +3,19 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v34";
+var CACHE_NAME = "nam-v35";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=34",
-  "/js/data.js?v=34",
-  "/js/dedup.js?v=34",
-  "/gossip-service/news-id.js?v=34",
-  "/js/gossip.js?v=34",
-  "/js/sky-engine-adapter.js?v=34",
-  "/js/app.js?v=34",
+  "/css/style.css?v=35",
+  "/js/data.js?v=35",
+  "/js/dedup.js?v=35",
+  "/gossip-service/news-id.js?v=35",
+  "/js/gossip.js?v=35",
+  "/js/sky-engine-adapter.js?v=35",
+  "/js/app.js?v=35",
   "/vendor/sky-engine/0.2.0/sky-engine.mjs",
   "/vendor/sky-engine/0.2.0/stars.json",
   "/vendor/sky-engine/0.2.0/manifest.json",

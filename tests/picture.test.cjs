@@ -278,6 +278,23 @@ test("sky modal watchdog: a paint that never lands is re-scheduled exactly once"
   }
 });
 
+test("wide layout: the split-grid card rule is scoped to the stage card only", () => {
+  // Regression: at >=1200px the split layout once styled every .card —
+  // including the picture modal's card. width:auto collapsed the modal
+  // card to 0px wide (the .skyart composition is a size container and
+  // contributes no intrinsic width), so the modal opened blank on
+  // desktop-width windows while narrow windows rendered fine.
+  const css = read("css/style.css");
+  const wide = css.slice(css.indexOf("@media (min-width: 1200px)"));
+  const block = wide.slice(0, wide.indexOf("\n}\n") > 0 ? wide.indexOf("\n}\n") : 4000);
+  assert.ok(!/body:not\(\.ambient\) \.card \{/.test(block),
+    "the wide split-layout rule must not target .card generically");
+  assert.ok(/body:not\(\.ambient\) #card \{/.test(block),
+    "the wide split-layout rule targets the stage card by id");
+  assert.ok(/\.capture-dialog\.img-dialog \{\s*width: min\(680px/.test(css),
+    "the picture dialog keeps its 680px width over the generic capture dialog");
+});
+
 test("sky modal watchdog: closing the modal disarms it", async () => {
   mock.timers.enable({ apis: ["setTimeout"] });
   try {
