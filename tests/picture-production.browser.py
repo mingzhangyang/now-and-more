@@ -169,6 +169,114 @@ def check_ready_and_download(page, kind, language):
     assert not page.locator("#img-overlay").is_visible() and save.is_disabled(), where
 
 
+def check_modal_isolation(browser, origin):
+    # Use the real app, with a deliberately scrollable background and long
+    # passage. Wheel events must scroll the dialog, never the stage.
+    context = browser.new_context(viewport={"width": 390, "height": 640},
+                                  locale="zh-CN", has_touch=True,
+                                  service_workers="block")
+    try:
+        page = context.new_page()
+        page.add_init_script("localStorage.setItem('nam-lang','zh'); "
+                             "window.NOW_AND_MORE_CONFIG = {gossipApi: ''};")
+        page.goto(origin + "/index.html", wait_until="domcontentloaded")
+        page.wait_for_function("() => initialDrawDone && !drawGate.pending && encounter > 0")
+        page.evaluate("""() => {
+          const item = { ...TALES[0], full: ('A long reading passage. '.repeat(70) + '\\n\\n').repeat(12) };
+          currentSelection = { cat: 'tales', item };
+          renderSelection(currentSelection);
+          const spacer = document.createElement('div');
+          spacer.style.cssText = 'height:1200px; flex:none';
+          document.body.appendChild(spacer);
+          window.scrollTo(0, 120);
+        }""")
+        page.wait_for_function("() => scrollY === 120")
+        before = page.evaluate("""() => ({
+          y: scrollY, stage: document.querySelector('main.stage').getBoundingClientRect().top,
+          count: encounter, deck: localStorage.getItem(NAM_DEDUP.KEY)
+        })""")
+        # Queue a real draw then open the reader before its 180 ms callback.
+        page.evaluate("""() => {
+          if (!drawCard()) throw Error('draw was not queued');
+          openFullText(currentSelection.item, $('full-text-btn'), 'tales');
+        }""")
+        overlay = page.locator("#full-overlay")
+        dialog = overlay.locator(".full-dialog")
+        close = page.locator("#full-close")
+        assert overlay.is_visible()
+        assert page.evaluate("() => document.querySelector('main.stage').inert")
+        assert close.evaluate("(e) => e === document.activeElement")
+        page.wait_for_function("() => !drawGate.pending")
+        assert page.evaluate("() => encounter") == before["count"]
+        assert page.evaluate("() => localStorage.getItem(NAM_DEDUP.KEY)") == before["deck"]
+        # Force the timer to be due, but do not change the system clock.
+        page.evaluate("() => { lastDrawAt = Date.now() - 65000; lastSecond = -1; tick(); }")
+        assert not page.evaluate("() => drawCard()")
+        # Dispatch the legacy page-level Space shortcut, not Space on
+        # the currently focused Close button (which correctly activates it).
+        page.evaluate("""() => document.body.dispatchEvent(new KeyboardEvent(
+          'keydown', {code:'Space', key:' ', bubbles:true, cancelable:true}))""")
+        assert page.evaluate("() => encounter") == before["count"]
+        for key in ("Tab", "Shift+Tab"):
+            page.keyboard.press(key)
+            assert overlay.evaluate("(e) => e.contains(document.activeElement)")
+        locked_stage = page.evaluate("() => document.querySelector('main.stage').getBoundingClientRect().top")
+        assert abs(locked_stage - before["stage"]) <= 1
+        box = dialog.bounding_box()
+        page.mouse.move(box["x"] + box["width"]/2, box["y"] + box["height"]/2)
+        page.mouse.wheel(0, 500)
+        page.wait_for_function("() => document.querySelector('.full-dialog').scrollTop > 0")
+        # Overscroll at both ends, then on the backdrop itself.
+        for end, delta in (("bottom", 1500), ("top", -1500)):
+            dialog.evaluate("(e, end) => e.scrollTop = end === 'top' ? 0 : e.scrollHeight", end)
+            page.mouse.wheel(0, delta)
+            page.wait_for_timeout(100)
+            assert abs(page.evaluate("() => document.querySelector('main.stage').getBoundingClientRect().top") - locked_stage) <= 1
+        page.mouse.move(4, 4)
+        page.mouse.wheel(0, 1200)
+        page.wait_for_timeout(100)
+        assert abs(page.evaluate("() => document.querySelector('main.stage').getBoundingClientRect().top") - locked_stage) <= 1
+        # Exercise touch input as well, including the old page-wide
+        # bottom swipe that would reveal the writing shortcut.
+        cdp = context.new_cdp_session(page)
+        x = int(box["x"] + box["width"]/2)
+        y = int(box["y"] + box["height"]*.85)
+        dialog.evaluate("(e) => e.scrollTop = e.scrollHeight")
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y}]})
+        for offset in (30, 60, 90, 120):
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": x, "y": y-offset}]})
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        page.wait_for_timeout(200)
+        assert page.evaluate("() => fabStickyUntil === 0 && !document.querySelector('#note-fab').classList.contains('show')")
+        assert abs(page.evaluate("() => document.querySelector('main.stage').getBoundingClientRect().top") - locked_stage) <= 1
+        page.keyboard.press("Escape")
+        assert not overlay.is_visible()
+        assert page.evaluate("() => scrollY") == before["y"]
+        assert not page.evaluate("() => document.querySelector('main.stage').inert")
+        assert page.evaluate("() => document.activeElement === $('full-text-btn')")
+        assert page.evaluate("() => Date.now() - lastDrawAt < 5000")
+        assert page.evaluate("() => encounter") == before["count"]
+        # The remaining real modal entry points use the same boundary.
+        for open_js, selector in [
+            ("openNoteModal($('note-fab'))", "#note-overlay"),
+            ("openMyDaysModal($('mydays-open'))", "#mydays-overlay"),
+            ("openImageModal({cat:'postcard', key:'lichun'})", "#img-overlay"),
+            ("const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1; canvas.toBlob(blob => showCapture(blob, new Date()))", "#capture-overlay"),
+        ]:
+            page.evaluate("() => {" + open_js + "}")
+            page.locator(selector).wait_for(state="visible", timeout=5000)
+            assert page.evaluate("() => document.documentElement.classList.contains('modal-open') && document.querySelector('main.stage').inert"), selector
+            assert not page.evaluate("() => drawCard()"), selector
+            page.keyboard.press("Escape")
+            assert not page.locator(selector).is_visible(), selector
+            assert not page.evaluate("() => document.documentElement.classList.contains('modal-open') || document.querySelector('main.stage').inert"), selector
+            assert page.evaluate("() => scrollY") == before["y"], selector
+        assert page.evaluate("() => drawCard()")
+        page.wait_for_function("() => !drawGate.pending && encounter > " + str(before["count"]))
+    finally:
+        context.close()
+
+
 def check_locale(browser, origin, language):
     context = browser.new_context(viewport={"width": 390, "height": 844},
                                   locale="zh-CN" if language == "zh" else "en-US",
@@ -222,8 +330,9 @@ if __name__ == "__main__":
             options["executable_path"] = os.environ["CHROMIUM_PATH"]
         browser = p.chromium.launch(**options)
         try:
+            check_modal_isolation(browser, origin)
             for language in ("zh", "en"):
                 check_locale(browser, origin, language)
         finally:
             browser.close()
-    print("8 actual picture compositions/downloads and 2 real moon texture retries passed")
+    print("Modal isolation, 8 actual picture compositions/downloads and 2 real moon texture retries passed")

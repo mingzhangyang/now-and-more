@@ -32,6 +32,8 @@ A single-page clock. At the centre, a precise real clock that never moves (certa
 
 Fixed pools draw without replacement and avoid repeats across normal bag boundaries. Progress commits after rendering and survives reload in the same browser via `nam-decks-v2`. Poems and quotes consume only the language rendered; revisiting an already displayed variant of the same encounter consumes nothing. Manual, keyboard and timed draws share a transition lock. Date-specific gifts retain priority; deterministic daily cards and chance values may repeat by design. On This Day is capped at three new encounters per local calendar day across languages and manual/automatic draws; failed renders and repaints do not spend a slot. Dynamic news uses the D2 list API, URL/title fingerprints, per-language caching, and a bounded 72-hour local history with a 30-minute minimum repeat cooldown. D3 uses permanent content IDs, frozen D2 index migration and Web Locks for cross-tab draw/history commits.
 
+All five main-page dialogs share a background scroll and focus lock. The clock continues to update, but new draws (including previously queued draws) pause until the dialog closes. Closing restores the saved scroll offset and starts a fresh rotation interval.
+
 Regression tests (Node 22+, no dependencies): `node --test tests/*.test.cjs`.
 
 ## 本地运行 / Run locally

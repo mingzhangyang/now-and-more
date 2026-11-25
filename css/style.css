@@ -1308,6 +1308,23 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
 }
 .ambient-hint.show { opacity: 0.85; pointer-events: auto; cursor: pointer; }
 
+/* ---------- Shared modal isolation ---------- */
+/* Fixed-body locking also prevents touch scroll-through on iOS versions
+   where root overflow locking alone is insufficient. The saved offset
+   keeps the background still; the dialog remains a viewport-fixed layer. */
+html.modal-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html.modal-open body {
+  position: fixed;
+  top: var(--modal-page-top);
+  left: var(--modal-page-left);
+  width: var(--modal-page-width);
+  max-width: 100vw;
+  overflow: hidden;
+}
+
 /* ---------- Keepsake capture overlay ---------- */
 .capture-overlay {
   position: fixed;
@@ -1318,6 +1335,8 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
   align-items: center;
   justify-content: center;
   padding: 20px;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 .capture-dialog {
   background: var(--bg);
@@ -1328,6 +1347,7 @@ body.ambient.cursor-hidden, body.ambient.cursor-hidden * { cursor: none !importa
   width: min(400px, 94vw);
   max-height: 94vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;

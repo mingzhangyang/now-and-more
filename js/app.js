@@ -1478,18 +1478,18 @@ function renderMyDaysList() {
    opened it sits inside the now-closed panel. */
 let myDaysOpener = null;
 function openMyDaysModal(opener) {
-  if (ambientOn) return; // no managing days in ambient mode
+  if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   setSettingsOpen(false);
   myDaysOpener = opener || null;
   renderMyDaysList();
-  $("mydays-overlay").hidden = false;
+  showModal("mydays-overlay");
   $("myday-name").focus();
 }
 function closeMyDaysModal() {
   if ($("mydays-overlay").hidden) return;
-  $("mydays-overlay").hidden = true;
-  if (myDaysOpener && myDaysOpener.isConnected && !settingsPanel.hidden) myDaysOpener.focus();
-  else settingsBtn.focus();
+  hideModal("mydays-overlay");
+  if (myDaysOpener && myDaysOpener.isConnected && !settingsPanel.hidden) myDaysOpener.focus({ preventScroll: true });
+  else settingsBtn.focus({ preventScroll: true });
   myDaysOpener = null;
 }
 function buildMyDaysForm() {
@@ -2084,7 +2084,7 @@ function updateNoteCount() {
   $("note-save").disabled = len === 0;
 }
 function openNoteModal(opener) {
-  if (ambientOn) return; // no writing in ambient mode
+  if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   setSettingsOpen(false);
   noteOpener = opener || null;
   noteType = "reflection";
@@ -2096,13 +2096,13 @@ function openNoteModal(opener) {
   $("note-error").hidden = true;
   updateNoteCount();
   hideFabNow();
-  $("note-overlay").hidden = false;
+  showModal("note-overlay");
   $("note-text").focus();
 }
 function closeNoteModal() {
   if ($("note-overlay").hidden) return;
-  $("note-overlay").hidden = true;
-  if (noteOpener && noteOpener.isConnected) noteOpener.focus();
+  hideModal("note-overlay");
+  if (noteOpener && noteOpener.isConnected) noteOpener.focus({ preventScroll: true });
   noteOpener = null;
 }
 $("note-type-reflection").addEventListener("click", () => { noteType = "reflection"; syncNoteTypeSeg(); });
@@ -2139,7 +2139,7 @@ function fullTextOf(item) {
 }
 
 function openFullText(item, opener, cat) {
-  if (ambientOn) return; // no reading modal in ambient mode
+  if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   const full = fullTextOf(item);
   if (!full) return;
   fullOpener = opener || null;
@@ -2150,14 +2150,14 @@ function openFullText(item, opener, cat) {
     .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
     .join("");
   $("full-source").textContent = item.source || "";
-  $("full-overlay").hidden = false;
+  showModal("full-overlay");
   document.querySelector(".full-dialog").scrollTop = 0;
   $("full-close").focus();
 }
 function closeFullText() {
   if ($("full-overlay").hidden) return;
-  $("full-overlay").hidden = true;
-  if (fullOpener && fullOpener.isConnected) fullOpener.focus();
+  hideModal("full-overlay");
+  if (fullOpener && fullOpener.isConnected) fullOpener.focus({ preventScroll: true });
   fullOpener = null;
 }
 $("full-text-btn").addEventListener("click", (e) => {
@@ -2419,10 +2419,10 @@ async function renderModalPostcard(sel) {
 
 /* The gift receipt is still written when the envelope is opened. */
 function openImageModal(sel) {
-  if (ambientOn || !isPictureCard(sel) || imageModalOpen()) return;
+  if (ambientOn || activeModal || !isPictureCard(sel) || imageModalOpen()) return;
   imageModalSel = sel;
   imageOpener = $("card");
-  $("img-overlay").hidden = false;
+  showModal("img-overlay");
   const surface = modalSurface();
   const info = pictureInfo(sel);
   surface.cat.textContent = info.category;
@@ -2460,7 +2460,7 @@ function armSkyModalWatchdog(sel) {
 
 function closeImageModal() {
   if (!imageModalOpen()) return;
-  $("img-overlay").hidden = true;
+  hideModal("img-overlay");
   if (imageModalSel && imageModalSel._abort) imageModalSel._abort.abort();
   imageModalSel = null;
   clearModalPicture();
@@ -2471,10 +2471,7 @@ function closeImageModal() {
   skyVisualGen++;
   delete $("img-card").dataset.skyGen;
   delete $("img-card").dataset.skyState;
-  // The stage rotation was paused while the modal was open; give the
-  // visitor a full minute with the stage again from the close.
-  lastDrawAt = Date.now();
-  if (imageOpener && imageOpener.isConnected) imageOpener.focus();
+  if (imageOpener && imageOpener.isConnected) imageOpener.focus({ preventScroll: true });
   imageOpener = null;
 }
 $("img-close-btn").addEventListener("click", closeImageModal);
@@ -2536,8 +2533,7 @@ let fabStickyUntil = 0;
 let fabSyncTimer = null;
 
 function fabShouldShow() {
-  if (ambientOn) return false;
-  if (!$("note-overlay").hidden) return false;
+  if (ambientOn || activeModal) return false;
   return fabInCorner || fabHovered || fabFocused || Date.now() < fabStickyUntil;
 }
 function syncFab() {
@@ -2567,6 +2563,7 @@ function resetFab() {
    headless or unusual pointers that report neither fine nor coarse
    still reveal the button the way a mouse would). */
 document.addEventListener("mousemove", (e) => {
+  if (activeModal) return;
   const inCorner = e.clientX >= window.innerWidth - 140 && e.clientY >= window.innerHeight - 140;
   if (inCorner === fabInCorner) return;
   fabInCorner = inCorner;
@@ -2593,6 +2590,7 @@ $("note-fab").addEventListener("blur", () => {
 });
 let fabTouchStart = null;
 document.addEventListener("touchstart", (e) => {
+  if (activeModal) { fabTouchStart = null; return; }
   const tch = e.changedTouches && e.changedTouches[0];
   if (!tch) { fabTouchStart = null; return; }
   fabTouchStart = {
@@ -2603,7 +2601,7 @@ document.addEventListener("touchstart", (e) => {
 document.addEventListener("touchend", (e) => {
   const start = fabTouchStart;
   fabTouchStart = null;
-  if (!start || !start.inBottom) return;
+  if (activeModal || !start || !start.inBottom) return;
   const tch = e.changedTouches && e.changedTouches[0];
   if (!tch) return;
   if (tch.clientY - start.y <= -40) {
@@ -3161,23 +3159,102 @@ function nextSelection(retryNotes = true) {
 let drawsReady = false;
 const drawGate = NAM_DEDUP.createDrawGate((task) => setTimeout(task, 180));
 
-/* The picture modal's selection, while it is open. While it is set,
-   every draw path (the minute tick, the button, the card, the space
-   bar) is inert: the visitor is looking at a picture, and the stage
-   waits. Closing the modal clears it and restarts the minute. */
+/* All five stage dialogs share one isolation boundary. Keep the body at
+   the saved viewport offset (including older iOS Safari), make its
+   other direct children inert, and contain keyboard focus. The clock
+   keeps ticking; new encounters wait until the reader closes the modal. */
 let imageModalSel = null;
+let activeModal = null;
+let modalEpoch = 0;
+let modalScroll = null;
+
+function showModal(id) {
+  if (activeModal) return false;
+  const overlay = $(id);
+  const root = document.documentElement;
+  const siblings = Array.from(document.body.children)
+    .filter(el => el !== overlay && !el.inert);
+  modalScroll = { x: window.scrollX, y: window.scrollY, siblings };
+  activeModal = overlay;
+  modalEpoch++;
+  overlay.hidden = false;
+  root.style.setProperty("--modal-page-top", `-${modalScroll.y}px`);
+  root.style.setProperty("--modal-page-left", `-${modalScroll.x}px`);
+  // Preserve the background's original width on desktop scrollbars.
+  root.style.setProperty("--modal-page-width", `${root.clientWidth}px`);
+  root.classList.add("modal-open");
+  for (const el of siblings) el.inert = true;
+  fabTouchStart = null;
+  resetFab();
+  return true;
+}
+
+function hideModal(id) {
+  if (activeModal !== $(id)) return false;
+  const { x, y, siblings } = modalScroll;
+  activeModal.hidden = true;
+  activeModal = null;
+  modalScroll = null;
+  for (const el of siblings) el.inert = false;
+  const root = document.documentElement;
+  root.classList.remove("modal-open");
+  root.style.removeProperty("--modal-page-top");
+  root.style.removeProperty("--modal-page-left");
+  root.style.removeProperty("--modal-page-width");
+  window.scrollTo(x, y);
+  // If a deep link opened a note before the first draw, allow startup
+  // to finish on the next tick rather than leaving an empty stage.
+  lastDrawAt = currentSelection ? Date.now() : Date.now() - 60000;
+  return true;
+}
+
+function modalFocusables() {
+  return Array.from(activeModal.querySelectorAll(
+    "a[href], button, input, select, textarea, [tabindex]"
+  )).filter(el => el.tabIndex >= 0 && !el.matches(":disabled") && el.getClientRects().length);
+}
+
+function focusInsideModal(last = false) {
+  const items = modalFocusables();
+  const target = (last ? items[items.length - 1] : items[0]) ||
+    activeModal.querySelector('[role="dialog"]');
+  if (target) {
+    if (!items.length) target.tabIndex = -1;
+    target.focus();
+  }
+}
+
+function trapModalTab(e) {
+  if (!activeModal || e.key !== "Tab") return;
+  const items = modalFocusables();
+  const index = items.indexOf(document.activeElement);
+  if (!items.length || index < 0 ||
+      (e.shiftKey ? index === 0 : index === items.length - 1)) {
+    e.preventDefault();
+    focusInsideModal(e.shiftKey);
+  }
+}
+
+function retainModalFocus(e) {
+  if (activeModal && !activeModal.contains(e.target)) focusInsideModal();
+}
 
 function drawCard() {
-  if (!drawsReady || drawGate.pending || imageModalSel) return false;
+  if (!drawsReady || drawGate.pending || activeModal || imageModalSel) return false;
+  const epoch = modalEpoch;
   const card = $("card");
   card.classList.add("leaving");
   return drawGate.request(() => {
-    if (gossipEndpoint()) refreshGossip();
     const finish = () => card.classList.remove("leaving");
+    if (activeModal || epoch !== modalEpoch) { finish(); return; }
+    if (gossipEndpoint()) refreshGossip();
     try {
       // Serialize choice, synchronous render, commit and daily receipt.
       const attempt = retriesLeft => {
         const result = deckState.withLock(() => {
+          // The modal can open while waiting for a shared lock or note
+          // refresh. Treat that attempt as finished without a draw/retry.
+          if (activeModal || epoch !== modalEpoch) return true;
           const selected = deckState.transact(() => {
             const sel = nextSelection(retriesLeft > 0);
             if (!sel) return null;
@@ -3533,7 +3610,7 @@ $("card").addEventListener("keydown", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !e.repeat && e.target === document.body) {
+  if (!activeModal && e.code === "Space" && !e.repeat && e.target === document.body) {
     e.preventDefault();
     drawCard();
   }
@@ -4381,6 +4458,8 @@ let captureUrl = null;
 let captureFile = null;
 
 function showCapture(blob, frozen) {
+  // A delayed stage capture must not interrupt a newer reading/editing modal.
+  if (activeModal) return;
   if (captureUrl) URL.revokeObjectURL(captureUrl);
   captureUrl = URL.createObjectURL(blob);
   const fname = `now-and-more-${frozen.getFullYear()}${pad(frozen.getMonth() + 1)}${pad(frozen.getDate())}` +
@@ -4394,21 +4473,21 @@ function showCapture(blob, frozen) {
   } catch (e) { captureFile = null; }
   const canShare = !!(captureFile && navigator.canShare && navigator.canShare({ files: [captureFile] }));
   $("capture-share").hidden = !canShare;
-  $("capture-overlay").hidden = false;
+  showModal("capture-overlay");
   $("capture-close-btn").focus();
 }
 
 function closeCapture() {
   if ($("capture-overlay").hidden) return;
-  $("capture-overlay").hidden = true;
+  hideModal("capture-overlay");
   if (captureUrl) {
     URL.revokeObjectURL(captureUrl);
     captureUrl = null;
   }
   captureFile = null;
   // Return focus to the surface the keepsake was taken from.
-  if (imageModalOpen()) $("img-close-btn").focus();
-  else $("capture-btn").focus();
+  if (imageModalOpen()) $("img-close-btn").focus({ preventScroll: true });
+  else $("capture-btn").focus({ preventScroll: true });
 }
 
 /* A sky chart / moon whose picture is NOT on the stage right now —
@@ -4545,6 +4624,8 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ================= Init ================= */
+document.addEventListener("keydown", trapModalTab, true);
+document.addEventListener("focusin", retainModalFocus);
 buildAnalogTicks();
 buildStyleChips();
 buildSignSelector();

@@ -135,6 +135,7 @@ function harness(storage = store()) {
     return {
       state: deckState, drawCard, makeSelection, selectionForLanguage, availableCategories, canRepaintSelection,
       ready: () => { drawsReady = true; },
+      setModal: open => { activeModal = open ? {} : null; if (open) modalEpoch++; },
       setLang: v => { lang = v; },
       fail: v => { failRender = v; },
       setGifts: (n, p) => { note = n; postcard = p; },
@@ -265,6 +266,31 @@ test("actual poem/quote selection consumes only shown language and caches varian
   assert.equal(h.state.state.d["quotes:zh"], undefined);
   h.setLang("zh");
   assert.ok(h.translate(q).quoteZh);
+});
+
+test("modal isolation cancels a queued draw and blocks draws until closed", () => {
+  const { h, queue, storage, rendered } = harness();
+  h.ready();
+  assert.equal(h.drawCard(), true);
+  h.setModal(true);
+  assert.equal(h.drawCard(), false);
+  queue.shift()();
+  assert.equal(h.count, 0);
+  assert.equal(rendered.length, 0);
+  assert.equal(storage.writes, 0);
+  assert.equal(h.drawCard(), false);
+  h.setModal(false);
+  assert.equal(h.drawCard(), true);
+  // Even opening and closing before the scheduled callback invalidates it.
+  h.setModal(true);
+  h.setModal(false);
+  queue.shift()();
+  assert.equal(h.count, 0);
+  assert.equal(storage.writes, 0);
+  assert.equal(h.drawCard(), true);
+  queue.shift()();
+  assert.equal(h.count, 1);
+  assert.equal(rendered.length, 1);
 });
 
 test("actual draw waits for startup, then one accepted render/commit per transition", () => {
