@@ -81,6 +81,10 @@ const sharedLocks = NAM_DEDUP.browserLocks();
 const deckState = NAM_DEDUP.createDeckState(appStorage, () => Math.random(), {
   legacyIds: NAM_LEGACY_DECK_IDS, locks: sharedLocks,
 });
+// Copy a budget an older build left inside nam-decks-v2. Passive sync
+// must not do this write; the shared lock rereads both keys first.
+const historyMigration = deckState.withLock(() => {});
+if (historyMigration && typeof historyMigration.then === "function") historyMigration.catch(() => {});
 const deckDraw = key => deckState.draw(key, NAM_DECK_IDS[key]);
 
 /* Dynamic news is eligible only if unseen or cooled down. Keep history

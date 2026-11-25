@@ -289,12 +289,14 @@ test("a v40 writer cannot erase the daily history budget", () => {
   assert.deepEqual(reader.state.d.pool.s, writer.state.d.pool.s);
 
   // A pre-fix snapshot kept the budget only inside nam-decks-v2.
-  // Loading the new build copies it out; a later v40 rewrite cannot restore the slots.
+  // The copy out runs under the lock, after a fresh read — not from passive sync.
   const embedded = store({ v: 2, d: { pool: { s: ["id:0"], r: ["id:1"], l: "id:0" } }, g: {}, fp: [], historyDaily: [
     { day, count: 3 }, { day: "20261124", count: 1 },
   ] });
   const migrated = api.createDeckState(embedded);
   assert.equal(migrated.historyAvailable(day), false);
+  assert.equal(embedded.getItem(api.HISTORY_KEY), null);
+  migrated.withLock(() => {});
   assert.match(embedded.getItem(api.HISTORY_KEY), /20261125/);
   rewriteLikeV40(embedded);
   migrated.sync();
@@ -303,6 +305,48 @@ test("a v40 writer cannot erase the daily history budget", () => {
   const afterWipe = api.createDeckState(embedded);
   assert.equal(afterWipe.historyAvailable(day), false);
   assert.equal(afterWipe.transact(() => afterWipe.recordHistory(day)), false);
+});
+
+test("passive history sync does not clobber a locked spend", () => {
+  const dayA = "20261125";
+  const dayB = "20261126";
+  // Day B, then back to day A: recordHistory persists [B, A]. Sorting that
+  // snapshot yields [A, B]. Publishing the sorted copy is what races a draw.
+  const snapshot = JSON.stringify([{ day: dayB, count: 1 }, { day: dayA, count: 1 }]);
+  const memory = new Map([
+    [key, JSON.stringify({ v: 2, d: {}, g: {}, fp: [] })],
+    [api.HISTORY_KEY, snapshot],
+  ]);
+  let armed = false;
+  let spentDuringStaleWrite = false;
+  const storage = {
+    getItem: (k) => memory.get(k) ?? null,
+    setItem(k, v) {
+      if (armed && k === api.HISTORY_KEY && !spentDuringStaleWrite) {
+        spentDuringStaleWrite = true;
+        memory.set(api.HISTORY_KEY, snapshot);
+        active.sync();
+        active.transact(() => active.recordHistory(dayA));
+      }
+      memory.set(k, String(v));
+    },
+  };
+  const active = api.createDeckState(storage);
+  const passive = api.createDeckState(storage);
+  // Force a real reread. The history bytes stay the pre-spend snapshot.
+  memory.set(key, JSON.stringify({ v: 2, d: {}, g: {}, fp: ["reread"] }));
+  memory.set(api.HISTORY_KEY, snapshot);
+  armed = true;
+  passive.sync();
+  armed = false;
+  assert.equal(spentDuringStaleWrite, false);
+  assert.equal(JSON.parse(memory.get(api.HISTORY_KEY)).find((entry) => entry.day === dayA).count, 1);
+  active.sync();
+  assert.equal(active.transact(() => active.recordHistory(dayA)), true);
+  assert.equal(JSON.parse(memory.get(api.HISTORY_KEY)).find((entry) => entry.day === dayA).count, 2);
+  passive.sync();
+  assert.equal(JSON.parse(memory.get(api.HISTORY_KEY)).find((entry) => entry.day === dayA).count, 2);
+  assert.equal(passive.state.historyDaily.find((entry) => entry.day === dayA).count, 2);
 });
 
 test("ambient shortcut stays outside an open modal", () => {

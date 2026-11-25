@@ -187,42 +187,57 @@ const NAM_DEDUP = (() => {
     let lastRaw = null, lastHistoryRaw = null, initialized = false, active = false, held = false;
     let state = fresh();
 
-    // Refresh immediately before each mutation; storage events also update
-    // passive tabs. Never replace an in-flight render draft.
+    // Passive tabs reread both keys and never write. A sorted in-memory view
+    // of an older snapshot must not be published: another tab may already
+    // have spent the next slot under the lock. Copying a budget that still
+    // lives only inside nam-decks-v2 happens in commitHistory, after this
+    // read, and only while that lock is held.
     function sync() {
-      if (active || held) return;
+      if (active || held) return false;
       try {
         const raw = storage.getItem(KEY);
         const historyRaw = storage.getItem(HISTORY_KEY);
-        if (initialized && raw === lastRaw && historyRaw === lastHistoryRaw) return;
+        // Unchanged bytes keep the in-memory state. That includes a v1
+        // migration that has not been persisted yet; replacing it with a
+        // fresh document here would drop news history on the next refresh.
+        if (initialized && raw === lastRaw && historyRaw === lastHistoryRaw) return true;
         const decoded = raw !== null ? decode(raw) : (!initialized ? migrate(storage.getItem(LEGACY_KEY), legacyIds) : fresh());
-        const embedded = decoded.historyDaily;
         const isolated = normalizeHistory(parse(historyRaw));
-        decoded.historyDaily = mergeHistory(isolated, embedded);
+        decoded.historyDaily = mergeHistory(isolated, decoded.historyDaily);
         state = decoded;
         lastRaw = raw;
         lastHistoryRaw = historyRaw;
         initialized = true;
-        // Copy a budget that an earlier build stored inside the deck
-        // document before a legacy writer can drop that field.
-        const merged = JSON.stringify(state.historyDaily);
-        if (merged !== (historyRaw ?? "[]")) {
-          storage.setItem(HISTORY_KEY, merged);
-          lastHistoryRaw = merged;
-        }
-      } catch { /* Keep the last valid in-memory state. */ }
+        return true;
+      } catch { return false; /* Keep the last valid in-memory state. */ }
     }
     sync();
+
+    // Publish only counts the stored key is missing. Equal counts in a
+    // different order are not a write: that rewrite raced with locked draws.
+    function historyCountsBehind(storedRaw, list) {
+      const have = new Map(normalizeHistory(parse(storedRaw)).map((entry) => [entry.day, entry.count]));
+      return list.some((entry) => (have.get(entry.day) || 0) < entry.count);
+    }
+
+    function commitHistory() {
+      if (!historyCountsBehind(lastHistoryRaw, state.historyDaily)) return;
+      const raw = JSON.stringify(state.historyDaily);
+      try {
+        storage.setItem(HISTORY_KEY, raw);
+        lastHistoryRaw = raw;
+      } catch { /* The in-memory budget still applies for this tab. */ }
+    }
 
     function persist() {
       const deck = JSON.stringify(deckRecord(state));
       const history = JSON.stringify(state.historyDaily);
-      const historySame = history === (lastHistoryRaw ?? "[]");
-      if (deck === lastRaw && historySame) return;
+      const writeHistory = historyCountsBehind(lastHistoryRaw, state.historyDaily);
+      if (deck === lastRaw && !writeHistory) return;
       try {
         // The budget first: a crash or a legacy rewrite of the deck
         // document must not lose a count that already rendered.
-        if (!historySame) {
+        if (writeHistory) {
           storage.setItem(HISTORY_KEY, history);
           lastHistoryRaw = history;
         }
@@ -234,14 +249,16 @@ const NAM_DEDUP = (() => {
       } catch { /* In-memory draw history is still committed. */ }
     }
 
-    // Browser Web Locks cover the complete synchronous choice/render/
-    // commit (including gift receipts) and D2 maintenance. Older browsers
-    // have best-effort reread, not a fake localStorage atomic mutex.
+    // Already inside the shared lock when the browser has one. Reread both
+    // keys here, then copy out an embedded budget before the draw mutates.
     function withLock(work) {
       const run = () => {
-        sync();
+        const readable = sync();
         held = true;
-        try { return work(); } finally { held = false; }
+        try {
+          if (readable) commitHistory();
+          return work();
+        } finally { held = false; }
       };
       return runShared(locks, run);
     }
