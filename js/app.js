@@ -456,10 +456,6 @@ function updateSkyCopy(sel) {
   }
   bindSkyRetry(sel);
 }
-function skyCancelled(err) {
-  const msg = String((err && err.message) || err || "");
-  return (err && err.name === "AbortError") || msg.indexOf("cancelled") >= 0 || msg.indexOf("canceled") >= 0;
-}
 /* Start a scene during the draw, but never await it under the deck lock.
    A later card increments the generation and aborts the canvas paint.
    The paint is scoped to ONE surface (the stage, or the picture modal):
@@ -492,9 +488,17 @@ function scheduleSkyVisual(sel, surface) {
       } else {
         await NAM_SKY.paintIllustration(cv, scene, sel.summary.sig, ctrl.signal);
       }
+      // The paint for this generation actually landed. The picture
+      // modal's watchdog compares against this stamp: a scheduled
+      // generation that never reaches it gets one re-schedule.
+      sel._paintedGen = gen;
     })
     .catch((err) => {
-      if (gen !== skyVisualGen || ctrl.signal.aborted || skyCancelled(err)) return;
+      // A superseded job stays silent — its abort was deliberate. But
+      // a failure (cancellation-shaped or not) that reaches the
+      // CURRENT generation is real: surface it so the retry
+      // affordance appears instead of a silently blank canvas.
+      if (gen !== skyVisualGen) return;
       sel.skyError = err;
       sel.summary = null;
       updateSkyCopy(sel);
@@ -645,8 +649,10 @@ function solarTermInstantsForYear(year) {
 }
 
 /* The term picture for the LOCAL day containing `date`:
-   today — the crossing whose local calendar date is that day, else null;
-   next  — the first crossing on/after the next local midnight.
+   today   — the crossing whose local calendar date is that day, else null;
+   next    — the first crossing on/after the next local midnight;
+   current — the term in force on that day: today when a crossing
+             falls on it, else the last crossing before it.
    Entries carry { idx, angle, instant, name, nameEn }. */
 function solarTermInfo(date) {
   const y = date.getUTCFullYear();
@@ -657,16 +663,17 @@ function solarTermInfo(date) {
   ].sort((a, b) => a.instant - b.instant);
   const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-  let today = null, next = null;
+  let today = null, next = null, current = null;
   for (const t of all) {
-    if (t.instant >= dayStart && t.instant < dayEnd) today = t;
     if (t.instant >= dayEnd) { next = t; break; }
+    current = t;
+    if (t.instant >= dayStart) today = t;
   }
   const named = (t) => (t ? {
     idx: t.idx, angle: t.angle, instant: t.instant,
     name: SOLAR_TERMS[t.idx], nameEn: SOLAR_TERMS_EN[t.idx],
   } : null);
-  return { today: named(today), next: named(next) };
+  return { today: named(today), next: named(next), current: named(current) };
 }
 
 function localHM(date) { return `${pad(date.getHours())}:${pad(date.getMinutes())}`; }
@@ -2220,12 +2227,13 @@ function renderEnvelope(sel, surface) {
   surface.body.innerHTML =
     `<div class="envelope env-${info.kind}">` +
     preview +
+    `<div class="env-text">` +
     `<p class="env-received">${esc(P.received)}</p>` +
     `<span class="big env-title">${esc(info.title)}</span>` +
     (info.intro ? `<div class="sub env-intro">${esc(info.intro)}</div>` : "") +
     (info.glimpse && info.glimpse !== info.intro ? `<div class="sub env-glimpse">${esc(info.glimpse)}</div>` : "") +
     `<p class="env-cta">${esc(P.view)} <span aria-hidden="true">›</span></p>` +
-    `</div>`;
+    `</div></div>`;
   liveWorldTime = null;
 }
 
@@ -2243,12 +2251,35 @@ function openImageModal(sel) {
   if (ambientOn || !isPictureCard(sel) || imageModalOpen()) return;
   imageModalSel = sel;
   imageOpener = $("card");
+  // Unhide BEFORE rendering: a sky canvas that starts painting while
+  // its overlay is still display:none can come up blank (seen live:
+  // illustration form, first open — copy updated, canvas never drew;
+  // a reopen painted instantly). Paint into a visible layout.
+  $("img-overlay").hidden = false;
   renderSelection(sel, modalSurface());
+  if (sel.cat === "sky") armSkyModalWatchdog(sel);
   $("img-capture-btn").textContent = t().capture;
   $("img-close-btn").textContent = t().captureClose;
-  $("img-overlay").hidden = false;
   deliverPostcardGift(sel);
   $("img-close-btn").focus();
+}
+
+/* One-shot watchdog for the modal's sky paint. If the generation
+   scheduled by this opening has not actually painted ~2.8s later —
+   the live first-open blank — schedule it once more into the modal
+   surface. At most one re-schedule per opening; a modal that has
+   closed (or moved on to another selection) is never touched. */
+function armSkyModalWatchdog(sel) {
+  const scheduledGen = sel._skyGen;
+  let fired = false;
+  const wd = setTimeout(() => {
+    if (fired) return;
+    fired = true;
+    if (imageModalSel !== sel || !imageModalOpen()) return;
+    if (sel._paintedGen === scheduledGen) return;
+    scheduleSkyVisual(sel, modalSurface());
+  }, 2800);
+  if (wd && typeof wd.unref === "function") wd.unref();
 }
 
 function closeImageModal() {
@@ -2747,16 +2778,24 @@ function renderSelection(sel, surface) {
     const a = sel.data;
     const alm = s.almanac;
     meta = a.lunarLabel ? `农历${a.lunarLabel} · ${a.yearGanzhi}年` : `${a.yearGanzhi}年`;
-    // 节气 with its exact crossing moment: today's term and the local
-    // time it begins, or — on an ordinary day — the next term, its local
-    // date and its exact time.
+    // 节气： the card speaks only of its own day. On a term day it
+    // names the term and the exact local time it begins; on an
+    // ordinary day it names the term currently in force — never the
+    // next term's future date, which read like a future day's almanac.
     const ti = a.termInfo;
-    const tMain = ti.today || ti.next;
-    const tDisp = termDisplayInstant(tMain.instant);
-    const termWhen = ti.today
-      ? `今日交节 <b>${localHM(tDisp)}</b>`
-      : `${tDisp.getMonth() + 1}月${tDisp.getDate()}日 <b>${localHM(tDisp)}</b> 交节`;
-    const bits = [`节气 <b>${tMain.name}</b> · ${termWhen}`];
+    const tMain = ti.today || ti.current || ti.next;
+    let termLine;
+    if (ti.today) {
+      termLine = `节气 <b>${tMain.name}</b> · 今日交节 <b>${localHM(termDisplayInstant(tMain.instant))}</b>`;
+    } else if (ti.current) {
+      termLine = `节气 <b>${tMain.name}</b>`;
+    } else {
+      // No term in force on record (cannot happen with the y−1…y+1
+      // window, but never crash the card): fall back to the next term.
+      const tDisp = termDisplayInstant(tMain.instant);
+      termLine = `节气 <b>${tMain.name}</b> · ${tDisp.getMonth() + 1}月${tDisp.getDate()}日 <b>${localHM(tDisp)}</b> 交节`;
+    }
+    const bits = [termLine];
     if (a.jianchu) bits.push(`值神 <b>${a.jianchu}</b>`);
     bits.push(`<b>${a.chongSha}</b>`);
     body = `<span class="big">${a.dayGanzhi}日</span>` +

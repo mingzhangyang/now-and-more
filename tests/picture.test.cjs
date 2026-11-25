@@ -1,5 +1,6 @@
 "use strict";
 const test = require("node:test");
+const { mock } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -44,7 +45,12 @@ function harness() {
       addEventListener(type, fn) { (this.handlers[type] ||= []).push(fn); },
       setAttribute() {}, getAttribute() { return null; },
       focus() { this.focused++; },
-      querySelector() { return null; },
+      querySelector(sel) {
+        // The one lookup the sky paint path cannot do without: the
+        // canvas inside the card body. Everything else stays null,
+        // which the copy/retry code already treats as "not there".
+        return sel === "canvas.sky-canvas" ? { fakeCanvas: true } : null;
+      },
       querySelectorAll() { return []; },
       append() {},
     };
@@ -59,9 +65,18 @@ function harness() {
     createElement: () => makeEl("anon"),
     createTextNode: (text) => ({ textContent: text }),
   };
+  const paintCalls = [];
   const NAM_SKY = {
     sceneFor: () => Promise.resolve({ fake: true }),
-    paintChart: async () => {}, paintMoon: async () => {}, paintIllustration: async () => {},
+    paintChart: async () => { paintCalls.push("chart"); },
+    paintMoon: async () => { paintCalls.push("moon"); },
+    paintIllustration: async () => {
+      paintCalls.push("illustration");
+      // With hang set, the paint starts but never lands — the live
+      // first-open blank — until the test releases it.
+      if (NAM_SKY.hang) await new Promise((resolve) => { NAM_SKY.release = resolve; });
+    },
+    hang: false, release: null,
     reset() {}, needsReload: () => false, warm: async () => {},
   };
   const source = data + "\n" + `
@@ -93,7 +108,7 @@ function harness() {
   `;
   const api = new Function("storage", "$", "document", "NAM_SKY", source)(
     storage, $, documentStub, NAM_SKY);
-  return { api, $, storage };
+  return { api, $, storage, sky: NAM_SKY, paintCalls };
 }
 
 const daxue = () => ({
@@ -113,6 +128,7 @@ test("non-ambient picture cards render as envelopes on the stage, not the pictur
   api.renderSelection(daxue());
   let body = $("card-body").innerHTML;
   assert.ok(body.includes("envelope"), "envelope markup");
+  assert.ok(body.includes('class="env-text"'), "the words ride in their own column beside the thumbnail");
   assert.ok(body.includes("你收到一张图卡"), "received line");
   assert.ok(body.includes("大雪"), "postcard title");
   assert.ok(body.includes("点击查看"), "call to view");
@@ -218,4 +234,64 @@ test("draw and rotation stay inert while the picture modal is open", () => {
   assert.ok(close.includes("lastDrawAt = Date.now();"));
   // The stage card opens an envelope instead of drawing past it.
   assert.ok(app.includes('if (stageShowsEnvelope(currentSelection)) { openImageModal(currentSelection); return; }'));
+});
+
+test("picture modal: the overlay unhides before the picture renders into it", () => {
+  const open = section("function openImageModal(sel)", "function armSkyModalWatchdog");
+  assert.ok(
+    open.indexOf('$("img-overlay").hidden = false') < open.indexOf("renderSelection(sel, modalSurface())"),
+    "a sky canvas must start painting in a visible layout, not under display:none");
+  assert.ok(open.includes("armSkyModalWatchdog(sel)"), "sky openings arm the watchdog");
+});
+
+const flush = async () => {
+  for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+};
+
+test("sky modal watchdog: a paint that never lands is re-scheduled exactly once", async () => {
+  mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    const { api, sky, paintCalls } = harness();
+    sky.hang = true; // the first paint starts but never lands (the live blank)
+    const sel = skySel("illustration");
+    api.openImageModal(sel);
+    await flush();
+    assert.deepEqual(paintCalls, ["illustration"]);
+    assert.equal(sel._paintedGen, undefined, "nothing has painted yet");
+
+    mock.timers.tick(2800); // the watchdog fires
+    await flush();
+    assert.deepEqual(paintCalls, ["illustration", "illustration"],
+      "the watchdog re-scheduled the modal paint");
+
+    sky.hang = false;
+    sky.release(); // the re-scheduled paint lands
+    await flush();
+    assert.equal(sel._paintedGen, sel._skyGen, "the re-scheduled generation is the painted one");
+
+    mock.timers.tick(60000); // one-shot: no third schedule, however long the modal stays open
+    await flush();
+    assert.equal(paintCalls.length, 2);
+    api.closeImageModal();
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test("sky modal watchdog: closing the modal disarms it", async () => {
+  mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    const { api, sky, paintCalls } = harness();
+    sky.hang = true;
+    const sel = skySel("illustration");
+    api.openImageModal(sel);
+    await flush();
+    assert.deepEqual(paintCalls, ["illustration"]);
+    api.closeImageModal();
+    mock.timers.tick(10000); // the leftover timer must not fire into a closed modal
+    await flush();
+    assert.deepEqual(paintCalls, ["illustration"], "no re-schedule after close");
+  } finally {
+    mock.timers.reset();
+  }
 });

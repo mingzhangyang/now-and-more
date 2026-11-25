@@ -724,17 +724,28 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
    Outside ambient mode a picture card (postcard / sky) arrives as an
    envelope: a glimpse of the picture, its name, one line about it and
    a quiet invitation to open it. The picture itself lives in the
-   image modal. The envelope wears the ordinary card dress, so the
-   stage keeps one height language for every category; the preview
-   strip is a fixed-height window, so wide and narrow layouts alike
-   stay unbroken. */
-.envelope { display: block; }
+   image modal. The envelope wears the ordinary card dress, but lays
+   itself out as a row — a square thumbnail on the left, the words in
+   a column beside it — so the card stays about half as tall as the
+   stacked layout it replaced, with no dead air on the right. */
+.envelope { display: flex; gap: 14px; align-items: stretch; }
 .env-preview {
-  height: 118px;
+  flex: none;
+  width: 104px;
+  height: auto;
+  min-height: 104px;
+  margin: 0;
   border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 14px;
   border: 1px solid var(--card-border);
+}
+.env-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
 }
 .env-preview-art img {
   width: 100%;
@@ -764,14 +775,16 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
     linear-gradient(165deg, #22335f 0%, #141f3d 55%, #0c1428 100%);
 }
 .env-received {
-  margin: 0 0 2px;
+  margin: 0 0 3px;
   font-family: var(--sans);
   font-size: 13px;
   letter-spacing: 0.22em;
   color: var(--ink-soft);
 }
-.env-title { display: block; }
-.env-intro { margin-top: 4px; }
+/* The envelope's title is a name, not a headline: smaller than the
+   stage's .big, which is sized for a card of its own. */
+.envelope .env-title { display: block; font-size: 27px; line-height: 1.2; }
+.env-intro { margin-top: 3px; }
 .env-glimpse {
   margin-top: 2px;
   display: -webkit-box;
@@ -780,14 +793,26 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   overflow: hidden;
 }
 .env-cta {
-  margin: 14px 0 0;
+  display: inline-block;
+  align-self: flex-start;
+  margin: 10px 0 0;
+  padding: 5px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
   font-family: var(--sans);
   font-size: 14px;
   letter-spacing: 0.14em;
   color: var(--accent);
   font-weight: 600;
 }
-.card.has-envelope:hover .env-cta, .card.has-envelope:focus-visible .env-cta { text-decoration: underline; text-underline-offset: 3px; }
+.card.has-envelope:hover .env-cta, .card.has-envelope:focus-visible .env-cta { border-color: var(--accent); }
+
+/* Narrow phones: a slimmer thumbnail and title keep the row in
+   proportion instead of squeezing the words. */
+@media (max-width: 380px) {
+  .env-preview { width: 88px; min-height: 88px; }
+  .envelope .env-title { font-size: 24px; }
+}
 
 /* ---------- Picture-card modal （图卡弹窗） ----------
    The picture opens in its own card inside a capture-style dialog.
