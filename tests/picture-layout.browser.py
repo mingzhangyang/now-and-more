@@ -32,7 +32,7 @@ def quoted(lang, key):
 COPY = {
     lang: {key: quoted(lang, key) for key in (
         "approx", "loading", "error", "retry", "reload", "moonCredit",
-        "capture", "captureClose", "illusMeta",
+        "captureDownload", "captureClose", "illusMeta",
     )}
     for lang in ("zh", "en")
 }
@@ -103,183 +103,86 @@ def check(browser, width, lang):
         }""")
         assert all(layout.values()), (width, lang, layout)
 
-        labels = COPY[lang]
-        page.evaluate("""(labels) => {
-          document.querySelector("#img-overlay").hidden=false;
-          document.querySelector("#img-capture-btn").textContent=labels.capture;
-          document.querySelector("#img-close-btn").textContent=labels.captureClose;
-          document.querySelector("#img-cat").textContent="Sky";
-          document.querySelector("#img-meta").textContent="Tonight's star chart";
-          document.querySelector("#img-card").dataset.skyState="ready";
-          document.querySelector("#img-body").innerHTML =
-            '<div class="img-fit"><canvas class="sky-canvas sky-chart" data-form="chart" width="880" height="880"></canvas></div>' +
-            '<div class="fact-row"><span>Tonight: Cassiopeia</span></div>' +
-            '<div class="sub">Positions approximate</div>';
-        }""", labels)
-        for form in ("chart", "moon"):
-            page.locator("#img-body canvas").evaluate("""(c, form) => {
-              c.className="sky-canvas sky-"+form;
-              c.width=c.height=form==="chart"?880:720;
-            }""", form)
-            fit = page.evaluate("""() => {
-              const r=s=>document.querySelector(s).getBoundingClientRect();
-              const c=r("#img-body canvas"), b=r("#img-body"), d=document.querySelector(".img-dialog");
-              const canvas=document.querySelector("#img-body canvas");
-              return {
-                left:c.left>=b.left-0.5,
-                right:c.right<=b.right+0.5,
-                square:Math.abs(c.width-c.height)<1,
-                centered:Math.abs(c.left+c.width/2-b.left-b.width/2)<1,
-                noHorizontalScroll:d.scrollWidth<=d.clientWidth+1,
-                noVerticalScroll:d.scrollHeight<=d.clientHeight+1,
-                fullWidth:Math.abs(c.width-b.width)<1,
-                transparent:getComputedStyle(d).backgroundColor==="rgba(0, 0, 0, 0)" &&
-                  getComputedStyle(d).borderTopWidth==="0px" &&
-                  getComputedStyle(d).boxShadow==="none" &&
-                  getComputedStyle(document.querySelector("#img-card")).backgroundColor==="rgba(0, 0, 0, 0)",
-                chromeHidden:r("#img-card .card-head").width<=1 &&
-                  r("#img-card .sub").width<=1,
-                captionShown:r("#img-card .fact-row").width>8 &&
-                  r("#img-card .fact-row").bottom<=innerHeight &&
-                  r("#img-card .fact-row").top>=0,
-                edged:getComputedStyle(canvas).boxShadow!=="none",
-                focusRoom:parseFloat(getComputedStyle(d).paddingBottom)>=4,
-                buttonsFit:r("#img-close-btn").bottom<=innerHeight &&
-                  r("#img-close-btn").height>=44 &&
-                  r("#img-capture-btn").bottom<=innerHeight &&
-                  r("#img-capture-btn").top>=0
-              };
-            }""")
-            assert all(fit.values()), (width, lang, form, fit)
-
-        page.evaluate("""() => {
-          document.querySelector("#img-card").dataset.skyState="error";
-          document.querySelector("#img-body .fact-row").innerHTML =
-            '<span>Unavailable</span><span><button class="sky-retry">Retry</button></span>';
-        }""")
-        retry = page.locator("#img-body .sky-retry")
-        box = retry.bounding_box()
-        assert retry.is_visible() and box["height"] >= 44
-        assert box["y"] >= 0 and box["y"] + box["height"] <= 844
-
-        for form in ("postcard", "skyart"):
-            page.evaluate("""form => {
-              const card = document.querySelector("#img-card");
-              card.className = "card img-card has-" + form;
-              delete card.dataset.skyState;
-              document.querySelector("#img-body").innerHTML =
-                '<div class="img-fit"><div class="' + form + '"><div>Image composition</div></div></div>';
-            }""", form)
-            box = page.locator("#img-body ." + form).bounding_box()
-            assert abs(box["height"] - box["width"] * 4 / 3) < 1, (width, lang, form, box)
-            close = page.locator("#img-close-btn").bounding_box()
-            assert close["y"] >= 0 and close["y"] + close["height"] <= 844
-            assert close["height"] >= 44
-            assert page.locator(".img-dialog").evaluate("(d) => d.scrollHeight <= d.clientHeight + 1")
     finally:
         page.close()
 
 
+
 def check_lightbox(browser, width, height, lang):
-    """Portrait and landscape, using the modal markup for ready, loading and error."""
+    """Real production publication/save code and intrinsic aspect ratios."""
     copy = COPY[lang]
-    states = [
-        {"kind": "chart", "skyState": "ready", "message": "Tonight: Cassiopeia", "label": ""},
-        {"kind": "chart", "skyState": "loading", "message": copy["loading"], "label": ""},
-        {"kind": "chart", "skyState": "error", "message": copy["error"], "label": copy["retry"]},
-        {"kind": "moon", "skyState": "error", "message": copy["error"], "label": copy["reload"]},
-        {"kind": "moon", "skyState": "ready", "message": "about 100% lit", "label": ""},
-        {"kind": "postcard", "skyState": "ready", "message": "", "label": ""},
-        {"kind": "skyart", "skyState": "error", "message": copy["error"], "label": copy["retry"]},
-        {"kind": "skyart", "skyState": "error", "message": copy["error"], "label": copy["reload"]},
-    ]
-    page = browser.new_page(viewport={"width": width, "height": height})
+    page = browser.new_page(viewport={"width": width, "height": height}, accept_downloads=True)
     try:
         page.set_content(HTML)
         page.add_style_tag(content=CSS)
-        for state in states:
-            page.evaluate("""({copy, state}) => {
-              document.querySelector("#img-overlay").hidden = false;
-              document.querySelector("#img-capture-btn").textContent = copy.capture;
-              document.querySelector("#img-close-btn").textContent = copy.captureClose;
-              const card = document.querySelector("#img-card");
-              card.className = "card img-card" + ((state.kind === "postcard" || state.kind === "skyart") ? " has-" + state.kind : "");
-              card.dataset.skyState = state.skyState;
-              const facts = state.label
-                ? `<span>${state.message}</span><span><button type="button" class="sky-retry">${state.label}</button></span>`
-                : `<span>${state.message}</span>`;
-              const body = document.querySelector("#img-body");
-              if (state.kind === "chart" || state.kind === "moon") {
-                const canvas = state.kind === "moon"
-                  ? '<canvas class="sky-canvas sky-moon" data-form="moon" width="720" height="720"></canvas>'
-                  : '<canvas class="sky-canvas sky-chart" data-form="chart" width="880" height="880"></canvas>';
-                const big = state.kind === "moon" ? `<span class="big">${copy.loading}</span>` : "";
-                const credit = state.kind === "moon" ? `<div class="sub">${copy.moonCredit}</div>` : "";
-                body.innerHTML = `<div class="img-fit">${canvas}</div>${big}<div class="fact-row">${facts}</div><div class="sub">${copy.approx}</div>${credit}`;
-              } else if (state.kind === "postcard") {
-                body.innerHTML = '<div class="img-fit"><div class="postcard"><div class="pc-photo"></div><div class="pc-text"><div class="pc-head"><h3 class="pc-title">Daxue</h3><p class="pc-meta">Dec 7</p></div><p class="pc-passage">A line for the day.</p></div></div></div>';
-              } else {
-                body.innerHTML =
-                  `<div class="img-fit"><div class="skyart"><div class="sa-photo"><canvas class="sky-canvas sky-illustration" data-form="illustration" width="1080" height="1180"></canvas></div>` +
-                  `<div class="sa-text"><div class="sa-head"><h3 class="sa-title">Where you are</h3><p class="sa-meta">${copy.illusMeta}</p></div></div></div></div>` +
-                  `<div class="fact-row skyart-status">${facts}</div>`;
-              }
-            }""", {"copy": copy, "state": state})
-            fit = page.evaluate("""(state) => {
-              const box = el => el.getBoundingClientRect();
-              const inside = el => {
-                const b = box(el);
-                const hit = document.elementFromPoint(b.left + Math.min(b.width / 2, b.width - 1), b.top + b.height / 2);
-                return {
-                  top: b.top >= -0.5, left: b.left >= -0.5,
-                  bottom: b.bottom <= innerHeight + 0.5, right: b.right <= innerWidth + 0.5,
-                  tall: b.height >= 44, wide: b.width > 8,
-                  hit: !!(hit && (hit === el || el.contains(hit)))
-                };
-              };
-              const art = document.querySelector("#img-body > .img-fit > .skyart, #img-body > .img-fit > .postcard, #img-body > .img-fit > canvas");
-              const a = box(art);
+        page.add_script_tag(content="""
+const $ = id => document.getElementById(id);
+let skyVisualGen = 0, imageModalSel = null;
+const modalSurface = () => ({card: $("img-card"), body: $("img-body")});
+const imageModalOpen = () => !$("img-overlay").hidden;
+""" + section(APP, "let modalPicture = null;", "async function renderModalPostcard(") + """
+$("img-capture-btn").addEventListener("click", saveModalPicture);
+""")
+        for kind in ("chart", "moon", "postcard", "illustration"):
+            image_height = 1700 if kind == "illustration" else 1440
+            assert page.evaluate("""async ({kind, imageHeight, copy}) => {
+              $("img-overlay").hidden = false;
+              $("img-capture-btn").textContent = copy.captureDownload;
+              $("img-close-btn").textContent = copy.captureClose;
+              clearModalPicture();
+              imageModalSel = {cat: kind === "postcard" ? "postcard" : "sky", form: kind};
+              $("img-card").dataset.skyGen = String(++skyVisualGen);
+              const canvas = document.createElement("canvas");
+              canvas.width = 1080; canvas.height = imageHeight;
+              const ctx = canvas.getContext("2d");
+              ctx.fillStyle = "#10182e"; ctx.fillRect(0, 0, 1080, imageHeight);
+              ctx.fillStyle = "#faf4e6"; ctx.fillRect(0, imageHeight - 360, 1080, 360);
+              ctx.fillStyle = "#2b2620"; ctx.font = "48px serif";
+              ctx.fillText(kind, 56, imageHeight - 260);
+              return publishModalPicture(imageModalSel, skyVisualGen, canvas, kind);
+            }""", {"kind": kind, "imageHeight": image_height, "copy": copy})
+            fit = page.evaluate("""() => {
+              const art = document.querySelector(".modal-picture"), a = art.getBoundingClientRect();
               const d = document.querySelector(".img-dialog");
-              const retry = document.querySelector(".sky-retry");
-              const sky = document.querySelector(".skyart");
-              return {
-                artW: a.width, artH: a.height, artTop: a.top, artBottom: a.bottom,
-                actions: {
-                  capture: inside(document.querySelector("#img-capture-btn")),
-                  close: inside(document.querySelector("#img-close-btn"))
-                },
-                retry: retry ? inside(retry) : null,
-                retryInArt: !!(retry && sky && sky.contains(retry)),
-                scroll: d.scrollHeight <= d.clientHeight + 1 && d.scrollWidth <= d.clientWidth + 1,
-                square: art.matches("canvas") ? Math.abs(a.width - a.height) < 1 : true,
-                ratio: art.matches("canvas") ? true : Math.abs(a.height - a.width * 4 / 3) < 1,
-                edged: getComputedStyle(art).boxShadow !== "none",
-                chromeHidden: state.kind === "chart" || state.kind === "moon"
-                  ? box(document.querySelector("#img-card .card-head")).width <= 1 &&
-                    box(document.querySelector("#img-card .sub")).width <= 1
-                  : true,
-                captionShown: (state.kind === "chart" || state.kind === "moon") && state.skyState === "ready"
-                  ? box(document.querySelector("#img-card .fact-row")).width > 8 &&
-                    box(document.querySelector("#img-card .fact-row")).bottom <= innerHeight + 0.5
-                  : true,
-                phaseShown: state.kind === "moon" && state.skyState === "ready"
-                  ? box(document.querySelector("#img-card .big")).width > 8 &&
-                    box(document.querySelector("#img-card .big")).bottom <= innerHeight + 0.5
-                  : true
+              const inside = el => {
+                const b = el.getBoundingClientRect();
+                const hit = document.elementFromPoint(b.left+b.width/2, b.top+b.height/2);
+                return b.height >= 44 && b.width > 8 && b.top >= -0.5 &&
+                  b.left >= -0.5 && b.bottom <= innerHeight+0.5 && b.right <= innerWidth+0.5 &&
+                  !!(hit && (hit === el || el.contains(hit)));
               };
-            }""", state)
-            where = (width, height, lang, state["kind"], state["skyState"], state["label"], fit)
-            assert fit["artW"] > 40 and fit["artH"] > 40, where
-            assert 0 <= fit["artTop"] and fit["artBottom"] <= height + 0.5, where
-            assert fully_inside(fit["actions"]["capture"]) and fully_inside(fit["actions"]["close"]), where
-            assert fit["scroll"] and fit["square"] and fit["ratio"] and fit["chromeHidden"], where
-            assert fit["captionShown"] and fit["phaseShown"] and fit["edged"], where
-            if state["label"]:
-                assert fully_inside(fit["retry"]), where
-                if state["kind"] == "skyart":
-                    assert fit["retryInArt"] is False, where
-            else:
-                assert fit["retry"] is None, where
+              return {
+                size: a.width > 40 && a.height > 40,
+                inside: a.top >= 0 && a.bottom <= innerHeight+0.5 && a.left >= 0 && a.right <= innerWidth+0.5,
+                ratio: Math.abs(a.height - a.width * art.naturalHeight / art.naturalWidth) < 1,
+                scroll: d.scrollHeight <= d.clientHeight+1 && d.scrollWidth <= d.clientWidth+1,
+                edged: getComputedStyle(art).boxShadow !== "none",
+                transparent: getComputedStyle(d).backgroundColor === "rgba(0, 0, 0, 0)",
+                chromeHidden: $("img-card").querySelector(".card-head").getBoundingClientRect().width <= 1,
+                noExternalCaption: !$("img-body").querySelector(".fact-row, .big, .sub"),
+                sameUrl: art.src === modalPicture.url,
+                actions: inside($("img-capture-btn")) && inside($("img-close-btn")),
+                saveReady: !$("img-capture-btn").disabled
+              };
+            }""")
+            assert all(fit.values()), (width, height, lang, kind, fit)
+            if (width, height, lang) == (390, 844, "zh"):
+                expected = bytes(page.evaluate("async () => Array.from(new Uint8Array(await (await fetch(document.querySelector('.modal-picture').src)).arrayBuffer()))"))
+                with page.expect_download() as download_info:
+                    page.locator("#img-capture-btn").click()
+                download = download_info.value
+                assert download.suggested_filename.endswith(".png")
+                assert download.path().read_bytes() == expected, kind
+        page.evaluate("""(copy) => {
+          clearModalPicture();
+          $("img-body").innerHTML = '<div class="fact-row picture-status" role="status"><span>' +
+            copy.error + '</span><span><button type="button" class="sky-retry">' + copy.retry + '</button></span></div>';
+        }""", copy)
+        assert page.locator("#img-capture-btn").is_disabled()
+        assert page.locator(".modal-picture").count() == 0
+        retry = page.locator(".sky-retry").bounding_box()
+        assert retry["height"] >= 44 and retry["y"] >= 0 and retry["y"]+retry["height"] <= height
+        assert page.locator("#img-close-btn").is_visible()
     finally:
         page.close()
 
@@ -386,8 +289,8 @@ if __name__ == "__main__":
             for lang in ("zh", "en"):
                 check_row_envelopes(browser, width, lang)
         check_stage_illustration_retry(browser)
-        for width, height in ((390, 844), (320, 844), (844, 390), (667, 320)):
+        for width, height in ((390, 844), (320, 844), (844, 390), (667, 320), (1440, 900)):
             for lang in ("zh", "en"):
                 check_lightbox(browser, width, height, lang)
         browser.close()
-    print("envelope rows, stage retry, tall lightbox canvases, and portrait/landscape controls passed")
+    print("envelope rows, stage retry, PNG layout, direct download byte equality and controls passed")

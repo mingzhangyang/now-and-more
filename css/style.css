@@ -852,8 +852,8 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
    picture sits in .img-fit, whose container size is whatever remains
    after the real status row and the action row, so a visible retry
    or a wrapped control shrinks the art instead of pushing Close off
-   screen. Square skies use the shorter side; composed 3:4 pictures
-   use three quarters of the free height. Empty dialog space stays a
+   screen. Every PNG fits its own intrinsic aspect ratio.
+   Empty dialog space stays a
    backdrop click — only the picture, status and actions take hits. */
 .capture-overlay.img-overlay {
   background: rgba(18, 17, 16, 0.84);
@@ -917,14 +917,8 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   justify-content: center;
   container-type: size;
 }
-/* Category, approximate-position notes and credits stay available to
-   assistive technology and to keepsake export, but they are not part
-   of the picture. The moon's phase name (.big) and a ready chart or
-   moon fact line stay on screen — without them the disc is anonymous.
-   Status and retry stay visible until the current generation paints,
-   and remain visible when it fails. */
-#img-card:not(.has-postcard):not(.has-skyart) .card-head,
-#img-card:not(.has-postcard):not(.has-skyart) .card-body > .sub {
+/* Captions are in the PNG. The dialog label remains accessible. */
+#img-card .card-head {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -934,36 +928,18 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   clip-path: inset(50%);
   white-space: nowrap;
 }
-#img-card:not(.has-postcard):not(.has-skyart) .card-body > .big {
-  flex: none;
-  color: #fff;
-  font-size: clamp(18px, 4.2vw, 26px);
-  line-height: 1.3;
-  text-align: center;
-  max-width: 100%;
-  margin: 0;
-  pointer-events: none;
-}
-#img-card .img-fit > .sky-canvas {
-  width: min(100cqw, 100cqh);
+#img-card .img-fit > .modal-picture {
+  display: block;
+  width: min(100cqw, calc(100cqh * var(--picture-ratio, 0.75)));
   height: auto;
-  aspect-ratio: 1;
   max-width: 100%;
   max-height: 100%;
+  object-fit: contain;
   margin: 0;
   pointer-events: auto;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.32), 0 10px 28px rgba(0, 0, 0, 0.35);
 }
-#img-card .img-fit > .postcard,
-#img-card .img-fit > .skyart {
-  width: min(100cqw, calc(100cqh * 0.75));
-  height: auto;
-  aspect-ratio: 3 / 4;
-  max-width: 100%;
-  max-height: 100%;
-  pointer-events: auto;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.32), 0 10px 28px rgba(0, 0, 0, 0.35);
-}
+#img-card .card-body { justify-content: center; }
 #img-card .card-body > .fact-row {
   flex: none;
   justify-content: center;
