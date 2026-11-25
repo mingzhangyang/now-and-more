@@ -28,3 +28,4 @@ jobs:
       - run: python -m playwright install --with-deps chromium
       - run: python tests/picture-layout.browser.py
       - run: python tests/picture-production.browser.py
+      - run: python tests/pwa-navigation.browser.py

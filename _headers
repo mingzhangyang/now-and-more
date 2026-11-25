@@ -1,3 +1,9 @@
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
 # Versioned SDK bytes are immutable. A new engine version lives in a new directory.
 /vendor/sky-engine/0.2.0/sky-engine.mjs
   Content-Type: text/javascript; charset=utf-8
