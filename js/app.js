@@ -432,7 +432,7 @@ function bindSkyRetry(sel) {
   btn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (currentSelection !== sel) return;
+    if (surface.stage ? currentSelection !== sel : imageModalSel !== sel) return;
     if (NAM_SKY.needsReload()) {
       window.location.reload();
       return;
@@ -442,7 +442,7 @@ function bindSkyRetry(sel) {
     sel.scene = null;
     sel.summary = null;
     sel.skyError = null;
-    updateSkyCopy(sel);
+    if (surface.stage) updateSkyCopy(sel);
     scheduleSkyVisual(sel, surface);
   });
 }
@@ -456,10 +456,11 @@ function updateSkyCopy(sel) {
     [...text.children].forEach((el) => { if (el !== head) el.remove(); });
     const external = surface.body.querySelector(":scope > .skyart-status");
     if (external) external.remove();
-    // The paper strip clips overflow. On the lightbox a failed
-    // illustration keeps its retry outside that strip, where the
-    // fixed-height control cannot be cut off.
-    if (!surface.stage && sel.skyError) {
+    // .skyart clips overflow, and the retry control is a fixed height
+    // while the paper strip scales with the card. Keep a failed
+    // illustration's retry outside that strip on every surface — the
+    // lightbox and the stage, including ambient mode.
+    if (sel.skyError) {
       surface.body.insertAdjacentHTML("beforeend",
         `<div class="fact-row skyart-status"><span>${esc(t().sky.error)}</span><span>${skyRetryButtonHtml()}</span></div>`);
     } else {
@@ -491,17 +492,28 @@ function scheduleSkyVisual(sel, surface) {
   const ctrl = new AbortController();
   sel._abort = ctrl;
   surface.card.dataset.skyGen = String(gen);
-  if (!surface.stage) surface.card.dataset.skyState = "loading";
   sel.skyError = null;
+  if (!surface.stage) {
+    clearModalPicture();
+    showModalStatus(sel, false);
+  }
+  const current = () => gen === skyVisualGen && !ctrl.signal.aborted &&
+    surface.card.dataset.skyGen === String(gen);
   const job = Promise.resolve(sel.ready || (sel.ready = NAM_SKY.sceneFor(sel.observer)))
     .then(async (scene) => {
-      if (gen !== skyVisualGen || ctrl.signal.aborted) return;
-      if (surface.card.dataset.skyGen !== String(gen)) return;
+      if (!current()) return false;
       sel.scene = scene;
       sel.summary = skySummary(scene, sel.observer);
-      updateSkyCopy(sel);
-      const cv = surface.body.querySelector("canvas.sky-canvas");
-      if (!cv || surface.card.dataset.skyGen !== String(gen)) return;
+      if (surface.stage) updateSkyCopy(sel);
+      // Independent modal canvases prevent a superseded render from
+      // modifying the current image after retry or close.
+      const cv = surface.stage ? surface.body.querySelector("canvas.sky-canvas") :
+        document.createElement("canvas");
+      if (!cv || !current()) return false;
+      if (!surface.stage) {
+        cv.width = KEEP_W;
+        cv.height = sel.form === "illustration" ? SKY_KEEP_ART_H : KEEP_W;
+      }
       if (sel.form === "chart") {
         await NAM_SKY.paintChart(cv, scene, lang === "zh" ? "zh-Hans" : "en");
       } else if (sel.form === "moon") {
@@ -509,27 +521,29 @@ function scheduleSkyVisual(sel, surface) {
       } else {
         await NAM_SKY.paintIllustration(cv, scene, sel.summary.sig, ctrl.signal);
       }
-      // The paint for this generation actually landed. The picture
-      // modal's watchdog compares against this stamp: a scheduled
-      // generation that never reaches it gets one re-schedule.
-      if (gen !== skyVisualGen || ctrl.signal.aborted ||
-          surface.card.dataset.skyGen !== String(gen)) return;
+      if (!current()) return false;
+      if (!surface.stage) {
+        await ensureCaptureFonts();
+        if (!current()) return false;
+        const serif = capturePalette().serif;
+        const picture = sel.form === "illustration"
+          ? await renderSkyArtKeepsake(sel, serif, cv)
+          : renderAstronomyPicture(sel, cv, serif);
+        if (!current() || !await publishModalPicture(sel, gen, picture, modalPictureDescription(sel))) return false;
+      }
       sel._paintedGen = gen;
-      if (!surface.stage) surface.card.dataset.skyState = "ready";
+      return true;
     })
     .catch((err) => {
-      // A superseded job stays silent — its abort was deliberate. But
-      // a failure (cancellation-shaped or not) that reaches the
-      // CURRENT generation is real: surface it so the retry
-      // affordance appears instead of a silently blank canvas.
-      if (gen !== skyVisualGen) return;
+      if (!current()) return false;
       sel.skyError = err;
-      if (!surface.stage) surface.card.dataset.skyState = "error";
       sel.summary = null;
-      updateSkyCopy(sel);
+      if (surface.stage) updateSkyCopy(sel);
+      else showModalStatus(sel, true);
+      return false;
     });
-  sel.painted = job.then(() => !sel.skyError && !!sel.summary);
-  return sel.painted;
+  sel.painted = job;
+  return job;
 }
 /* ================= End night sky ================= */
 
@@ -2271,36 +2285,156 @@ function imageModalOpen() {
   return !$("img-overlay").hidden;
 }
 
-/* The lightbox sizes .img-fit from the space left after the status
-   and action rows. Only the art goes in that slot; stage cards are
-   left as renderers wrote them. */
-function mountModalArt(surface) {
-  if (!surface || surface.stage) return;
-  const art = surface.body.querySelector(":scope > .sky-canvas, :scope > .postcard, :scope > .skyart");
-  if (!art || typeof art.before !== "function") return;
-  const fit = document.createElement("div");
-  fit.className = "img-fit";
-  art.before(fit);
-  fit.appendChild(art);
+// The same immutable PNG is used for both preview and saving.
+let modalPicture = null;
+function modalPictureIsCurrent(sel, gen) {
+  return imageModalOpen() && imageModalSel === sel && gen === skyVisualGen &&
+    $("img-card").dataset.skyGen === String(gen);
+}
+function clearModalPicture() {
+  $("img-capture-btn").disabled = true;
+  if (modalPicture) URL.revokeObjectURL(modalPicture.url);
+  modalPicture = null;
+}
+function showModalStatus(sel, failed) {
+  const surface = modalSurface();
+  surface.card.dataset.skyState = failed ? "error" : "loading";
+  const sky = sel.cat === "sky";
+  const message = sky ? (failed ? t().sky.error : t().sky.loading) :
+    (failed ? (lang === "zh" ? "图片这次没有载入。" : "The picture did not load this time.") :
+      (lang === "zh" ? "正在制作图片…" : "Preparing the picture…"));
+  surface.body.innerHTML = '<div class="fact-row picture-status" role="status"><span>' +
+    esc(message) + '</span>' + (failed ? '<span>' +
+      (sky ? skyRetryButtonHtml() : '<button type="button" class="sky-retry">' + esc(t().sky.retry) + '</button>') +
+      '</span>' : '') + '</div>';
+  if (failed && sky) bindSkyRetry(sel);
+  if (failed && !sky) {
+    const retry = surface.body.querySelector(".sky-retry");
+    if (retry) retry.addEventListener("click", () => {
+      if (imageModalOpen() && imageModalSel === sel) renderModalPostcard(sel);
+    });
+  }
+}
+function modalPictureDescription(sel) {
+  const s = t();
+  if (sel.cat === "postcard") {
+    const c = POSTCARD_COPY[sel.key];
+    return [lang === "zh" ? c.titleZh : c.titleEn, postcardMetaText(sel),
+      lang === "zh" ? c.subZh : c.subEn, lang === "zh" ? c.passZh : c.passEn].filter(Boolean).join(" · ");
+  }
+  if (sel.form === "moon") {
+    const m = sel.summary.moon;
+    return [s.world.moonTitle, s.world.phases[m.idx], s.world.moonIllum(m.illum),
+      s.world.moonAge(m.age), s.sky.approx, s.sky.moonCredit].join(" · ");
+  }
+  const bits = skyFactsInner(sel);
+  const title = sel.form === "illustration"
+    ? (sel.place ? skyPlaceName(sel.place) : s.categories.sky) + " · " + s.sky.illusMeta
+    : s.sky.chartMeta;
+  return [title, bits.look, bits.line, sel.form === "chart" ? s.sky.approx : ""].filter(Boolean).join(" · ");
+}
+async function publishModalPicture(sel, gen, canvas, description) {
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!modalPictureIsCurrent(sel, gen)) return false;
+  if (!blob) throw new Error("PNG encoding failed");
+  const url = URL.createObjectURL(blob);
+  let published = false;
+  try {
+    const image = document.createElement("img");
+    image.className = "modal-picture";
+    image.alt = description;
+    image.width = canvas.width;
+    image.height = canvas.height;
+    image.style.setProperty("--picture-ratio", String(canvas.width / canvas.height));
+    if (typeof image.decode === "function") {
+      image.src = url;
+      await image.decode();
+    } else {
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = url;
+      });
+    }
+    if (!modalPictureIsCurrent(sel, gen)) return false;
+    const fit = document.createElement("div");
+    fit.className = "img-fit";
+    fit.appendChild(image);
+    const name = "now-and-more-" + (sel.cat === "postcard" ? "postcard" : sel.form) +
+      "-" + new Date().toISOString().replace(/[:.]/g, "-") + ".png";
+    modalSurface().body.replaceChildren(fit);
+    modalPicture = { url, blob, name };
+    published = true;
+    $("img-card").dataset.skyState = "ready";
+    $("img-capture-btn").disabled = false;
+    return true;
+  } finally {
+    if (!published) URL.revokeObjectURL(url);
+  }
+}
+function downloadModalPicture(picture) {
+  const a = document.createElement("a");
+  a.href = picture.url;
+  a.download = picture.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+function saveModalPicture() {
+  const picture = modalPicture;
+  if (!picture || !imageModalOpen() || $("img-capture-btn").disabled) return;
+  // iOS/iPadOS exposes Save Image in the native file share sheet.
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (ios && navigator.share && navigator.canShare && typeof File === "function") {
+    try {
+      const file = new File([picture.blob], picture.name, { type: "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file] }).catch((err) => {
+          if (err.name !== "AbortError" && modalPicture === picture) downloadModalPicture(picture);
+        });
+        return;
+      }
+    } catch (e) { /* fall back to download */ }
+  }
+  downloadModalPicture(picture);
+}
+async function renderModalPostcard(sel) {
+  const gen = ++skyVisualGen;
+  $("img-card").dataset.skyGen = String(gen);
+  clearModalPicture();
+  showModalStatus(sel, false);
+  try {
+    const copy = POSTCARD_COPY[sel.key];
+    const art = lang === "en" && copy.artEn ? copy.artEn : copy.art;
+    const image = await loadPostcardImage(`assets/special-dates/${art}.webp`);
+    await ensureCaptureFonts();
+    if (!modalPictureIsCurrent(sel, gen)) return;
+    const canvas = renderPostcardKeepsake(sel, image, capturePalette().serif);
+    await publishModalPicture(sel, gen, canvas, modalPictureDescription(sel));
+  } catch (e) {
+    if (modalPictureIsCurrent(sel, gen)) showModalStatus(sel, true);
+  }
 }
 
-/* Open the picture itself in the modal. A gifted postcard is
-   delivered by this opening (see deliverPostcardGift) — the envelope
-   on the stage was only its announcement. */
+/* The gift receipt is still written when the envelope is opened. */
 function openImageModal(sel) {
   if (ambientOn || !isPictureCard(sel) || imageModalOpen()) return;
   imageModalSel = sel;
   imageOpener = $("card");
-  // Unhide BEFORE rendering: a sky canvas that starts painting while
-  // its overlay is still display:none can come up blank (seen live:
-  // illustration form, first open — copy updated, canvas never drew;
-  // a reopen painted instantly). Paint into a visible layout.
   $("img-overlay").hidden = false;
-  renderSelection(sel, modalSurface());
-  mountModalArt(modalSurface());
-  if (sel.cat === "sky") armSkyModalWatchdog(sel);
-  $("img-capture-btn").textContent = t().capture;
+  const surface = modalSurface();
+  const info = pictureInfo(sel);
+  surface.cat.textContent = info.category;
+  surface.meta.textContent = info.title;
+  $("img-capture-btn").textContent = t().captureDownload;
   $("img-close-btn").textContent = t().captureClose;
+  if (sel.cat === "sky") {
+    scheduleSkyVisual(sel, surface);
+    armSkyModalWatchdog(sel);
+  } else {
+    renderModalPostcard(sel);
+  }
   deliverPostcardGift(sel);
   $("img-close-btn").focus();
 }
@@ -2317,7 +2451,8 @@ function armSkyModalWatchdog(sel) {
     if (fired) return;
     fired = true;
     if (imageModalSel !== sel || !imageModalOpen()) return;
-    if (sel._paintedGen === scheduledGen) return;
+    if (sel._skyGen !== scheduledGen || sel._paintedGen === scheduledGen ||
+        $("img-card").dataset.skyState !== "loading") return;
     scheduleSkyVisual(sel, modalSurface());
   }, 2800);
   if (wd && typeof wd.unref === "function") wd.unref();
@@ -2326,7 +2461,10 @@ function armSkyModalWatchdog(sel) {
 function closeImageModal() {
   if (!imageModalOpen()) return;
   $("img-overlay").hidden = true;
+  if (imageModalSel && imageModalSel._abort) imageModalSel._abort.abort();
   imageModalSel = null;
+  clearModalPicture();
+  $("img-body").replaceChildren();
   // A sky paint still in flight for the modal must not land after the
   // modal has closed: dropping the surface's generation stamp makes
   // the late job a no-op (it re-checks the stamp before painting).
@@ -2345,11 +2483,10 @@ $("img-overlay").addEventListener("click", (e) => {
 });
 $("img-capture-btn").addEventListener("click", (e) => {
   e.stopPropagation();
-  captureKeepsake();
+  saveModalPicture();
 });
 document.addEventListener("keydown", (e) => {
-  // A keepsake preview taken from inside the modal sits above it:
-  // Escape closes that first, and the modal only on the next press.
+  // Escape dismisses the picture without saving.
   if (e.key === "Escape" && imageModalOpen() && $("capture-overlay").hidden) closeImageModal();
 });
 $("note-save").addEventListener("click", async () => {
@@ -4073,7 +4210,7 @@ function renderPostcardKeepsake(sel, img, serif) {
 const SKY_KEEP_ART_H = 1350;   // the painting: 1080×1350, 4:5 portrait
 const SKY_KEEP_PANEL_H = 350;  // the paper panel below it
 const SKY_KEEP_H = SKY_KEEP_ART_H + SKY_KEEP_PANEL_H;
-async function renderSkyArtKeepsake(sel, serif) {
+async function renderSkyArtKeepsake(sel, serif, paintedArt = null) {
   const cv = document.createElement("canvas");
   cv.width = KEEP_W;
   cv.height = SKY_KEEP_H;
@@ -4088,7 +4225,9 @@ async function renderSkyArtKeepsake(sel, serif) {
   // paper panel below is sized to its text (350), so the keepsake
   // stands 1080×1700 in all.
   const artH = SKY_KEEP_ART_H;
-  if (sel.scene) {
+  if (paintedArt) {
+    ctx.drawImage(paintedArt, 0, 0, KEEP_W, artH);
+  } else if (sel.scene) {
     const off = document.createElement("canvas");
     off.width = KEEP_W;
     off.height = artH;
@@ -4151,6 +4290,66 @@ async function renderSkyArtKeepsake(sel, serif) {
   ctx.fillText(brand, tx + tw, SKY_KEEP_H - 38);
   setLetterSpacing(ctx, "0px");
 
+  return cv;
+}
+
+/* The SDK artwork remains square; the 360px paper panel contains
+   the title, observations, approximation, credits and brand. */
+function renderAstronomyPicture(sel, art, serif) {
+  const cv = document.createElement("canvas");
+  cv.width = KEEP_W;
+  cv.height = PC_KEEP_H;
+  const ctx = cv.getContext("2d");
+  const s = t(), K = s.sky;
+  const moon = sel.form === "moon";
+  const m = moon ? sel.summary.moon : null;
+  const title = moon ? s.world.phases[m.idx] : K.chartMeta;
+  const bits = moon ? null : skyFactsInner(sel);
+  const facts = moon ? [s.world.moonIllum(m.illum) + " · " + s.world.moonAge(m.age)] :
+    [bits.look, bits.line].filter(Boolean);
+  const notes = moon ? [K.approx, K.moonCredit] : [K.approx];
+  const brand = lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有";
+  const tx = 56, tw = KEEP_W - tx * 2;
+  ctx.fillStyle = PC_PAPER;
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(art, 0, 0, KEEP_W, KEEP_W);
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "left";
+  const fitLine = (value, size, weight, x, y, maxWidth) => {
+    ctx.font = `${weight} ${size}px ${serif}`;
+    while (ctx.measureText(value).width > maxWidth && size > 22) {
+      size -= 2;
+      ctx.font = `${weight} ${size}px ${serif}`;
+    }
+    ctx.fillText(value, x, y, maxWidth);
+  };
+  ctx.fillStyle = PC_INK;
+  fitLine(title, 50, 900, tx, 1152, moon ? tw * 0.58 : tw);
+  if (moon) {
+    ctx.fillStyle = PC_INK_SOFT;
+    ctx.textAlign = "right";
+    fitLine(s.world.moonTitle, 27, 400, tx + tw, 1152, tw * 0.39);
+    ctx.textAlign = "left";
+  }
+  ctx.fillStyle = PC_INK;
+  let size = 38, lines;
+  do {
+    ctx.font = `400 ${size}px ${serif}`;
+    lines = facts.flatMap((fact) => wrapText(ctx, fact, tw));
+    if (lines.length <= 3 || size <= 24) break;
+    size -= 2;
+  } while (true);
+  const step = Math.min(48, 96 / Math.max(1, lines.length - 1));
+  lines.forEach((line, i) => ctx.fillText(line, tx, 1210 + i * step, tw));
+  ctx.fillStyle = PC_INK_SOFT;
+  notes.forEach((note, i) => fitLine(note, 27, 400, tx, 1350 + i * 31, tw));
+  ctx.strokeStyle = "rgba(43, 38, 32, 0.10)";
+  ctx.beginPath();
+  ctx.moveTo(tx, 1395);
+  ctx.lineTo(tx + tw, 1395);
+  ctx.stroke();
+  ctx.textAlign = "right";
+  fitLine(brand, 22, 400, tx + tw, 1422, tw);
   return cv;
 }
 
@@ -4251,10 +4450,8 @@ async function captureSkyPanelSnap(sel, frozen) {
 
 async function captureKeepsake() {
   const btn = $("capture-btn");
-  const imgBtn = $("img-capture-btn");
-  if (btn.disabled) return;
+  if (btn.disabled || imageModalOpen()) return;
   btn.disabled = true;
-  if (imgBtn) imgBtn.disabled = true;
   try {
     const frozen = new Date();
     // A postcard on stage captures as the postcard itself (see above).
@@ -4301,18 +4498,16 @@ async function captureKeepsake() {
     }
     const s = t();
     const enc = encounter > 0 ? s.encounter(encounter) : "";
-    // With the picture modal open, the keepsake reads the modal's card
-    // (the picture), not the envelope waiting on the stage behind it.
-    const inModal = imageModalOpen();
+    // The stage keepsake remains separate from the picture modal.
     const snap = {
       time: `${pad(frozen.getHours())}:${pad(frozen.getMinutes())}:${pad(frozen.getSeconds())}`,
       dateLine: $("date-line").textContent,
-      category: inModal ? $("img-cat").textContent : $("card-category").textContent,
-      meta: inModal ? $("img-meta").textContent : $("card-meta").textContent,
-      blocks: extractCardBlocks(inModal ? $("img-body") : $("card-body")),
+      category: $("card-category").textContent,
+      meta: $("card-meta").textContent,
+      blocks: extractCardBlocks($("card-body")),
       skyCanvas: currentSelection && currentSelection.cat === "sky" &&
         (currentSelection.form === "chart" || currentSelection.form === "moon")
-        ? (inModal ? $("img-body") : $("card-body")).querySelector("canvas.sky-canvas") : null,
+        ? $("card-body").querySelector("canvas.sky-canvas") : null,
       brand: lang === "zh" ? "此时，还有 · Now, and More" : "Now, and More · 此时，还有",
       footer: enc ? `${enc} · now.orangely.xyz` : "now.orangely.xyz",
     };
@@ -4322,7 +4517,7 @@ async function captureKeepsake() {
     const blob = await new Promise((res) => cv.toBlob((b) => res(b), "image/png"));
     if (blob) showCapture(blob, frozen);
   } catch (e) { /* capture is a keepsake, never a page-breaker */ }
-  finally { btn.disabled = false; if (imgBtn) imgBtn.disabled = false; }
+  finally { btn.disabled = false; }
 }
 
 $("capture-btn").addEventListener("click", captureKeepsake);

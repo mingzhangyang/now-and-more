@@ -53,6 +53,10 @@ function harness() {
       },
       querySelectorAll() { return []; },
       append() {},
+      appendChild(child) { this.children.push(child); },
+      replaceChildren(...children) { this.children = children; this.innerHTML = ""; },
+      style: { setProperty() {} },
+      decode: async () => {},
     };
     return el;
   }
@@ -91,7 +95,17 @@ function harness() {
       ? (lang === "zh" ? place.city.zh : place.city.en) : t().sky.hereLabel;
     const postcardMetaText = () => lang === "zh" ? "12月7日" : "Dec 7";
     const fullTextOf = () => "";
-    const captureKeepsake = () => {};
+    const KEEP_W = 1080, SKY_KEEP_ART_H = 1350;
+    const fakePicture = (height = 1440) => ({
+      width: 1080, height,
+      toBlob: (done) => done(new Blob(["picture"], { type: "image/png" })),
+    });
+    const ensureCaptureFonts = async () => {};
+    const capturePalette = () => ({ serif: "serif" });
+    const renderAstronomyPicture = () => fakePicture();
+    const renderSkyArtKeepsake = async () => fakePicture(1700);
+    const loadPostcardImage = async () => ({});
+    const renderPostcardKeepsake = () => fakePicture();
   ` +
     section("const MOON_GLYPHS", "/* ================= Night sky") +
     section("let skyVisualGen", "/* ================= End night sky") +
@@ -104,6 +118,7 @@ function harness() {
       setAmbient: (v) => { ambientOn = v; },
       setLang: (v) => { lang = v; },
       get modalSel() { return imageModalSel; },
+      get picture() { return modalPicture; },
     };
   `;
   const api = new Function("storage", "$", "document", "NAM_SKY", source)(
@@ -182,7 +197,7 @@ test("non-ambient picture cards render as envelopes on the stage, not the pictur
   assert.ok(!body.includes("env-received"));
 });
 
-test("gifted postcard: envelope writes no receipt; opening the modal delivers it", () => {
+test("gifted postcard: envelope writes no receipt; opening the modal delivers it", async () => {
   const { api, $, storage } = harness();
   const sel = daxue();
   api.renderSelection(sel);
@@ -193,9 +208,12 @@ test("gifted postcard: envelope writes no receipt; opening the modal delivers it
   api.openImageModal(sel);
   assert.equal(api.imageModalOpen(), true);
   assert.equal(api.modalSel, sel);
-  // The modal carries the picture itself, in its own composition.
-  assert.ok($("img-body").innerHTML.includes('class="postcard"'), "postcard renders inside the modal");
-  assert.ok($("img-body").innerHTML.includes("assets/special-dates/daxue.webp"));
+  assert.equal($("img-capture-btn").disabled, true, "save waits for the PNG");
+  await flush();
+  assert.equal($("img-capture-btn").disabled, false);
+  assert.equal($("img-capture-btn").textContent, "保存图片");
+  assert.equal($("img-body").children[0].children[0].src, api.picture.url);
+  assert.match($("img-body").children[0].children[0].alt, /大雪/);
   assert.equal(storage.getItem("nam-postcard-20261207"), "1",
     "opening the picture writes the gift receipt");
 
@@ -213,7 +231,7 @@ test("gifted postcard: envelope writes no receipt; opening the modal delivers it
   const before = storage.getItem("nam-postcard-20261207");
   api.openImageModal(skySel("chart"));
   assert.equal(api.imageModalOpen(), true);
-  assert.ok($("img-body").innerHTML.includes("sky-canvas"), "chart canvas lives in the modal");
+  assert.equal($("img-capture-btn").disabled, true, "chart still loading");
   api.closeImageModal();
   assert.equal(storage.getItem("nam-postcard-20261207"), before);
 });
@@ -251,7 +269,7 @@ test("draw and rotation stay inert while the picture modal is open", () => {
 test("picture modal: the overlay unhides before the picture renders into it", () => {
   const open = section("function openImageModal(sel)", "function armSkyModalWatchdog");
   assert.ok(
-    open.indexOf('$("img-overlay").hidden = false') < open.indexOf("renderSelection(sel, modalSurface())"),
+    open.indexOf('$("img-overlay").hidden = false') < open.indexOf("scheduleSkyVisual(sel, surface)"),
     "a sky canvas must start painting in a visible layout, not under display:none");
   assert.ok(open.includes("armSkyModalWatchdog(sel)"), "sky openings arm the watchdog");
 });
@@ -310,10 +328,11 @@ test("wide layout: the split-grid card rule is scoped to the stage card only", (
   assert.ok(!css.includes("--img-height") && !css.includes("max(180px"),
     "the lightbox must not reserve a fixed chrome height or a 180px composition floor");
   assert.match(css, /#img-card \.img-fit \{[\s\S]*container-type: size;/);
-  assert.match(css, /width: min\(100cqw, 100cqh\)/);
-  assert.match(css, /width: min\(100cqw, calc\(100cqh \* 0\.75\)\)/);
+  assert.match(css, /width: min\(100cqw, calc\(100cqh \* var\(--picture-ratio, 0\.75\)\)\)/);
   assert.match(app, /className = "img-fit"/);
   assert.match(app, /fact-row skyart-status/);
+  assert.match(app, /if \(sel\.skyError\) \{[\s\S]*?skyart-status/);
+  assert.doesNotMatch(app, /if \(!surface\.stage && sel\.skyError\)/);
 });
 
 test("sky modal watchdog: closing the modal disarms it", async () => {
@@ -342,13 +361,20 @@ test("lightbox tracks sky failure, successful paint and close", async () => {
   assert.equal($("img-card").dataset.skyState, "loading");
   await sel.painted;
   assert.equal($("img-card").dataset.skyState, "error");
+  assert.equal($("img-capture-btn").disabled, true);
+  assert.equal(api.picture, null);
   api.closeImageModal();
   assert.equal($("img-card").dataset.skyState, undefined);
   const next = skySel("moon");
   api.openImageModal(next);
   await next.painted;
   assert.equal($("img-card").dataset.skyState, "ready");
+  assert.equal($("img-capture-btn").disabled, false);
+  assert.equal($("img-body").children[0].children[0].src, api.picture.url);
+  assert.equal(api.picture.blob.type, "image/png");
   api.closeImageModal();
+  assert.equal(api.picture, null);
+  assert.equal($("img-capture-btn").disabled, true);
   assert.equal($("img-card").dataset.skyState, undefined);
 });
 
