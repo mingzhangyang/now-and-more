@@ -58,6 +58,7 @@ const I18N = {
       loading: "星空正在计算…",
       error: "星空这次没有载入。",
       retry: "重试",
+      reload: "重新加载页面",
       moonCredit: "月面影像：NASA / LROC",
       asterisms: {
         dipper: { name: "北斗七星", line: "斗柄所指，古人拿它定四季" },
@@ -221,6 +222,7 @@ const I18N = {
       loading: "Computing the sky…",
       error: "The sky did not load this time.",
       retry: "Try again",
+      reload: "Reload page",
       moonCredit: "Surface: NASA / LROC",
       asterisms: {
         dipper: { name: "the Big Dipper", line: "Its handle once told the seasons" },

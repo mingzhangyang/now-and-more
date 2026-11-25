@@ -383,9 +383,13 @@ function skyFactsInner(sel) {
   }
   return { error: false, look: K.fallback, line: "" };
 }
+function skyRetryButtonHtml() {
+  const label = NAM_SKY.needsReload() ? t().sky.reload : t().sky.retry;
+  return `<button type="button" class="sky-retry">${esc(label)}</button>`;
+}
 function skyMoonFactsHtml(sel) {
   if (sel.skyError) {
-    return `<span>${esc(t().sky.error)}</span><span><button type="button" class="sky-retry">${esc(t().sky.retry)}</button></span>`;
+    return `<span>${esc(t().sky.error)}</span><span>${skyRetryButtonHtml()}</span>`;
   }
   if (!sel.summary) return `<span>${esc(t().sky.loading)}</span>`;
   const W = t().world;
@@ -395,7 +399,7 @@ function skyMoonFactsHtml(sel) {
 function skyChartFactsHtml(sel) {
   const bits = skyFactsInner(sel);
   if (bits.error) {
-    return `<span>${bits.html}</span><span><button type="button" class="sky-retry">${esc(t().sky.retry)}</button></span>`;
+    return `<span>${bits.html}</span><span>${skyRetryButtonHtml()}</span>`;
   }
   if (!sel.summary) return `<span>${bits.html}</span>`;
   return (bits.look ? `<span>${esc(bits.look)}</span>` : "") +
@@ -404,7 +408,7 @@ function skyChartFactsHtml(sel) {
 function skyArtFactsHtml(sel) {
   const bits = skyFactsInner(sel);
   if (bits.error) {
-    return `<p class="sa-line">${bits.html}</p><p class="sa-line"><button type="button" class="sky-retry">${esc(t().sky.retry)}</button></p>`;
+    return `<p class="sa-line">${bits.html}</p><p class="sa-line">${skyRetryButtonHtml()}</p>`;
   }
   if (!sel.summary) return `<p class="sa-line">${bits.html}</p>`;
   return `<p class="sa-line">${esc(bits.look)}</p>` +
@@ -418,6 +422,10 @@ function bindSkyRetry(sel) {
     e.preventDefault();
     e.stopPropagation();
     if (currentSelection !== sel) return;
+    if (NAM_SKY.needsReload()) {
+      window.location.reload();
+      return;
+    }
     NAM_SKY.reset();
     sel.ready = NAM_SKY.sceneFor(sel.observer);
     sel.scene = null;
@@ -3071,9 +3079,9 @@ $("card").addEventListener("click", (e) => {
   drawCard();
 });
 $("card").addEventListener("keydown", (e) => {
-  // Enter on the card draws; Enter on the 全文 button must only open
-  // the reading modal (the button's own click), never draw first.
-  if (e.key === "Enter" && !e.target.closest("#card-foot")) drawCard();
+  // Enter draws only when the card itself is focused. Descendant controls
+  // (including sky retry and reading links/buttons) own their activation.
+  if (e.key === "Enter" && e.target === e.currentTarget) drawCard();
 });
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && !e.repeat && e.target === document.body) {

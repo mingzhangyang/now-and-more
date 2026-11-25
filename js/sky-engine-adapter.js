@@ -13,6 +13,8 @@
   var SCENE_LIMIT = 6;
 
   var enginePromise = null;
+  var engineAttempt = 0;
+  var ENGINE_RETRY_LIMIT = 3;
   var catalogJson = null;
   var catalogFlight = null;
   var moonBitmap = null;
@@ -23,8 +25,12 @@
     return new URL(BASE + name, document.baseURI).href;
   }
 
+  function needsReload() {
+    return engineAttempt > ENGINE_RETRY_LIMIT;
+  }
+
   function reset() {
-    enginePromise = null;
+    // Keep the current module flight/instance: the browser retains its module map.
     catalogJson = null;
     catalogFlight = null;
     moonBitmap = null;
@@ -34,8 +40,13 @@
 
   function loadEngine() {
     if (!enginePromise) {
-      var url = asset("sky-engine.mjs");
-      enginePromise = import(url).catch(function (err) {
+      if (needsReload()) return Promise.reject(new Error("Sky Engine module retry limit reached."));
+      // A failed module URL can remain rejected in this document's module map.
+      // Advance only after an actual import failure, not a catalog/texture failure.
+      var url = new URL(asset("sky-engine.mjs"));
+      if (engineAttempt) url.searchParams.set("retry", String(engineAttempt));
+      enginePromise = import(url.href).catch(function (err) {
+        engineAttempt += 1;
         enginePromise = null;
         throw err;
       });
@@ -224,5 +235,6 @@
     paintMoon: paintMoon,
     warm: warm,
     reset: reset,
+    needsReload: needsReload,
   };
 })();

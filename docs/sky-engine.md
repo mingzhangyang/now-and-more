@@ -71,7 +71,7 @@ Sun, Moon, planets and stars cannot disagree between those surfaces.
 
 ## Service worker
 
-Cache name `nam-v31` precaches `sky-engine.mjs`, `stars.json`, and
+Cache name `nam-v32` precaches `sky-engine.mjs`, `stars.json`, and
 `moon-lroc.jpg` for this exact directory, plus the adapter. Activating the
 worker deletes every other cache name, so an older shell cannot pair a new
 module with an old catalog or an old lunar map. The version lives in the
@@ -115,3 +115,16 @@ The circular chart and the moon card are now `renderSkyChart` and
 `renderMoonPhase`. A new browser pass for those two surfaces is in
 `docs/sky-engine/evidence/` (`17-chart-v020.png`, `18-moon-v020.png`).
 
+
+### Module-load recovery regression
+
+A failed dynamic import advances through at most three retry URLs within the
+same pinned SDK directory. A successful module remains shared; catalog and
+texture retries do not advance the module URL. After the last failed import,
+the retry control explicitly offers a page reload. The service worker maps
+retry URLs to the canonical versioned module cache key.
+
+Run the focused Chromium regression with Python Playwright installed:
+`python tests/sky-retry.browser.py` (set `CHROMIUM_PATH` to an installed Chromium
+if needed). It serves the production adapter, card retry/event handlers, and
+service worker with a small SDK fixture; it does not render astronomical scenes.
