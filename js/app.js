@@ -173,6 +173,16 @@ function moonPhase(date) {
   return { age: Math.floor(age), illum, idx, glyph: MOON_GLYPHS[idx] };
 }
 
+// Use the existing synchronous approximate illumination calculation.
+// At >= 98% (roughly three days around full moon), give the moon
+// four tickets and each other form one; otherwise keep equal odds.
+function chooseSkyForm(date, random = Math.random) {
+  const forms = moonPhase(date).illum >= 98
+    ? ["chart", "illustration", "moon", "moon", "moon", "moon"]
+    : ["chart", "illustration", "moon"];
+  return forms[Math.floor(random() * forms.length)];
+}
+
 /* ================= Night sky （星空） =================
    Positions and the watercolour illustration come from the pinned
    Sky Engine SDK (vendor/sky-engine/0.2.0, see docs/sky-engine.md).
@@ -2487,11 +2497,11 @@ function makeSelection(cat) {
     case "world":
       return { cat, city: CITIES[deckDraw("world")] };
     case "sky": {
-      // No deck: the sky is computed per draw, like the almanac. Its
-      // three forms — chart, illustration, moon — are equally likely.
-      // The scene itself is async (SDK); the draw lock does not wait.
-      const form = ["chart", "illustration", "moon"][Math.floor(Math.random() * 3)];
+      // No deck: the sky is computed per draw, like the almanac.
+      // Near full moon, favour the lunar portrait without changing the
+      // category weights or waiting for the asynchronous SDK scene.
       const now = new Date();
+      const form = chooseSkyForm(now);
       if (form === "moon") {
         // Right now, not 21:00. The zone's city (or latitude 35) only
         // orients the portrait. No geolocation prompt on this card.

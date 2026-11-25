@@ -344,3 +344,19 @@ test("lightbox tracks sky failure, successful paint and close", async () => {
   api.closeImageModal();
   assert.equal($("img-card").dataset.skyState, undefined);
 });
+
+
+test("near-full moon doubles lunar portrait odds without changing ordinary sky odds", () => {
+  const choose = new Function("DAY_MS", section("const MOON_GLYPHS", "/* ================= Night sky") + "\nreturn chooseSkyForm;")(86400000);
+  const epoch = Date.UTC(2000, 0, 6, 18, 14);
+  const atAge = age => new Date(epoch + age * 86400000);
+  const odds = date => Array.from({length: 600}, (_, i) => choose(date, () => (i + 0.5) / 600))
+    .reduce((counts, form) => ({...counts, [form]: (counts[form] || 0) + 1}), {});
+  for (const age of [14, 14.765, 16]) {
+    assert.deepEqual(odds(atAge(age)), {chart:100, illustration:100, moon:400});
+  }
+  for (const age of [0, 7, 12, 18, 22]) {
+    assert.deepEqual(odds(atAge(age)), {chart:200, illustration:200, moon:200});
+  }
+  assert.match(app, /const now = new Date\(\);\s*const form = chooseSkyForm\(now\);/);
+});
