@@ -101,7 +101,7 @@ test("gate rejects overlapping requests and releases after errors", () => {
 // scheduler and tiny DOM/storage adapters. The browser is not mocked by
 // replacing selection logic. Extract named sections to avoid clock/Canvas
 // startup side effects; syntax-check the full script separately in CI.
-function harness() {
+function harness(storage = store()) {
   const source = core + "\n" + data + "\n" + `
     let lang = "zh", currentSelection = null, lastCategory = null, encounter = 0, lastDrawAt = 0;
     let notesList = [], userSign = "", ambientOn = false;
@@ -130,10 +130,10 @@ function harness() {
     const $ = () => el;
     const renderSelection = sel => { if (failRender) throw Error("render failed"); rendered.push(sel); };
   ` + section("function postcardDayKey(", "/* Today's postcard") +
-    section("function availableCategories()", "function esc(str)") +
+    section("function availableCategories(", "function esc(str)") +
     section("const POSTCARD_POOL_CHANCE", "/* ================= Clock engine") + `
     return {
-      state: deckState, drawCard, makeSelection, selectionForLanguage,
+      state: deckState, drawCard, makeSelection, selectionForLanguage, availableCategories, canRepaintSelection,
       ready: () => { drawsReady = true; },
       setLang: v => { lang = v; },
       fail: v => { failRender = v; },
@@ -149,11 +149,102 @@ function harness() {
       })
     };
   `;
-  const storage = store(), queue = [], rendered = [];
-  const math = Object.create(Math); math.random = () => 0;
-  const h = new Function("storage", "rendered", "setTimeout", "Math", source)(storage, rendered, fn => queue.push(fn), math);
-  return { h, storage, queue, rendered };
+  const queue = [], rendered = [];
+  let random = 0, now = new Date(2026, 10, 25, 12).getTime();
+  class FakeDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+    static now() { return now; }
+  }
+  const math = Object.create(Math); math.random = () => random;
+  const h = new Function("storage", "rendered", "setTimeout", "Math", "Date", source)(storage, rendered, fn => queue.push(fn), math, FakeDate);
+  return { h, storage, queue, rendered, setRandom: value => { random = value; }, setNow: date => { now = date.getTime(); } };
 }
+
+test("history is capped at three actual draws per local day, including reload and language changes", () => {
+  const first = harness();
+  const { h, queue, setRandom, storage } = first;
+  const day = "20261125";
+  h.ready();
+  const draw = random => { setRandom(random); assert.equal(h.drawCard(), true); queue.shift()(); return h.current; };
+  assert.equal(draw(0.29).cat, "history");
+  assert.equal(draw(0).cat, "world");
+  assert.equal(draw(0.2).cat, "history");
+  assert.equal(draw(0).cat, "world");
+  const third = draw(0.2);
+  assert.equal(third.cat, "history");
+  assert.equal(third.today, true);
+  assert.equal(h.state.historyAvailable(day), false);
+  const before = storage.getItem(key);
+  h.setLang("en");
+  assert.equal(h.canRepaintSelection(third), true);
+  assert.equal(h.translate(third), third);
+  assert.equal(storage.getItem(key), before);
+  assert.ok(!h.availableCategories().some(c => c.key === "history"));
+  assert.notEqual(draw(0).cat, "history");
+  assert.notEqual(draw(0.2).cat, "history");
+
+  const reloaded = harness(storage);
+  reloaded.h.setLang("en");
+  assert.ok(!reloaded.h.availableCategories().some(c => c.key === "history"));
+  // Direct/stale selection is guarded too; it selects a different category.
+  assert.notEqual(reloaded.h.select("history").cat, "history");
+  reloaded.setNow(new Date(2026, 10, 26, 0, 0, 0));
+  assert.ok(reloaded.h.availableCategories().some(c => c.key === "history"));
+  const next = reloaded.h.select("history");
+  assert.equal(next.cat, "history");
+  assert.equal(next.key, "11-26");
+  assert.equal(reloaded.h.state.historyAvailable("20261126"), true);
+  // Travelling back across a date boundary must not reopen yesterday's budget.
+  reloaded.setNow(new Date(2026, 10, 25, 23, 59, 59));
+  assert.ok(!reloaded.h.availableCategories().some(c => c.key === "history"));
+});
+
+test("failed history render rolls back its slot, and old or malformed counts are safe", () => {
+  const { h, storage } = harness(store({v:2,d:{},g:{},fp:[]}));
+  const day = "20261125";
+  assert.equal(h.select("history").cat, "history");
+  assert.equal(h.select("history").cat, "history");
+  const before = storage.getItem(key);
+  h.fail(true);
+  assert.throws(() => h.select("history"), /render failed/);
+  assert.equal(storage.getItem(key), before);
+  assert.equal(h.state.historyAvailable(day), true);
+  h.fail(false);
+  assert.equal(h.select("history").cat, "history");
+  assert.equal(h.state.historyAvailable(day), false);
+  const corrupt = api.createDeckState(store({v:2,d:{},g:{},fp:[],historyDaily:[
+    {day, count: 99}, {day, count: 1}, {day:"invalid",count:3}, {day:"20261126",count:-1}
+  ]}));
+  assert.equal(corrupt.historyAvailable(day), false);
+  assert.equal(corrupt.historyAvailable("20261126"), true);
+  assert.throws(() => corrupt.recordHistory(day), /transaction/);
+  for (let i = 1; i <= 20; i++) {
+    const stamp = "202612" + String(i).padStart(2, "0");
+    assert.equal(corrupt.transact(() => corrupt.recordHistory(stamp)), true);
+  }
+  assert.ok(corrupt.state.historyDaily.length <= 8);
+});
+
+test("shared-lock tabs cannot spend more than three history slots combined", async () => {
+  const storage = store();
+  let tail = Promise.resolve();
+  const locks = { request(name, options, work) {
+    assert.equal(name, "nam-decks-v2-write");
+    assert.equal(options.mode, "exclusive");
+    const next = tail.then(work);
+    tail = next.catch(() => {});
+    return next;
+  } };
+  const a = api.createDeckState(storage, Math.random, { locks });
+  const b = api.createDeckState(storage, Math.random, { locks });
+  const day = "20261125";
+  const results = await Promise.all(Array.from({length:20}, (_, i) => {
+    const tab = i % 2 ? a : b;
+    return tab.withLock(() => tab.transact(() => tab.recordHistory(day)));
+  }));
+  assert.equal(results.filter(Boolean).length, 3);
+  assert.equal(api.createDeckState(storage).historyAvailable(day), false);
+});
 
 test("actual poem/quote selection consumes only shown language and caches variants", () => {
   const { h } = harness();

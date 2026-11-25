@@ -2619,11 +2619,12 @@ $("note-fab").addEventListener("click", () => openNoteModal($("note-fab")));
 /* Categories available in the current language. almanac + classics are
    zh-only; proverbs + word are en-only; gossip joins only when its feed
    has actually delivered headlines. */
-function availableCategories() {
+function availableCategories(now = new Date()) {
   const base = lang === "zh"
     ? ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "classics", "almanac", "astro", "chance", "memory"]
     : ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "proverbs", "word", "astro", "chance", "memory"];
-  const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key));
+  const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key) &&
+    (c.key !== "history" || deckState.historyAvailable(postcardDayKey(now))));
   if (gossipCandidates().length) {
     const g = CATEGORY_WEIGHTS.find((c) => c.key === "gossip");
     if (g) list.push(g);
@@ -2637,8 +2638,8 @@ function availableCategories() {
   return list;
 }
 
-function weightedCategory() {
-  return NAM_DEDUP.weightedCategory(availableCategories(), lastCategory, Math.random);
+function weightedCategory(now = new Date()) {
+  return NAM_DEDUP.weightedCategory(availableCategories(now), lastCategory, Math.random);
 }
 
 /* Only consume the language actually rendered. Keep the rendered variant
@@ -2653,7 +2654,7 @@ function selectionForLanguage(sel) {
   return { ...sel, [key]: pool[deckDraw(sel.cat + ":" + lang)] };
 }
 
-function makeSelection(cat) {
+function makeSelection(cat, now = new Date()) {
   switch (cat) {
     case "world":
       return { cat, city: CITIES[deckDraw("world")] };
@@ -2687,10 +2688,17 @@ function makeSelection(cat) {
     case "poem":
       return selectionForLanguage({ cat });
     case "history": {
-      const now = new Date();
+      // Recheck at selection as well as eligibility. Count the new
+      // encounter in the render draft; language/ambient repaints do not
+      // call makeSelection. Use the same local day as the eligibility check.
+      if (!deckState.recordHistory(postcardDayKey(now))) {
+        const fallback = NAM_DEDUP.weightedCategory(
+          availableCategories(now).filter(c => c.key !== "history"), lastCategory, Math.random);
+        return makeSelection(fallback, now);
+      }
       const key = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      // Today's entry is date-determined (the certainty side of the site);
-      // the deck governs only the random-day fallback pool.
+      // Today's entry is date-determined; the deck governs only the
+      // random-day fallback pool. Both consume the daily history budget.
       if (HISTORY[key]) return { cat, key, entry: HISTORY[key], today: true };
       const keys = Object.keys(HISTORY);
       const rk = keys[deckDraw("history")];
@@ -2742,8 +2750,8 @@ function makeSelection(cat) {
       // selection. Recondition the original category weights, not a fixed
       // fallback that might repeat the last category.
       const fallback = NAM_DEDUP.weightedCategory(
-        availableCategories().filter(c => c.key !== "gossip"), lastCategory, Math.random);
-      return makeSelection(fallback);
+        availableCategories(now).filter(c => c.key !== "gossip"), lastCategory, Math.random);
+      return makeSelection(fallback, now);
     }
     case "memory":
       return { cat, item: MEMORY_PROMPTS[deckDraw("memory")] };
@@ -2751,8 +2759,8 @@ function makeSelection(cat) {
       const entry = notesCurrent() ? drawNoteEntry() : null;
       if (entry) return { cat, note: entry };
       const fallback = NAM_DEDUP.weightedCategory(
-        availableCategories().filter(c => c.key !== "mine"), lastCategory, Math.random);
-      return makeSelection(fallback);
+        availableCategories(now).filter(c => c.key !== "mine"), lastCategory, Math.random);
+      return makeSelection(fallback, now);
     }
     case "chance": {
       const kinds = NAM_DECK_IDS["chance:kind"];
@@ -3141,13 +3149,13 @@ function nextSelection(retryNotes = true) {
         if (retryNotes) return null;
         // A bounded refresh failed: keep the stage usable without consuming
         // the postcard receipt. A later draw can still deliver both in order.
-        return makeSelection(weightedCategory());
+        return makeSelection(weightedCategory(now), now);
       }
       return { ...pc, gifted: true, giftStamp: stamp };
     }
     if (lastCategory !== "postcard" && Math.random() < POSTCARD_POOL_CHANCE) return pc;
   }
-  return makeSelection(weightedCategory());
+  return makeSelection(weightedCategory(now), now);
 }
 
 let drawsReady = false;
@@ -3216,7 +3224,8 @@ function drawCard() {
 }
 
 function canRepaintSelection(sel) {
-  if (sel.cat === "postcard") return true;
+  // The cap excludes new history encounters, not the current bilingual card.
+  if (sel.cat === "postcard" || sel.cat === "history") return true;
   if (sel.cat === "gossip") return sel.newsLang === lang;
   return availableCategories().some(c => c.key === sel.cat);
 }

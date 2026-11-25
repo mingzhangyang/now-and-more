@@ -6,13 +6,16 @@ const NAM_DEDUP = (() => {
   const KEY = "nam-decks-v2";
   const LEGACY_KEY = "nam-decks-v1";
   const LOCK = "nam-decks-v2-write";
-  const fresh = () => ({ v: 2, d: {}, g: {}, fp: [] });
+  const HISTORY_DAILY_LIMIT = 3;
+  const HISTORY_DAY_RETENTION = 8;
+  const fresh = () => ({ v: 2, d: {}, g: {}, fp: [], historyDaily: [] });
   const object = x => !!x && typeof x === "object" && !Array.isArray(x);
   const validId = x => typeof x === "string" && x.length > 0 && x.length <= 128;
   const uniqueIds = x => [...new Set((Array.isArray(x) ? x : []).filter(validId))];
   const own = (o, key) => Object.prototype.hasOwnProperty.call(o, key);
   const parse = raw => { try { return JSON.parse(raw); } catch { return null; } };
   const safeKey = key => !["__proto__", "constructor", "prototype"].includes(key);
+  const validDay = day => typeof day === "string" && /^\d{8}$/.test(day);
 
   function baseFields(s) {
     const state = fresh();
@@ -20,6 +23,14 @@ const NAM_DEDUP = (() => {
       for (const lang of ["zh", "en"]) if (own(s.g, lang) && object(s.g[lang])) state.g[lang] = s.g[lang];
     }
     if (Array.isArray(s.fp)) state.fp = s.fp.filter(x => typeof x === "string" && x.length <= 1024).slice(-16);
+    if (Array.isArray(s.historyDaily)) {
+      const days = new Map();
+      for (const entry of s.historyDaily) {
+        if (!object(entry) || !validDay(entry.day) || !Number.isInteger(entry.count) || entry.count < 1) continue;
+        days.set(entry.day, Math.min(HISTORY_DAILY_LIMIT, Math.max(days.get(entry.day) || 0, entry.count)));
+      }
+      state.historyDaily = Array.from(days, ([day, count]) => ({ day, count })).slice(-HISTORY_DAY_RETENTION);
+    }
     return state;
   }
 
@@ -234,6 +245,25 @@ const NAM_DEDUP = (() => {
       d.l = id;
     }
 
+    // A date-determined card is not a shuffle-bag member. Share its
+    // daily exposure budget across languages and tabs in the same render
+    // transaction: a failed render cannot consume a slot. Keep a few
+    // recent dates so crossing a time-zone boundary does not reset a day.
+    function historyAvailable(day) {
+      const entry = state.historyDaily.find(item => item.day === day);
+      return validDay(day) && (!entry || entry.count < HISTORY_DAILY_LIMIT);
+    }
+
+    function recordHistory(day) {
+      if (!active) throw new Error("History displays must be inside a render transaction");
+      if (!historyAvailable(day)) return false;
+      const entry = state.historyDaily.find(item => item.day === day);
+      state.historyDaily = state.historyDaily.filter(item => item.day !== day);
+      state.historyDaily.push({ day, count: (entry ? entry.count : 0) + 1 });
+      state.historyDaily = state.historyDaily.slice(-HISTORY_DAY_RETENTION);
+      return true;
+    }
+
     function updateGossip(language, update) {
       if (!["zh", "en"].includes(language)) return;
       if (active) throw new Error("News maintenance must be outside a render transaction");
@@ -268,7 +298,7 @@ const NAM_DEDUP = (() => {
       return selection;
     }
 
-    return { get state() { return state; }, draw, markSeen, transact, updateGossip, withLock, sync };
+    return { get state() { return state; }, draw, markSeen, historyAvailable, recordHistory, transact, updateGossip, withLock, sync };
   }
 
   function weightedCategory(available, last, random = Math.random) {
