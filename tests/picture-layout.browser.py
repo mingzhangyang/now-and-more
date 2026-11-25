@@ -81,9 +81,11 @@ def check(browser, width, lang):
           document.querySelector("#img-overlay").hidden=false;
           document.querySelector("#img-cat").textContent="Sky";
           document.querySelector("#img-meta").textContent="Tonight's star chart";
+          document.querySelector("#img-card").dataset.skyState="ready";
           document.querySelector("#img-body").innerHTML =
             '<canvas class="sky-canvas sky-chart" data-form="chart" width="880" height="880"></canvas>' +
-            '<div class="fact-row"><span>Tonight: Cassiopeia</span></div>';
+            '<div class="fact-row"><span>Tonight: Cassiopeia</span></div>' +
+            '<div class="sub">Positions approximate</div>';
         }""")
         for form in ("chart", "moon"):
             page.locator("#img-body canvas").evaluate("""(c, form) => {
@@ -98,10 +100,41 @@ def check(browser, width, lang):
                 right:c.right<=b.right+0.5,
                 square:Math.abs(c.width-c.height)<1,
                 centered:Math.abs(c.left+c.width/2-b.left-b.width/2)<1,
-                noHorizontalScroll:d.scrollWidth<=d.clientWidth+1
+                noHorizontalScroll:d.scrollWidth<=d.clientWidth+1,
+                noVerticalScroll:d.scrollHeight<=d.clientHeight+1,
+                fullWidth:Math.abs(c.width-b.width)<1,
+                transparent:getComputedStyle(d).backgroundColor==="rgba(0, 0, 0, 0)" &&
+                  getComputedStyle(d).borderTopWidth==="0px" &&
+                  getComputedStyle(d).boxShadow==="none" &&
+                  getComputedStyle(document.querySelector("#img-card")).backgroundColor==="rgba(0, 0, 0, 0)",
+                factsHidden:r("#img-card .fact-row").width<=1 &&
+                  r("#img-card .card-head").width<=1 &&
+                  r("#img-card .sub").width<=1,
+                buttonsFit:r("#img-close-btn").bottom<=innerHeight &&
+                  r("#img-close-btn").height>=44
               };
             }""")
             assert all(fit.values()), (width, lang, form, fit)
+
+        page.evaluate("""() => {
+          document.querySelector("#img-card").dataset.skyState="error";
+          document.querySelector("#img-body .fact-row").innerHTML =
+            '<span>Unavailable</span><span><button class="sky-retry">Retry</button></span>';
+        }""")
+        retry = page.locator("#img-body .sky-retry")
+        assert retry.is_visible() and retry.bounding_box()["height"] >= 44
+
+        for form in ("postcard", "skyart"):
+            page.evaluate("""form => {
+              const card = document.querySelector("#img-card");
+              card.className = "card img-card has-" + form;
+              document.querySelector("#img-body").innerHTML =
+                '<div class="' + form + '"><div>Image composition</div></div>';
+            }""", form)
+            box = page.locator("#img-body ." + form).bounding_box()
+            assert abs(box["height"] - box["width"] * 4 / 3) < 1, (width, lang, form, box)
+            assert page.locator("#img-close-btn").bounding_box()["y"] + 44 <= 844
+            assert page.locator(".img-dialog").evaluate("(d) => d.scrollHeight <= d.clientHeight + 1")
     finally:
         page.close()
 
@@ -116,4 +149,4 @@ if __name__ == "__main__":
             for lang in ("zh", "en"):
                 check(browser, width, lang)
         browser.close()
-    print("16 envelope layouts and 32 modal canvas layouts passed")
+    print("16 envelope layouts, 32 lightbox canvases, 32 composed images and 16 retry layouts passed")

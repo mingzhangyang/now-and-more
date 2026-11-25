@@ -263,13 +263,14 @@ const flush = async () => {
 test("sky modal watchdog: a paint that never lands is re-scheduled exactly once", async () => {
   mock.timers.enable({ apis: ["setTimeout"] });
   try {
-    const { api, sky, paintCalls } = harness();
+    const { api, $, sky, paintCalls } = harness();
     sky.hang = true; // the first paint starts but never lands (the live blank)
     const sel = skySel("illustration");
     api.openImageModal(sel);
     await flush();
     assert.deepEqual(paintCalls, ["illustration"]);
     assert.equal(sel._paintedGen, undefined, "nothing has painted yet");
+    assert.equal($("img-card").dataset.skyState, "loading");
 
     mock.timers.tick(2800); // the watchdog fires
     await flush();
@@ -280,6 +281,7 @@ test("sky modal watchdog: a paint that never lands is re-scheduled exactly once"
     sky.release(); // the re-scheduled paint lands
     await flush();
     assert.equal(sel._paintedGen, sel._skyGen, "the re-scheduled generation is the painted one");
+    assert.equal($("img-card").dataset.skyState, "ready");
 
     mock.timers.tick(60000); // one-shot: no third schedule, however long the modal stays open
     await flush();
@@ -323,4 +325,22 @@ test("sky modal watchdog: closing the modal disarms it", async () => {
   } finally {
     mock.timers.reset();
   }
+});
+
+test("lightbox tracks sky failure, successful paint and close", async () => {
+  const { api, $ } = harness();
+  const sel = skySel("chart");
+  sel.ready = Promise.reject(new Error("offline"));
+  api.openImageModal(sel);
+  assert.equal($("img-card").dataset.skyState, "loading");
+  await sel.painted;
+  assert.equal($("img-card").dataset.skyState, "error");
+  api.closeImageModal();
+  assert.equal($("img-card").dataset.skyState, undefined);
+  const next = skySel("moon");
+  api.openImageModal(next);
+  await next.painted;
+  assert.equal($("img-card").dataset.skyState, "ready");
+  api.closeImageModal();
+  assert.equal($("img-card").dataset.skyState, undefined);
 });

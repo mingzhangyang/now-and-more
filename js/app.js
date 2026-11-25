@@ -471,6 +471,7 @@ function scheduleSkyVisual(sel, surface) {
   const ctrl = new AbortController();
   sel._abort = ctrl;
   surface.card.dataset.skyGen = String(gen);
+  if (!surface.stage) surface.card.dataset.skyState = "loading";
   sel.skyError = null;
   const job = Promise.resolve(sel.ready || (sel.ready = NAM_SKY.sceneFor(sel.observer)))
     .then(async (scene) => {
@@ -491,7 +492,10 @@ function scheduleSkyVisual(sel, surface) {
       // The paint for this generation actually landed. The picture
       // modal's watchdog compares against this stamp: a scheduled
       // generation that never reaches it gets one re-schedule.
+      if (gen !== skyVisualGen || ctrl.signal.aborted ||
+          surface.card.dataset.skyGen !== String(gen)) return;
       sel._paintedGen = gen;
+      if (!surface.stage) surface.card.dataset.skyState = "ready";
     })
     .catch((err) => {
       // A superseded job stays silent — its abort was deliberate. But
@@ -500,6 +504,7 @@ function scheduleSkyVisual(sel, surface) {
       // affordance appears instead of a silently blank canvas.
       if (gen !== skyVisualGen) return;
       sel.skyError = err;
+      if (!surface.stage) surface.card.dataset.skyState = "error";
       sel.summary = null;
       updateSkyCopy(sel);
     });
@@ -2293,6 +2298,7 @@ function closeImageModal() {
   // the late job a no-op (it re-checks the stamp before painting).
   skyVisualGen++;
   delete $("img-card").dataset.skyGen;
+  delete $("img-card").dataset.skyState;
   // The stage rotation was paused while the modal was open; give the
   // visitor a full minute with the stage again from the close.
   lastDrawAt = Date.now();
@@ -2301,7 +2307,7 @@ function closeImageModal() {
 }
 $("img-close-btn").addEventListener("click", closeImageModal);
 $("img-overlay").addEventListener("click", (e) => {
-  if (e.target === $("img-overlay")) closeImageModal();
+  if (e.target === $("img-overlay") || e.target === $("img-overlay").querySelector(".img-dialog")) closeImageModal();
 });
 $("img-capture-btn").addEventListener("click", (e) => {
   e.stopPropagation();

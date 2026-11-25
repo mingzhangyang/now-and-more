@@ -843,19 +843,98 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   line-height: 1.5;
 }
 
-/* ---------- Picture-card modal （图卡弹窗） ----------
-   The picture opens in its own card inside a capture-style dialog.
-   The dialog scrolls when the fixed 3:4 compositions (postcard, sky
-   illustration) stand taller than a short viewport — the composition
-   itself is never rescaled or cropped. The card inside is a stage
-   card in every respect but its cursor: clicking it must not read
-   as a draw, so it keeps the default cursor. */
-.capture-dialog.img-dialog {
-  width: min(680px, 94vw);
-  align-items: stretch;
+/* ---------- Picture-card lightbox （图卡灯箱） ---------- */
+.capture-overlay.img-overlay {
+  background: rgba(18, 17, 16, 0.84);
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  --img-height: calc(100vh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)) - 72px);
 }
-.img-card { width: 100%; min-width: 0; cursor: default; box-shadow: none; }
-.img-dialog .capture-actions { align-self: center; }
+@supports (height: 100dvh) {
+  .capture-overlay.img-overlay {
+    --img-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)) - 72px);
+  }
+}
+.capture-dialog.img-dialog {
+  width: min(680px, 100%, max(180px, var(--img-height)));
+  max-height: 100%;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  scrollbar-gutter: auto;
+  color: #fff;
+  align-items: stretch;
+  gap: 12px;
+}
+/* The paper and text intrinsic to a composed picture are part of the art. */
+.capture-dialog.img-dialog:has(.has-postcard, .has-skyart) {
+  width: min(680px, 100%, max(180px, calc(var(--img-height) * 0.75)));
+}
+#img-card {
+  position: relative;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  cursor: default;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* Preserve semantic copy and credits for assistive technology and export.
+   Keep status and retry visible until the current generation paints. */
+#img-card:not(.has-postcard):not(.has-skyart) .card-head,
+#img-card:not(.has-postcard):not(.has-skyart) .card-body > .big,
+#img-card:not(.has-postcard):not(.has-skyart) .card-body > .sub,
+#img-card:not(.has-postcard):not(.has-skyart)[data-sky-state="ready"] .card-body > .fact-row {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+#img-card .card-body > .sky-canvas {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+}
+#img-card .card-body > .fact-row {
+  justify-content: center;
+  color: #fff;
+  font-family: var(--sans);
+}
+#img-card .card-body > .fact-row .sky-retry {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.6);
+  min-height: 44px;
+}
+#img-card .postcard, #img-card .skyart { box-shadow: none; }
+.img-dialog .capture-actions { align-self: center; flex: none; }
+.img-dialog .capture-action {
+  min-height: 44px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.13);
+}
+.img-dialog .capture-action:hover, .img-dialog .capture-action:focus-visible {
+  color: #fff;
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.24);
+}
+.img-dialog .capture-action:focus-visible, .img-dialog .sky-retry:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.img-dialog .capture-action:disabled { opacity: 0.5; cursor: default; }
 
 /* ---------- Gift notice ----------
    A slim pill that floats below the brand row for the one moment a
