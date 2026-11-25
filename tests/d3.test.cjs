@@ -284,11 +284,15 @@ test("known-stale IndexedDB note snapshot is excluded and older load cannot repl
 
 test("library shares the write lock, signals after commit, and offline shell includes the script",()=>{
   const library=read("library.html");
-  assert.ok(library.includes('src="js/dedup.js?v=35"'));
+  const sw=read("sw.js");
+  const version=/var CACHE_NAME = "nam-v(\d+)";/.exec(sw);
+  assert.ok(version, "service worker cache version");
+  const script="js/dedup.js?v="+version[1];
+  assert.ok(library.includes('src="'+script+'"'));
   assert.ok(library.includes('NAM_DEDUP.runShared(NAM_DEDUP.browserLocks(), remove)'));
   assert.ok(library.indexOf("tx.oncomplete = function ()")<library.indexOf('localStorage.setItem("nam-notes-revision"'));
   assert.ok(app.includes("NAM_DEDUP.runShared(sharedLocks"));
-  assert.ok(read("sw.js").includes('"/js/dedup.js?v=35"'));
+  assert.ok(sw.includes('"/'+script+'"'));
 });
 
 /* Real draw, revision, receipt and bag logic. Only IndexedDB, the clock,
