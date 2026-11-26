@@ -1,0 +1,282 @@
+{
+  "days": 1461,
+  "vocabulary": 36,
+  "yi": {
+    "precision": 0.8209,
+    "recall": 0.6822,
+    "dayPrecision": 0.8053,
+    "dayRecall": 0.6757,
+    "ours": 9899,
+    "ref": 11911
+  },
+  "ji": {
+    "precision": 0.742,
+    "recall": 0.9192,
+    "dayPrecision": 0.6682,
+    "dayRecall": 0.842,
+    "ours": 26659,
+    "ref": 21518
+  },
+  "contradictions": 1538,
+  "contradictionRate": 0.0421,
+  "contradictionDays": 463,
+  "allJiDays": {
+    "both": 120,
+    "oursOnly": 69,
+    "refOnly": 3
+  },
+  "perItem": {
+    "祭祀": {
+      "yiPrecision": 0.7052,
+      "yiRecall": 0.7757,
+      "jiPrecision": 0.8025,
+      "jiRecall": 0.6146,
+      "contradictions": 156
+    },
+    "祈福": {
+      "yiPrecision": 0.8638,
+      "yiRecall": 0.5764,
+      "jiPrecision": 0.6793,
+      "jiRecall": 0.967,
+      "contradictions": 60
+    },
+    "求嗣": {
+      "yiPrecision": 0.9161,
+      "yiRecall": 0.6364,
+      "jiPrecision": 0.7463,
+      "jiRecall": 0.943,
+      "contradictions": 47
+    },
+    "会亲友": {
+      "yiPrecision": 0.9572,
+      "yiRecall": 0.8439,
+      "jiPrecision": 0.7406,
+      "jiRecall": 0.9913,
+      "contradictions": 42
+    },
+    "入学": {
+      "yiPrecision": 1,
+      "yiRecall": 0.8286,
+      "jiPrecision": 0.4979,
+      "jiRecall": 0.9756,
+      "contradictions": 12
+    },
+    "出行": {
+      "yiPrecision": 0.7626,
+      "yiRecall": 0.7018,
+      "jiPrecision": 0.7174,
+      "jiRecall": 0.9429,
+      "contradictions": 56
+    },
+    "赴任": {
+      "yiPrecision": 0.9146,
+      "yiRecall": 0.6159,
+      "jiPrecision": 0.648,
+      "jiRecall": 0.9577,
+      "contradictions": 125
+    },
+    "纳采": {
+      "yiPrecision": 0.7887,
+      "yiRecall": 0.7341,
+      "jiPrecision": 0.7179,
+      "jiRecall": 0.9482,
+      "contradictions": 44
+    },
+    "嫁娶": {
+      "yiPrecision": 0.5541,
+      "yiRecall": 0.633,
+      "jiPrecision": 0.7357,
+      "jiRecall": 0.9515,
+      "contradictions": 51
+    },
+    "移徙": {
+      "yiPrecision": 0.8349,
+      "yiRecall": 0.6825,
+      "jiPrecision": 0.6462,
+      "jiRecall": 0.9286,
+      "contradictions": 52
+    },
+    "安床": {
+      "yiPrecision": 0.9231,
+      "yiRecall": 0.6429,
+      "jiPrecision": 0.7513,
+      "jiRecall": 0.9002,
+      "contradictions": 13
+    },
+    "解除": {
+      "yiPrecision": 0.8468,
+      "yiRecall": 0.7309,
+      "jiPrecision": 0.7073,
+      "jiRecall": 0.9611,
+      "contradictions": 46
+    },
+    "沐浴": {
+      "yiPrecision": 0.9925,
+      "yiRecall": 0.654,
+      "jiPrecision": 0.6349,
+      "jiRecall": 0.9756,
+      "contradictions": 27
+    },
+    "剃头": {
+      "yiPrecision": 1,
+      "yiRecall": 0.4413,
+      "jiPrecision": 0.8502,
+      "jiRecall": 0.8936,
+      "contradictions": 14
+    },
+    "求医疗病": {
+      "yiPrecision": 0.66,
+      "yiRecall": 0.4204,
+      "jiPrecision": 0.5115,
+      "jiRecall": 0.9868,
+      "contradictions": 159
+    },
+    "裁衣": {
+      "yiPrecision": 0.9871,
+      "yiRecall": 0.7773,
+      "jiPrecision": 0.7341,
+      "jiRecall": 0.9868,
+      "contradictions": 45
+    },
+    "修造动土": {
+      "yiPrecision": 0.6583,
+      "yiRecall": 0.6306,
+      "jiPrecision": 0.5758,
+      "jiRecall": 0.8896,
+      "contradictions": 72
+    },
+    "竖柱上梁": {
+      "yiPrecision": 0.8654,
+      "yiRecall": 0.752,
+      "jiPrecision": 0.7486,
+      "jiRecall": 0.8984,
+      "contradictions": 27
+    },
+    "开市": {
+      "yiPrecision": 0.798,
+      "yiRecall": 0.7778,
+      "jiPrecision": 0.7301,
+      "jiRecall": 0.9018,
+      "contradictions": 26
+    },
+    "立券交易": {
+      "yiPrecision": 0.7353,
+      "yiRecall": 0.6611,
+      "jiPrecision": 0.6958,
+      "jiRecall": 0.9033,
+      "contradictions": 65
+    },
+    "纳财": {
+      "yiPrecision": 0.7928,
+      "yiRecall": 0.6949,
+      "jiPrecision": 0.6644,
+      "jiRecall": 0.9413,
+      "contradictions": 58
+    },
+    "开仓": {
+      "yiPrecision": 0.6651,
+      "yiRecall": 0.7079,
+      "jiPrecision": 0.7853,
+      "jiRecall": 0.8487,
+      "contradictions": 37
+    },
+    "开渠穿井": {
+      "yiPrecision": 0.8205,
+      "yiRecall": 0.6957,
+      "jiPrecision": 0.9694,
+      "jiRecall": 0.9414,
+      "contradictions": 5
+    },
+    "扫舍宇": {
+      "yiPrecision": 1,
+      "yiRecall": 0.3612,
+      "jiPrecision": 0.6349,
+      "jiRecall": 0.9756,
+      "contradictions": 12
+    },
+    "修饰垣墙": {
+      "yiPrecision": 1,
+      "yiRecall": 0.9825,
+      "jiPrecision": 0.959,
+      "jiRecall": 0.8933,
+      "contradictions": 0
+    },
+    "平治道涂": {
+      "yiPrecision": 1,
+      "yiRecall": 0.975,
+      "jiPrecision": 0.9496,
+      "jiRecall": 0.9154,
+      "contradictions": 2
+    },
+    "破屋坏垣": {
+      "yiPrecision": 0.871,
+      "yiRecall": 0.7105,
+      "jiPrecision": 0.922,
+      "jiRecall": 0.8842,
+      "contradictions": 6
+    },
+    "伐木": {
+      "yiPrecision": 0.5,
+      "yiRecall": 0.9,
+      "jiPrecision": 0.9564,
+      "jiRecall": 0.9797,
+      "contradictions": 0
+    },
+    "捕捉": {
+      "yiPrecision": 1,
+      "yiRecall": 0.7773,
+      "jiPrecision": 0.6657,
+      "jiRecall": 0.9876,
+      "contradictions": 18
+    },
+    "畋猎": {
+      "yiPrecision": 0.9,
+      "yiRecall": 0.7397,
+      "jiPrecision": 0.8801,
+      "jiRecall": 0.8967,
+      "contradictions": 12
+    },
+    "栽种": {
+      "yiPrecision": 0.9016,
+      "yiRecall": 0.6433,
+      "jiPrecision": 0.5576,
+      "jiRecall": 0.9765,
+      "contradictions": 80
+    },
+    "牧养": {
+      "yiPrecision": 0.9591,
+      "yiRecall": 0.7547,
+      "jiPrecision": 0.7485,
+      "jiRecall": 0.9352,
+      "contradictions": 45
+    },
+    "纳畜": {
+      "yiPrecision": 0.8374,
+      "yiRecall": 0.6953,
+      "jiPrecision": 0.713,
+      "jiRecall": 0.8839,
+      "contradictions": 58
+    },
+    "破土": {
+      "yiPrecision": 0,
+      "yiRecall": 0,
+      "jiPrecision": 0.6951,
+      "jiRecall": 0.9059,
+      "contradictions": 12
+    },
+    "安葬": {
+      "yiPrecision": 0.8082,
+      "yiRecall": 0.5609,
+      "jiPrecision": 0.7512,
+      "jiRecall": 0.931,
+      "contradictions": 48
+    },
+    "启攒": {
+      "yiPrecision": 0,
+      "yiRecall": null,
+      "jiPrecision": 0.8926,
+      "jiRecall": 0.862,
+      "contradictions": 6
+    }
+  }
+}

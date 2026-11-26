@@ -89,7 +89,7 @@ const I18N = {
     almanac: {
       yi: "宜",
       ji: "忌",
-      footnote: "宜忌为趣味版 · 仅供参考",
+      footnote: "宜忌依《协纪辨方书》推算 · 属传统民俗，非科学预测",
     },
     astro: {
       daily: "每日运势",
@@ -256,7 +256,7 @@ const I18N = {
     almanac: {
       yi: "Good for",
       ji: "Avoid",
-      footnote: "A playful almanac, for reference only",
+      footnote: "Reckoned by the rules of the Xieji Bianfang Shu · traditional folk custom, not a scientific forecast",
     },
     astro: {
       daily: "Daily Horoscope",
@@ -1038,21 +1038,6 @@ const MEMORY_PROMPTS = [
   { id: "memory:041", zh: "今天的日落你看到了吗？如果没看到，上一次认真看日落是什么时候，和谁一起？", en: "Did you see today's sunset? If not, when did you last watch one properly, and who was with you?" },
 ];
 
-
-/* ---------- Almanac (zh only): yi/ji vocabularies, picked by date seed ---------- */
-const ALMANAC_YI = [
-  "嫁娶", "纳采", "祭祀", "祈福", "求嗣", "出行", "出火", "拆卸", "动土", "上梁",
-  "开市", "交易", "立券", "挂匾", "入宅", "移徙", "安床", "栽种", "纳畜", "入殓",
-  "安葬", "立碑", "修造", "起基", "定磉", "开池", "放水", "纳财", "开仓", "冠笄",
-  "会亲友", "纳婿", "牧养", "开光", "经络", "裁衣", "安机械", "赴任", "求医", "治病",
-  "结网", "领证",
-];
-const ALMANAC_JI = [
-  "祈福", "开光", "出行", "嫁娶", "动土", "破土", "安葬", "开市", "立券", "栽种",
-  "入宅", "移徙", "上梁", "修造", "赴任", "纳财", "开仓", "安床", "置产", "纳畜",
-  "入殓", "启钻", "经络", "裁衣", "词讼", "探病", "求医", "开池", "掘井", "造桥",
-  "伐木", "造船", "开柱眼", "作灶",
-];
 
 /* ---------- Classics (zh only, public domain). An entry may carry
    a `full` field: the complete passage behind the card's excerpt,

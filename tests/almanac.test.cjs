@@ -1,76 +1,11 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const root = path.join(__dirname, "..");
-const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
-const app = read("js/app.js");
-const data = read("js/data.js");
+const { harness } = require("./almanac-harness.cjs");
 
-function section(start, end) {
-  const a = app.indexOf(start), b = app.indexOf(end, a + start.length);
-  assert.ok(a >= 0 && b > a, start);
-  return app.slice(a, b);
-}
-
-/* Real solar-term + almanac + render code from app.js, driven through
-   a hand-passed surface. Only the boundaries are stubbed: the clock
-   language state, the envelope gate (almanac is never a picture card)
-   and the full-text door. Dates are built in LOCAL time, matching how
-   the app itself reasons about days. */
-function harness() {
-  function makeEl() {
-    return {
-      hidden: true, textContent: "", innerHTML: "", dataset: {},
-      classList: {
-        _s: new Set(),
-        add(...cs) { cs.forEach((c) => this._s.add(c)); },
-        remove(...cs) { cs.forEach((c) => this._s.delete(c)); },
-        toggle(c, f) {
-          if (f === undefined) f = !this._s.has(c);
-          if (f) this._s.add(c); else this._s.delete(c);
-          return f;
-        },
-        contains(c) { return this._s.has(c); },
-      },
-      append() {},
-    };
-  }
-  const documentStub = {
-    addEventListener() {},
-    createElement: () => makeEl(),
-    createTextNode: (text) => ({ textContent: text }),
-  };
-  const enLine = app.match(/const SOLAR_TERMS_EN = \[.*\];/);
-  assert.ok(enLine, "SOLAR_TERMS_EN literal");
-  const source = data + "\n" + `
-    let lang = "zh", currentSelection = null, liveWorldTime = null;
-    let skyVisualGen = 0;
-    const DAY_MS = 86400000;
-    const RAD = Math.PI / 180;
-    const pad = (n) => String(n).padStart(2, "0");
-    const t = () => I18N[lang];
-    const stageShowsEnvelope = () => false;
-    const fullTextOf = () => "";
-    ${enLine[0]}
-  ` +
-    section("/* ================= Precise solar terms", "/* ================= Almanac") +
-    section("/* ================= Almanac", "/* ================= Astrology") +
-    section("function esc(str)", "/* Dated note first") + `
-    return { solarTermInfo, computeAlmanac, renderSelection };
-  `;
-  const api = new Function("document", source)(documentStub);
-  const surface = () => {
-    const s = {
-      stage: true,
-      card: makeEl(), cat: makeEl(), meta: makeEl(), body: makeEl(),
-      foot: null, fullBtn: null,
-    };
-    return s;
-  };
-  return { api, surface };
-}
+/* These tests run in whatever zone the machine has (CI and dev boxes
+   differ): every assertion is phrased so it holds in any TZ. The
+   Beijing-dated golden checks live in almanac-golden.test.cjs. */
 
 test("solarTermInfo: an ordinary day reports the term in force as current", () => {
   const { api } = harness();
@@ -117,4 +52,369 @@ test("almanac card on a term day still gives the exact crossing time", () => {
   const body = s.body.innerHTML;
   assert.ok(body.includes("节气 <b>大雪</b>"), "the day's term named");
   assert.ok(body.includes("今日交节"), "crossing announced as today's");
+});
+
+test("year label is the lunar year: 乙巳 until 2026's Spring Festival, then 丙午", () => {
+  const { api } = harness();
+  // Mid-January and mid-February are far from any boundary in every TZ.
+  assert.equal(api.computeAlmanac(new Date(2026, 0, 1, 12)).yearGanzhi, "乙巳");
+  assert.equal(api.computeAlmanac(new Date(2026, 1, 10, 12)).yearGanzhi, "乙巳");
+  assert.equal(api.computeAlmanac(new Date(2026, 1, 20, 12)).yearGanzhi, "丙午");
+  // The 立春-based year (not shown) turns at 立春, before the lunar year.
+  assert.equal(api.computeAlmanac(new Date(2026, 1, 10, 12)).lichunYearGanzhi, "丙午");
+});
+
+test("lunar dates never read Intl's chinese calendar (an Intl without it changes nothing)", () => {
+  const broken = { DateTimeFormat: function () { throw new RangeError("no chinese calendar"); } };
+  const { api } = harness({ Intl: broken });
+  const a = api.computeAlmanac(new Date(2026, 0, 15, 12));
+  assert.equal(a.yearGanzhi, "乙巳");
+  assert.equal(a.lunarLabel, "十一月廿七");
+  assert.equal(api.computeAlmanac(new Date(2026, 2, 1, 12)).lunarLabel, "正月十三");
+});
+
+test("a local date D gets the lunar date of civil date D in Beijing time, in any zone", () => {
+  const { api } = harness();
+  // Early and late on the same local day give the same lunar day…
+  for (const h of [0, 12, 23]) {
+    assert.equal(api.lunarDate(new Date(2026, 10, 26, h, 30)).label, "十月十八", `hour ${h}`);
+    assert.equal(api.lunarDate(new Date(2027, 1, 6, h, 30)).label, "正月初一", `hour ${h}`);
+  }
+  // …and the card's year/date line follow it: 2027-02-06 is 丁未 正月初一 everywhere.
+  const a = api.computeAlmanac(new Date(2027, 1, 6, 12));
+  assert.deepEqual([a.yearGanzhi, a.lunarLabel], ["丁未", "正月初一"]);
+  assert.equal(api.lunarFestivalOn(new Date(2027, 1, 6, 12)).key, "chunjie");
+  assert.equal(api.computeAlmanac(new Date(2027, 1, 5, 12)).yearGanzhi, "丙午");
+});
+
+test("朔日 弦日 望日 follow the lunar calendar's Beijing date in any zone: 朔日 is always 初一", () => {
+  const { api } = harness();
+  const counts = { 朔日: 0, 弦日: 0, 望日: 0 };
+  for (let i = 0; i < 365; i++) {
+    const day = new Date(2026, 0, 1 + i, 12);
+    const a = api.computeAlmanac(day);
+    const dn = Date.UTC(2026, 0, 1 + i);
+    const inDay = api.LUNAR.phasesBetween(dn - 8 * 3600000, dn + 16 * 3600000)
+      .map((p) => ({ 朔: "朔日", 上弦: "弦日", 望: "望日", 下弦: "弦日" })[p.name]);
+    for (const n of Object.keys(counts)) {
+      const has = a.xiongShen.some((g) => g.name === n);
+      assert.equal(has, inDay.includes(n), `${day.toDateString()} ${n}`);
+      if (has) counts[n]++;
+    }
+    assert.equal(a.xiongShen.some((g) => g.name === "朔日"), a.lunar.day === 1, day.toDateString());
+  }
+  assert.ok(counts.朔日 >= 12 && counts.朔日 <= 13);
+  assert.ok(counts.望日 >= 12 && counts.望日 <= 13);
+  assert.ok(counts.弦日 >= 24 && counts.弦日 <= 26);
+});
+
+test("节月 turns exactly on the local 交节 day of each 节 (and agrees with 今日交节)", () => {
+  const { api } = harness();
+  const JIE = ["立春", "惊蛰", "清明", "立夏", "芒种", "小暑", "立秋", "白露", "寒露", "立冬", "大雪", "小寒"];
+  let prev = api.jieMonthInfo(new Date(2024, 11, 31, 12));
+  let turns = 0;
+  for (let i = 0; i < 4 * 366; i++) {
+    const day = new Date(2025, 0, 1 + i, 12);
+    if (day.getFullYear() > 2028) break;
+    const jm = api.jieMonthInfo(day);
+    const ti = api.solarTermInfo(day);
+    const crossesJie = !!(ti.today && JIE.includes(ti.today.name));
+    assert.equal(jm.today, crossesJie, day.toDateString());
+    if (crossesJie) {
+      turns++;
+      assert.equal(jm.termName, ti.today.name);
+      assert.equal(jm.branchIdx, (prev.branchIdx + 1) % 12, `month advances on ${day.toDateString()}`);
+      assert.equal(JIE.indexOf(jm.termName), jm.monthIdx);
+    } else {
+      assert.equal(jm.branchIdx, prev.branchIdx, `no change on ${day.toDateString()}`);
+    }
+    prev = jm;
+  }
+  assert.equal(turns, 48);
+});
+
+test("建除 advances daily and repeats on every 交节 day, in any time zone", () => {
+  const { api } = harness();
+  const ORDER = "建除满平定执破危成收开闭";
+  let prev = api.computeAlmanac(new Date(2024, 11, 31, 12)).jianchu;
+  for (let i = 0; i < 365 * 2; i++) {
+    const day = new Date(2026, 0, 1 + i, 12);
+    const cur = api.computeAlmanac(day).jianchu;
+    const turned = api.jieMonthInfo(day).today;
+    if (i > 0) {
+      const step = (ORDER.indexOf(cur) - ORDER.indexOf(prev) + 12) % 12;
+      assert.equal(step, turned ? 0 : 1, day.toDateString());
+    }
+    prev = cur;
+  }
+});
+
+test("煞方 follows the 三合 group of the day branch, not the clash direction", () => {
+  const { api } = harness();
+  const expected = { 子: "南", 辰: "南", 申: "南", 巳: "东", 酉: "东", 丑: "东", 寅: "北", 午: "北", 戌: "北", 亥: "西", 卯: "西", 未: "西" };
+  for (const [b, dir] of Object.entries(expected)) assert.equal(api.shaDirectionOf(api.ZHI.indexOf(b)), dir, b);
+  // 2026-11-24 is 壬寅 by local calendar date in every zone.
+  const a = api.computeAlmanac(new Date(2026, 10, 24, 12));
+  assert.equal(a.dayGanzhi, "壬寅");
+  assert.equal(a.chongSha, "冲猴煞北");
+  assert.equal(a.chong, "猴");
+  assert.equal(a.sha, "北");
+});
+
+test("card labels 十二建除 as 建除 and shows the 黄道黑道 值神 beside it", () => {
+  const { api, surface } = harness();
+  const s = surface();
+  api.renderSelection({ cat: "almanac", data: api.computeAlmanac(new Date(2026, 10, 24, 12)) }, s);
+  assert.ok(s.body.innerHTML.includes("建除 <b>平</b>"), "2026-11-24 壬寅 in 亥月 is 平");
+  assert.ok(s.body.innerHTML.includes("值神 <b>天牢</b>（黑道）"), "亥月: 青龙 on 午, so 寅 is 天牢");
+  assert.ok(s.meta.textContent.endsWith("丙午年 己亥月"), s.meta.textContent);
+});
+
+test("彭祖百忌 is the classic stem/branch lookup", () => {
+  const { api } = harness();
+  assert.deepEqual(api.computeAlmanac(new Date(2026, 10, 24, 12)).pengzu, ["壬不汲水，更难提防", "寅不祭祀，神鬼不尝"]);
+});
+
+test("nothing in the almanac is random: no seeded pick left, Math.random never read", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const root = path.join(__dirname, "..");
+  for (const f of ["js/app.js", "js/data.js", "js/almanac-rules.js"]) {
+    const src = fs.readFileSync(path.join(root, f), "utf8");
+    assert.ok(!/seededDailyPick|ALMANAC_YI|ALMANAC_JI/.test(src), `${f} still has the seeded 宜忌`);
+  }
+  const rules = fs.readFileSync(path.join(root, "js/almanac-rules.js"), "utf8");
+  assert.ok(!/Math\.random/.test(rules));
+  const { api } = harness();
+  const real = Math.random;
+  Math.random = () => { throw new Error("the almanac read Math.random"); };
+  try {
+    const d = new Date(2026, 10, 24, 12);
+    assert.deepEqual(api.computeAlmanac(d).yiJi, api.computeAlmanac(new Date(d)).yiJi);
+  } finally { Math.random = real; }
+});
+
+test("宜/忌 are disjoint lists of the 用事 vocabulary, in its order, each traced to a source", () => {
+  const { api } = harness();
+  const V = api.NAM_ALMANAC.YONGSHI.map((y) => y.name);
+  assert.ok(V.length >= 30 && V.length <= 40, `vocabulary of ${V.length}`);
+  assert.equal(new Set(V).size, V.length);
+  for (const y of api.NAM_ALMANAC.YONGSHI) assert.ok(y.gloss.length > 0 && y.gloss.length <= 8, y.name);
+  const known = new Set([...api.NAM_ALMANAC.JI_NAMES, ...api.NAM_ALMANAC.XIONG_NAMES, ..."建除满平定执破危成收开闭".split("").map((c) => c + "日")]);
+  let allJiDays = 0;
+  for (let i = 0; i < 2 * 365; i++) {
+    const a = api.computeAlmanac(new Date(2026, 0, 1 + i, 12));
+    const yj = a.yiJi;
+    const label = `${a.dayGanzhi} ${a.jieMonth.branch}月 ${a.jianchu}`;
+    assert.deepEqual(a.yi, yj.yi);
+    for (const list of [a.yi, a.ji]) {
+      const idx = list.map((n) => V.indexOf(n));
+      assert.ok(idx.every((k) => k >= 0), label);
+      assert.deepEqual(idx, [...idx].sort((x, y) => x - y), `${label}: vocabulary order`);
+    }
+    assert.ok(!a.yi.some((n) => a.ji.includes(n)), `${label}: an item in both lists`);
+    // Each graded god's 「從X論」 points at a god that really sits on the day.
+    for (const [g, v] of Object.entries(yj.graded)) assert.ok(v !== "J?", `${label}: ${g} defers to an absent god`);
+    if (yj.allJi) {
+      allJiDays++;
+      assert.deepEqual(a.yi, []);
+      assert.deepEqual(a.ji, V);
+      assert.equal(yj.level.code, "X");
+      continue;
+    }
+    const byName = new Map(yj.trace.map((t) => [t.name, t]));
+    for (const n of a.yi) {
+      const t = byName.get(n);
+      assert.equal(t.result, "宜");
+      assert.ok(t.yi.length > 0, `${label}: 宜 ${n} without a source`);
+    }
+    for (const n of a.ji) {
+      const t = byName.get(n);
+      assert.equal(t.result, "忌");
+      assert.ok(t.ji.length > 0, `${label}: 忌 ${n} without a source`);
+    }
+    for (const t of yj.trace) for (const src of [...t.yi, ...t.ji]) {
+      assert.ok(known.has(src) || api.NAM_ALMANAC.YIJI_SOURCES.includes(src), `${label}: unknown source ${src}`);
+    }
+  }
+  assert.ok(allJiDays > 20 && allJiDays < 150, `${allJiDays} 诸事皆忌 days in two years`);
+});
+
+test("宜忌 invariants that follow from the book in any time zone", () => {
+  const { api } = harness();
+  const LIJUE_OK = new Set(["祭祀", "解除", "沐浴", "剃头", "扫舍宇", "修饰垣墙", "平治道涂", "破屋坏垣", "伐木"]);
+  const PO_OK = new Set(["祭祀", "入学", "解除", "沐浴", "求医疗病", "扫舍宇", "平治道涂", "破屋坏垣", "捕捉", "畋猎"]);
+  let li = 0, po = 0;
+  for (let i = 0; i < 2 * 365; i++) {
+    const a = api.computeAlmanac(new Date(2026, 0, 1 + i, 12));
+    const xs = new Set(a.xiongShen.map((g) => g.name));
+    const label = `${a.dayGanzhi} ${a.jieMonth.branch}月 ${a.jianchu}`;
+    // 四離 四絶: 「止不忌祭祀解除沐浴……伐木，餘事皆忌；與徳合赦願併猶忌」.
+    if (xs.has("四离") || xs.has("四绝")) {
+      li++;
+      assert.ok(a.yi.every((n) => LIJUE_OK.has(n)), `${label}: ${a.yi}`);
+      if (!a.yiJi.allJi) assert.ok(a.yiJi.trace.length && api.NAM_ALMANAC.YONGSHI.every((y) => LIJUE_OK.has(y.name) || a.ji.includes(y.name)), label);
+    }
+    // 月破: 德 cannot lift it, so only the few 「不忌」 用事 can be 宜.
+    if (xs.has("月破")) { po++; assert.ok(a.yi.every((n) => PO_OK.has(n)), `${label}: ${a.yi}`); }
+    // 往亡, 归忌: 猶忌 whatever 吉神 sit on the day.
+    if (xs.has("往亡")) for (const n of ["出行", "嫁娶", "移徙"]) assert.ok(a.ji.includes(n), `${label} 往亡 ${n}`);
+    if (xs.has("归忌")) assert.ok(a.ji.includes("移徙"), `${label} 归忌`);
+    // 亥日不嫁娶, 寅日不祭祀 (百忌日), unless the whole day is 诸事皆忌 anyway.
+    if (a.dayGanzhi[1] === "亥") assert.ok(a.ji.includes("嫁娶"), label);
+    if (a.dayGanzhi[1] === "寅") assert.ok(a.ji.includes("祭祀") && !a.yi.includes("祈福"), label);
+  }
+  assert.ok(li >= 16 && po >= 55, `${li} 四离/四绝 days, ${po} 月破 days`);
+});
+
+test("card shows the first 宜/忌 in vocabulary order, 「等N事」 for the rest, and 诸事皆忌 days plainly", () => {
+  const { api, surface } = harness();
+  let long = null, allJi = null;
+  for (let i = 0; i < 400 && !(long && allJi); i++) {
+    const a = api.computeAlmanac(new Date(2026, 0, 1 + i, 12));
+    if (!long && a.yi.length > 8) long = a;
+    if (!allJi && a.yiJi.allJi) allJi = a;
+  }
+  let s = surface();
+  api.renderSelection({ cat: "almanac", data: long }, s);
+  const row = s.body.innerHTML.match(/<b>宜<\/b> (.*?)<\/span><\/div>/)[1];
+  const shown = [...row.matchAll(/<span title="[^"]+">([^<]+)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(shown, long.yi.slice(0, 8));
+  assert.ok(row.includes(`等${long.yi.length}事`), row);
+  assert.ok(!s.body.innerHTML.includes("趣味"));
+  assert.ok(s.body.innerHTML.includes("协纪辨方书"), "footnote names the source");
+  s = surface();
+  api.renderSelection({ cat: "almanac", data: allJi }, s);
+  assert.ok(s.body.innerHTML.includes("<b>宜</b> 诸事不宜"));
+  assert.ok(s.body.innerHTML.includes("<b>忌</b> 诸事皆忌"));
+  // The 全文 reading groups every 宜/忌 under the sources that decided it.
+  const doc = api.almanacFullDoc(long);
+  for (const side of ["yi", "ji"]) {
+    const names = doc[side].groups.flatMap((g) => g.items.map((i) => i.name));
+    assert.deepEqual([...names].sort(), [...long[side]].sort(), side);
+    assert.equal(doc[side].count, long[side].length);
+    for (const g of doc[side].groups) {
+      for (const i of g.items) {
+        const t = long.yiJi.trace.find((r) => r.name === i.name);
+        assert.deepEqual(g.sources, side === "yi" ? t.yi : t.ji, i.name);
+        assert.equal(g.why, t.why && t.why !== (long.yiJi.level || {}).name ? t.why : "", i.name);
+        const y = api.NAM_ALMANAC.YONGSHI.find((v) => v.name === i.name);
+        assert.equal(i.gloss, y.plain ? "" : y.gloss, i.name);
+      }
+    }
+  }
+  const full = api.almanacFullText(long);
+  assert.equal(full.includes("等第："), !!long.yiJi.level, "等第 only when a graded 凶煞 decided the day");
+  assert.ok(!full.includes("趣味"));
+  const html = api.almanacReadingHtml(doc);
+  for (const n of [...long.yi, ...long.ji]) assert.ok(html.includes(`<span class="al-item">${n}</span>`), n);
+  assert.ok(!/undefined|NaN/.test(html));
+  // 诸事皆忌: a banner, both sides closed, the wanted 宜 folded away
+  // without repeating the verdict on every group.
+  const allDoc = api.almanacFullDoc(allJi);
+  assert.ok(allDoc.allJi && allDoc.level.strong && allDoc.level.name === "诸事皆忌");
+  assert.equal(allDoc.yi.count + allDoc.ji.count, 0);
+  assert.ok(allDoc.quiet.count > 0 && allDoc.quiet.groups.every((g) => g.why === ""));
+  const allHtml = api.almanacReadingHtml(allDoc);
+  assert.ok(allHtml.includes("al-level--strong") && allHtml.includes("诸事皆忌"));
+  assert.ok(allHtml.includes('<details class="al-quiet">'), "本有之宜 starts folded");
+  assert.ok(api.almanacFullText(allJi).includes("诸事皆忌"));
+});
+
+test("黄道黑道: 青龙 placement by month branch, six 黄道 gods, order by day branch", () => {
+  const { api } = harness();
+  const Z = api.ZHI;
+  const qinglong = { 寅: "子", 申: "子", 卯: "寅", 酉: "寅", 辰: "辰", 戌: "辰", 巳: "午", 亥: "午", 子: "申", 午: "申", 丑: "戌", 未: "戌" };
+  const ORDER = ["青龙", "明堂", "天刑", "朱雀", "金匮", "天德", "白虎", "玉堂", "天牢", "玄武", "司命", "勾陈"];
+  for (const [mb, day] of Object.entries(qinglong)) {
+    for (let k = 0; k < 12; k++) {
+      const g = api.NAM_ALMANAC.zhiShenOf((Z.indexOf(day) + k) % 12, Z.indexOf(mb));
+      assert.equal(g.name, ORDER[k], `${mb}月 ${Z[(Z.indexOf(day) + k) % 12]}日`);
+      assert.equal(g.huangdao, [0, 1, 4, 5, 7, 10].includes(k));
+    }
+  }
+});
+
+test("值神 steps +1 a day and −1 on each 交节 day, in any time zone", () => {
+  const { api } = harness();
+  const ORDER = api.NAM_ALMANAC.ZHISHEN;
+  let prev = api.computeAlmanac(new Date(2025, 11, 31, 12)).zhiShen.name;
+  for (let i = 0; i < 365 * 2; i++) {
+    const day = new Date(2026, 0, 1 + i, 12);
+    const cur = api.computeAlmanac(day).zhiShen.name;
+    const step = (ORDER.indexOf(cur) - ORDER.indexOf(prev) + 12) % 12;
+    assert.equal(step, api.jieMonthInfo(day).today ? 11 : 1, day.toDateString());
+    prev = cur;
+  }
+});
+
+test("四离 / 四绝 fall on the local day before 分至 / 四立; 土王用事 is the 18 days before 四立", () => {
+  const { api } = harness();
+  const LI = ["春分", "夏至", "秋分", "冬至"], JUE = ["立春", "立夏", "立秋", "立冬"];
+  let tuWangRun = 0;
+  for (let i = 0; i < 366 * 2; i++) {
+    const day = new Date(2026, 0, 1 + i, 12);
+    const next = api.solarTermInfo(new Date(2026, 0, 2 + i, 12)).today;
+    const names = api.computeAlmanac(day).xiongShen.map((g) => g.name);
+    assert.equal(names.includes("四离"), !!(next && LI.includes(next.name)), day.toDateString());
+    assert.equal(names.includes("四绝"), !!(next && JUE.includes(next.name)), day.toDateString());
+    const tw = api.tuWangYongShi(day);
+    if (tw) tuWangRun++;
+    if (next && JUE.includes(next.name)) {
+      assert.equal(tw, true, "the eve of a 四立 is inside 土王用事");
+      assert.equal(tuWangRun, 18, `18 days of 土王用事 before ${next.name}`);
+    }
+    if (!tw) tuWangRun = 0;
+  }
+});
+
+test("吉神/凶神 are rule-derived {name, gloss} lists with no duplicated 值神", () => {
+  const { api } = harness();
+  const JI = new Set(api.NAM_ALMANAC.JI_NAMES), XIONG = new Set(api.NAM_ALMANAC.XIONG_NAMES);
+  // Only 天德 shares a name with a 值神 — the month table's 天德, a different god from 黄道 天德.
+  const shared = api.NAM_ALMANAC.ZHISHEN.filter((n) => JI.has(n) || XIONG.has(n));
+  assert.deepEqual(shared, ["天德"]);
+  for (let i = 0; i < 120; i++) {
+    const a = api.computeAlmanac(new Date(2026, 0, 1 + i * 3, 12));
+    for (const g of [...a.jiShen, ...a.xiongShen]) {
+      assert.deepEqual(Object.keys(g), ["name", "gloss"]);
+      assert.ok(g.gloss.length > 0 && g.gloss.length <= 16, g.name);
+    }
+    assert.ok(a.jiShen.every((g) => JI.has(g.name)) && a.xiongShen.every((g) => XIONG.has(g.name)));
+    // 月破 and 大耗 share the 破日; 生气 is the 开日; 死神 the 平日.
+    const has = (n) => [...a.jiShen, ...a.xiongShen].some((g) => g.name === n);
+    assert.equal(has("月破"), a.jianchu === "破");
+    assert.equal(has("大耗"), a.jianchu === "破");
+    assert.equal(has("生气"), a.jianchu === "开");
+    assert.equal(has("死神"), a.jianchu === "平");
+  }
+});
+
+test("card lists god names only (gloss on hover); the 全文 reading gives every gloss", () => {
+  const { api, surface } = harness();
+  const a = api.computeAlmanac(new Date(2026, 10, 24, 12));
+  const s = surface();
+  api.renderSelection({ cat: "almanac", data: a }, s);
+  const body = s.body.innerHTML;
+  for (const g of [...a.jiShen, ...a.xiongShen]) {
+    assert.ok(body.includes(`<span title="${g.gloss}">${g.name}</span>`), g.name);
+    assert.ok(!body.includes(`${g.name}（`), `${g.name} has no inline gloss`);
+  }
+  // The reading repeats nothing the card shows (pillars, 建除, 值神, 冲煞)
+  // and glosses every god exactly once: on the first group it decides,
+  // else under 其余神煞.
+  const full = api.almanacFullText(a);
+  assert.ok(full.startsWith("农历") && full.split("\n")[0].endsWith("壬寅日"));
+  for (const x of ["值神", "建除", a.chongSha, "丙午年"]) assert.ok(!full.includes(x), x);
+  const doc = api.almanacFullDoc(a);
+  const glossedIn = [...doc.yi.groups, ...doc.ji.groups].flatMap((g) => g.glosses.map((x) => x.name));
+  const rest = [...doc.otherGods.ji, ...doc.otherGods.xiong].map((g) => g.name);
+  assert.deepEqual([...glossedIn, ...rest].sort(), [...a.jiShen, ...a.xiongShen].map((g) => g.name).sort());
+  for (const g of [...a.jiShen, ...a.xiongShen]) {
+    assert.equal(full.split(`${g.name}：${g.gloss}`).length - 1, 1, g.name);
+    const grp = [...doc.yi.groups, ...doc.ji.groups].find((x) => x.glosses.some((y) => y.name === g.name));
+    if (grp) assert.ok(grp.sources.includes(g.name), g.name);
+  }
+  // An ordinary day carries no 等第 strip; a graded day does.
+  assert.equal(api.almanacFullDoc(api.computeAlmanac(new Date(2026, 10, 26, 12))).level, null);
 });

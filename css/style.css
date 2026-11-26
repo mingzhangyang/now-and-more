@@ -537,6 +537,10 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .card-body .sub { color: var(--ink-soft); font-size: 15px; }
 .card-body .fact-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 6px; font-size: 15px; color: var(--ink-soft); }
 .card-body .fact-row b { color: var(--ink); font-weight: 600; }
+/* Almanac 宜 / 忌 and 吉神 / 凶神: names only, never split inside a name. */
+.card-body .alm-gods { line-height: 1.55; }
+.card-body .alm-nayin { font-size: 15px; font-weight: 600; margin-left: 10px; letter-spacing: 0.08em; opacity: 0.72; }
+.card-body .alm-gods > span > span { white-space: nowrap; }
 .card-body .swatch {
   display: inline-block;
   width: 54px; height: 54px;
@@ -1658,6 +1662,91 @@ html.modal-open body {
 }
 :root:lang(en) .hr-kicker, :root:lang(en) .hr-section-title { letter-spacing: 0.08em; text-transform: uppercase; }
 :root:lang(en) .hr-label, :root:lang(en) .hr-tile-name { letter-spacing: 0.03em; }
+
+/* ---------- Almanac reading (full-text dialog) ----------
+   Shares the horoscope reading's frame (.hr: section titles, notes,
+   footer). Printed almanacs set 宜 in red and 忌 in black; the reading
+   keeps that: 宜 groups carry the vermillion rule, 忌 groups the ink
+   rule. Each group is one line of sources (small sans) over the 用事
+   it decided, set as serif names with their plain gloss beneath. */
+.al-kicker {
+  padding-bottom: 12px; border-bottom: 1px solid var(--hr-rule);
+  font-family: var(--sans); font-size: 13px; letter-spacing: 0.16em; color: var(--ink-soft); text-align: center;
+}
+.al-kicker + .hr-section { margin-top: 18px; }
+.al-level {
+  margin-top: 14px !important; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px;
+  padding: 9px 12px; border-radius: 8px; background: var(--bg-soft);
+  font-family: var(--sans); font-size: 13px; line-height: 1.6; color: var(--ink-soft);
+}
+.al-level b { font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: 0.06em; }
+.al-level--strong { background: var(--hr-tint); border-left: 3px solid var(--accent); }
+.al-level--strong b { color: var(--accent); }
+
+.al-count {
+  display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0; text-align: center; line-height: 1.6;
+  color: var(--ink-soft); background: var(--bg-soft); font-variant-numeric: tabular-nums;
+}
+.al-sec--ji .hr-section-title { color: var(--ink); }
+.al-group {
+  padding: 10px 14px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+  border-left: 3px solid var(--accent); background: var(--card-bg);
+}
+.al-group + .al-group { margin-top: 8px; }
+.al-group--ji { border-left-color: var(--ink); }
+.al-group--quiet { border-left-color: var(--card-border); }
+.al-src {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px;
+  font-family: var(--sans); font-size: 12px; line-height: 1.6; color: var(--ink-soft);
+}
+.al-god b { margin-right: 6px; font-size: 13px; font-weight: 600; letter-spacing: 0.1em; color: var(--accent); }
+.al-group--ji .al-god b { color: var(--ink); }
+.al-group--quiet .al-god b { color: var(--ink-soft); }
+.al-why {
+  margin-top: 2px !important; font-family: var(--sans); font-size: 12px; line-height: 1.6; color: var(--ink-soft);
+}
+.al-why::before { content: "注"; margin-right: 6px; padding: 0 4px; border-radius: 3px; font-size: 11px; color: var(--ink-soft); border: 1px solid var(--card-border); }
+.al-group .al-items { margin-top: 8px; }
+.al-items { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.al-items li { display: flex; flex-direction: column; min-width: 3.5em; }
+.al-item { font-size: 17px; font-weight: 600; line-height: 1.45; letter-spacing: 0.06em; }
+.al-gloss { font-family: var(--sans); font-size: 11px; line-height: 1.4; color: var(--ink-soft); }
+.al-group--quiet .al-item { font-weight: 400; color: var(--ink-soft); }
+
+.al-allji { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.al-allji p { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--card-bg); font-size: 17px; font-weight: 600; }
+.al-side { margin-right: 10px; font-family: var(--sans); font-size: 12px; letter-spacing: 0.12em; }
+.al-side--yi { color: var(--accent); }
+.al-side--ji { color: var(--ink); }
+
+.al-quiet { margin-top: 22px; }
+.al-quiet summary {
+  cursor: pointer; font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0.24em; color: var(--ink-soft);
+  padding: 4px 0;
+}
+.al-quiet summary:hover, .al-quiet summary:focus-visible { color: var(--accent); }
+.al-quiet > .hr-note { margin: 6px 0 10px; }
+
+.al-grid { display: grid; gap: 8px; margin: 0; }
+.al-grid--dirs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.al-grid--nayin { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.al-grid div { padding: 8px 6px; border-radius: 10px; background: var(--bg-soft); text-align: center; }
+.al-grid dt { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); letter-spacing: 0.06em; }
+.al-grid dd { margin: 2px 0 0; font-size: 16px; font-weight: 600; letter-spacing: 0.06em; }
+.al-grid .al-grid-sub { margin: 0; font-family: var(--sans); font-size: 11px; font-weight: 400; color: var(--ink-soft); }
+
+.al-gods { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.al-gods li { font-family: var(--sans); font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
+.al-gods li b { margin-right: 8px; font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.al-gods .al-side--yi b { color: var(--accent); }
+.al-gods .al-side--ji b { color: var(--ink); }
+@media (max-width: 520px) {
+  .full-dialog:has(> .full-body.al) { padding: 22px 16px 18px; }
+  .al-grid--dirs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .al-group { padding: 9px 12px 11px; }
+  .al-items { gap: 6px 14px; }
+}
 
 /* ---------- English typography ----------
    The tracking above is set for Chinese, whose square characters want

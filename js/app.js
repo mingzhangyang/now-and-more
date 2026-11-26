@@ -600,11 +600,12 @@ const TERM_VSOP_R0 = [
 ];
 const ARCSEC_RAD = Math.PI / (180 * 3600);
 
-/* ΔT = TT − UT, in seconds. Quadratic through the IERS-observed values
-   for 2000/2010/2020 (63.83 / 66.07 / 69.36 s); Earth's rotation has
-   kept ΔT nearly flat since, so the 2020s continue almost level. An
-   error of even 5 s here moves a crossing by 5 s — far below the
-   minute precision the card displays. */
+/* ΔT = TT − UT, in seconds, for the sky and horoscope positions
+   (sunApparentLongitudeDeg): a quadratic through the IERS-observed values
+   for 2000/2010/2020 (63.83 / 66.07 / 69.36 s), nearly level since. It is
+   pinned by the horoscope regression tests and differs from
+   civilDeltaTSeconds by under 0.4 s in 2000–2030. Calendar instants
+   (solar terms, new moons) use civilDeltaTSeconds instead. */
 function deltaTSeconds(yearFloat) {
   if (yearFloat <= 2020) {
     const u = (yearFloat - 2010) / 10;
@@ -613,11 +614,55 @@ function deltaTSeconds(yearFloat) {
   return 69.36 + 0.03 * (yearFloat - 2020);
 }
 
+/* TT − UTC (civil time), in seconds: what turns an ephemeris instant (TT)
+   into the clock time on which calendar days are decided. Civil time is
+   UTC (Beijing time = UTC+8, GB/T 33661-2017), so:
+   · from 1972 it is exactly 32.184 s + TAI−UTC (the leap-second table,
+     IERS Bulletin C; 69.184 s since 2017-01-01). No leap second has been
+     added since, and the 27th CGPM (2022, Resolution 4) decided to stop
+     them by 2035, so 69.184 s is held for the future: future civil time
+     is UTC as it now runs, the convention JPL Horizons also uses.
+   · before 1972 UTC followed UT, so it is ΔT = TT − UT: observed values
+     every five years 1900–1970 (Espenak & Meeus, "Polynomial expressions
+     for Delta T", NASA 2006), interpolated linearly, joined to 1972.
+   Earth's rotation (UT1) will drift from that UTC by a minute or two by
+   2100; that drift matters for sunrise, not for which civil day holds a
+   new moon or a solar term. Used for the solar terms and the lunar
+   calendar's new moons (js/lunar.js); see docs/almanac-rules.md §1a. */
+const DELTA_T_TABLE = [
+  -2.79, 3.86, 10.46, 17.20, 21.16, 23.62, 24.02, 23.93, 24.33, 26.77, // 1900 … 1945
+  29.07, 31.07, 33.15, 35.73, 40.18,                                   // 1950 … 1970
+];
+// Decimal years at which TAI − UTC stepped to 11, 12, … 37 s (10 s on 1972-01-01).
+const LEAP_SECOND_YEARS = [
+  1972.5, 1973, 1974, 1975, 1976, 1977, 1978, 1979, 1980, 1981.5, 1982.5, 1983.5, 1985.5,
+  1988, 1990, 1991, 1992.5, 1993.5, 1994.5, 1996, 1997.5, 1999, 2006, 2009, 2012.5, 2015.5, 2017,
+];
+function civilDeltaTSeconds(yearFloat) {
+  if (yearFloat >= 1972) {
+    let leap = 10;
+    for (const y of LEAP_SECOND_YEARS) if (yearFloat >= y) leap++;
+    return 32.184 + leap;
+  }
+  if (yearFloat >= 1970) return 40.18 + (42.184 - 40.18) * (yearFloat - 1970) / 2;
+  if (yearFloat <= 1900) return DELTA_T_TABLE[0];
+  const x = (yearFloat - 1900) / 5, i = Math.floor(x);
+  return DELTA_T_TABLE[i] + (DELTA_T_TABLE[i + 1] - DELTA_T_TABLE[i]) * (x - i);
+}
+
 /* Apparent ecliptic longitude of the Sun (degrees, 0..360) at a UTC
    instant (a JS Date). Includes aberration and nutation in longitude. */
 function sunApparentLongitudeDeg(date) {
   const jdUT = date.valueOf() / DAY_MS + 2440587.5;
-  const jdTT = jdUT + deltaTSeconds(1970 + (jdUT - 2440587.5) / 365.25) / 86400;
+  return sunApparentLongitudeTT(jdUT + deltaTSeconds(1970 + (jdUT - 2440587.5) / 365.25) / 86400);
+}
+/* The same at a civil (UTC) instant, with the calendar's TT − UTC. */
+function sunCivilLongitudeDeg(date) {
+  const jdUT = date.valueOf() / DAY_MS + 2440587.5;
+  return sunApparentLongitudeTT(jdUT + civilDeltaTSeconds(1970 + (jdUT - 2440587.5) / 365.25) / 86400);
+}
+/* …and at a Julian Ephemeris Day (TT). */
+function sunApparentLongitudeTT(jdTT) {
   const T = (jdTT - 2451545) / 36525; // Julian centuries of TT from J2000
   const tau = T / 10;                 // Julian millennia
   const L0 = 280.46646 + T * (36000.76983 + 0.0003032 * T);
@@ -656,10 +701,10 @@ function angDiffDeg(a, b) {
 function solveSolarTermInstant(angleDeg, guessMs) {
   let t = guessMs;
   for (let i = 0; i < 40; i++) {
-    const f = angDiffDeg(sunApparentLongitudeDeg(new Date(t)), angleDeg);
+    const f = angDiffDeg(sunCivilLongitudeDeg(new Date(t)), angleDeg);
     if (Math.abs(f) < 1e-9) break;
     const h = 60000;
-    const d = angDiffDeg(sunApparentLongitudeDeg(new Date(t + h)), sunApparentLongitudeDeg(new Date(t - h))) / (2 * h);
+    const d = angDiffDeg(sunCivilLongitudeDeg(new Date(t + h)), sunCivilLongitudeDeg(new Date(t - h))) / (2 * h);
     if (!(d > 0)) break;
     const step = f / d;
     t -= step;
@@ -691,6 +736,30 @@ function solarTermInstantsForYear(year) {
   return list;
 }
 
+/* All crossings of the UTC years y−1 … y+1 around `date`, in time
+   order (a window wide enough for any "last term before / first term
+   after" question about a day). Shared by solarTermInfo and the
+   almanac's 节月 helper so both read the very same instants. */
+function solarTermsAround(date) {
+  const y = date.getUTCFullYear();
+  return [
+    ...solarTermInstantsForYear(y - 1),
+    ...solarTermInstantsForYear(y),
+    ...solarTermInstantsForYear(y + 1),
+  ].sort((a, b) => a.instant - b.instant);
+}
+
+/* [dayStart, dayEnd) of the LOCAL civil day containing `date`. Every
+   calendar decision in the almanac is made on this half-open interval:
+   a crossing belongs to day D when D's local midnight ≤ instant < the
+   next local midnight. */
+function localDayBounds(date) {
+  return {
+    dayStart: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+    dayEnd: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1),
+  };
+}
+
 /* The term picture for the LOCAL day containing `date`:
    today   — the crossing whose local calendar date is that day, else null;
    next    — the first crossing on/after the next local midnight;
@@ -698,14 +767,8 @@ function solarTermInstantsForYear(year) {
              falls on it, else the last crossing before it.
    Entries carry { idx, angle, instant, name, nameEn }. */
 function solarTermInfo(date) {
-  const y = date.getUTCFullYear();
-  const all = [
-    ...solarTermInstantsForYear(y - 1),
-    ...solarTermInstantsForYear(y),
-    ...solarTermInstantsForYear(y + 1),
-  ].sort((a, b) => a.instant - b.instant);
-  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  const all = solarTermsAround(date);
+  const { dayStart, dayEnd } = localDayBounds(date);
   let today = null, next = null, current = null;
   for (const t of all) {
     if (t.instant >= dayEnd) { next = t; break; }
@@ -728,7 +791,19 @@ function termDisplayInstant(instant) {
   return new Date(Math.round(instant.getTime() / 60000) * 60000);
 }
 
-/* ================= Almanac (zh only, computed per day) ================= */
+/* ================= Almanac (zh only, computed per day) =================
+   Rules, conventions and sources: docs/almanac-rules.md. In short —
+   · day boundary = local civil midnight; the day ganzhi is that of the
+     local calendar date;
+   · 节月 (month branch): a 节 whose instant falls on local day D governs
+     from D onward (the whole day), decided on the same instants and the
+     same local-day interval as the card's 「今日交节」;
+   · the card's 「X年」 is the lunar year (changes at 正月初一); the
+     立春-based year is exposed separately for the month pillar;
+   · 黄道黑道值神 and the day's 吉神/凶神 follow 《协纪辨方书》's rules
+     (js/almanac-rules.js), and so do 宜忌, which are synthesised from the
+     建除, the 神煞 and a few fixed special days (NAM_ALMANAC.yiJi). Nothing
+     in the almanac is random. */
 const GAN = "甲乙丙丁戊己庚辛壬癸";
 const ZHI = "子丑寅卯辰巳午未申酉戌亥";
 
@@ -749,31 +824,101 @@ function ganzhiFromIndex(idx) {
   return GAN[i % 10] + ZHI[i % 12];
 }
 function dayGanzhi(date) { return ganzhiFromIndex(julianDayNumber(date) + 49); }
-function yearGanzhi(date) {
-  let lunarYear = date.getFullYear();
-  try {
-    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { year: "numeric" }).formatToParts(date);
-    const yp = parts.find((x) => x.type === "year");
-    const n = yp ? parseInt(yp.value, 10) : NaN;
-    if (!Number.isNaN(n)) lunarYear = n;
-  } catch (e) { /* fall back to Gregorian year */ }
-  return ganzhiFromIndex(lunarYear - 4);
-}
-/* Deterministic per-day pseudo-random pick: the same calendar day always
-   yields the same 宜/忌. Certainty hiding inside the chance pool. */
-function seededDailyPick(pool, count, seed, exclude) {
-  let s = (seed % 2147483647) + 1;
-  const rnd = () => {
-    s = (s * 1103515245 + 12345) % 2147483648;
-    return s / 2147483648;
-  };
-  const avail = pool.filter((x) => !exclude || !exclude.includes(x));
-  const copy = avail.slice();
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+
+/* 节月 — the month of the 干支 calendar, which turns at each of the
+   twelve 节 (立春 寅, 惊蛰 卯, 清明 辰, 立夏 巳, 芒种 午, 小暑 未,
+   立秋 申, 白露 酉, 寒露 戌, 立冬 亥, 大雪 子, 小寒 丑); the twelve 中气
+   in between do not move it. A 节 sits at an apparent solar longitude
+   ≡ 15° (mod 30°); 立春 is 315°. The governing 节 of a local day is the
+   last 节 whose instant is before that day's END, i.e. a 节 crossing at
+   any time on day D already governs all of D — the convention of
+   printed almanacs, and the same rule solarTermInfo uses for `current`.
+   Returns
+     branchIdx — month branch as an index into ZHI (0 子 … 11 亥);
+     branch    — that branch, e.g. "寅";
+     monthIdx  — 0 for 寅月 (the first 节月, from 立春) … 11 for 丑月;
+     jieYear   — the 立春-based year number: the Gregorian year of the
+                 立春 that opened the current 节年 (Jan before 立春 →
+                 previous year);
+     termIdx / termName / instant — the governing 节 itself;
+     today     — true when that 节 crosses on this local day (交节日). */
+function jieMonthInfo(date) {
+  const { dayStart, dayEnd } = localDayBounds(date);
+  let gov = null;
+  for (const t of solarTermsAround(date)) {
+    if (t.instant >= dayEnd) break;
+    if (t.angle % 30 === 15) gov = t;
   }
-  return copy.slice(0, Math.min(count, copy.length));
+  const monthIdx = ((gov.angle - 315 + 360) % 360) / 30; // 立春 → 0
+  // 小寒 (丑月, early January) is the only 节 that opens a month of the
+  // previous 节年; every other 节 shares its instant's Gregorian year.
+  const jieYear = gov.instant.getUTCFullYear() - (monthIdx === 11 ? 1 : 0);
+  return {
+    branchIdx: (monthIdx + 2) % 12,
+    branch: ZHI[(monthIdx + 2) % 12],
+    monthIdx,
+    jieYear,
+    termIdx: gov.idx,
+    termName: SOLAR_TERMS[gov.idx],
+    instant: gov.instant,
+    today: gov.instant >= dayStart,
+  };
+}
+
+/* Year ganzhi of the 立春-based year (the year pillar of 八字 and the
+   year a 节月 belongs to). Not shown on the card, which names the lunar
+   year; exposed for the month pillar. */
+function lichunYearGanzhi(date) {
+  return ganzhiFromIndex(jieMonthInfo(date).jieYear - 4);
+}
+
+/* Month ganzhi by 五虎遁 (甲己之年丙作首, 乙庚之岁戊为头, 丙辛必定寻庚起,
+   丁壬壬位顺行流, 戊癸何方发, 甲寅之上好追求): the 寅月 stem is fixed
+   by the 立春-year stem, and stems then advance one per 节月. Shown on
+   the card's meta line (「丙午年 己亥月」). */
+function jieMonthGanzhi(date) {
+  const jm = jieMonthInfo(date);
+  const yearStem = ((jm.jieYear - 4) % 10 + 10) % 10;
+  const stem = ((yearStem % 5) * 2 + 2 + jm.monthIdx) % 10;
+  return GAN[stem] + jm.branch;
+}
+
+/* The lunar calendar (农历) — computed by js/lunar.js from Meeus new
+   moons and this file's solar terms (中气) under the GB/T 33661-2017
+   rules, never from Intl's "chinese" calendar (ICU starts 丁未 2027 a day
+   late and differs between browsers). A local date D gets the lunar date
+   of civil date D in Beijing time. lunarDate(date) → { year (the
+   Gregorian year in which that lunar year began), month, day, leap,
+   monthDays, yearGanzhi, label 「十月十八」 }. */
+const LUNAR = NAM_LUNAR.create({ deltaTSeconds: civilDeltaTSeconds, termsOfYear: solarTermInstantsForYear });
+function lunarDate(date) { return LUNAR.fromDate(date); }
+
+/* Lunar-year ganzhi: the year that changes at 正月初一, as printed on
+   almanacs (「乙巳年」 until the 2026 Spring Festival on Feb 17). */
+function yearGanzhi(date) {
+  return lunarDate(date).yearGanzhi;
+}
+
+/* 十二建除: the officer of a day is fixed by the distance from the 节月
+   branch to the day branch — 建 when they are equal, then 除 满 平 定 执
+   破 危 成 收 开 闭 (《淮南子·天文训》; 《协纪辨方书·义例·建除十二神》).
+   Because the month branch advances on the 交节 day while the day branch
+   advances every day, the officer repeats on each 交节 day. */
+function jianchuOf(dayBranchIdx, monthBranchIdx) {
+  return JIANCHU[((dayBranchIdx - monthBranchIdx) % 12 + 12) % 12];
+}
+
+/* 煞方 of a day by its branch's 三合 group: 申子辰煞南, 巳酉丑煞东,
+   寅午戌煞北, 亥卯未煞西 — the 三煞 (劫煞·灾煞·岁煞) directions that
+   《协纪辨方书》 gives by year branch, applied by day branch the way
+   通书/printed almanacs print 「冲X煞Y」. It is the direction opposite
+   the group's own 三合 element (申子辰 water ↔ south fire, etc.), NOT
+   the direction of the clashing branch. The 三合 groups are exactly
+   the branches with equal index mod 4 (子辰申 0, 丑巳酉 1, 寅午戌 2,
+   卯未亥 3). */
+const SHA_BY_TRINE = ["南", "东", "北", "西"];
+function shaDirectionOf(dayBranchIdx) {
+  return SHA_BY_TRINE[dayBranchIdx % 4];
 }
 /* 彭祖百忌： classic lookup by day stem / day branch (traditional text). */
 const PENGZU_BY_STEM = {
@@ -789,89 +934,248 @@ const PENGZU_BY_BRANCH = {
   "酉": "酉不会客，醉坐颠狂", "戌": "戌不吃犬，作怪上床", "亥": "亥不嫁娶，不利新郎",
 };
 const ZHI_ANIMAL = "鼠牛虎兔龙蛇马羊猴鸡狗猪";
-const ZHI_DIRECTION = {
-  "子": "北", "丑": "东北", "寅": "东北", "卯": "东", "辰": "东南", "巳": "东南",
-  "午": "南", "未": "西南", "申": "西南", "酉": "西", "戌": "西北", "亥": "西北",
-};
 /* 十二建除 in order, index 0 = 建 (day branch == month branch). */
 const JIANCHU = ["建", "除", "满", "平", "定", "执", "破", "危", "成", "收", "开", "闭"];
 /* Solar terms by 15° step of the Sun's apparent ecliptic longitude, index 0 = 0° (春分). */
 const SOLAR_TERMS = ["春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至", "小寒", "大寒", "立春", "雨水", "惊蛰"];
-/* 吉神/凶神： simplified day-seeded picks in the same spirit as traditional
-   almanacs; glosses are our own one-liners. Not the full traditional algorithm. */
-const JISHEN = [
-  { name: "天德", gloss: "主福德庇佑" }, { name: "月德", gloss: "主和顺吉祥" },
-  { name: "天恩", gloss: "主恩泽施予" }, { name: "三合", gloss: "主和合顺遂" },
-  { name: "天喜", gloss: "主喜庆临门" }, { name: "母仓", gloss: "主积蓄丰盈" },
-  { name: "时德", gloss: "主当日得时" }, { name: "青龙", gloss: "主吉庆祥瑞" },
-  { name: "益后", gloss: "主利在长远" }, { name: "民日", gloss: "主安民宜事" },
-];
-const XIONGSHEN = [
-  { name: "天刑", gloss: "主刑伤是非" }, { name: "朱雀", gloss: "主口舌争端" },
-  { name: "白虎", gloss: "主损伤血光" }, { name: "天牢", gloss: "主束缚困顿" },
-  { name: "玄武", gloss: "主盗失暗昧" }, { name: "勾陈", gloss: "主牵连迟滞" },
-  { name: "大煞", gloss: "主诸事不利" }, { name: "往亡", gloss: "主出行不利" },
-  { name: "天火", gloss: "主火患之忧" }, { name: "四击", gloss: "主冲犯不利" },
-];
-
-function lunarMonthNumber(date) {
-  try {
-    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "numeric" }).formatToParts(date);
-    const mp = parts.find((x) => x.type === "month");
-    const n = mp ? parseInt(mp.value, 10) : NaN;
-    if (!Number.isNaN(n)) return n;
-  } catch (e) { /* fall through to name parsing */ }
-  try {
-    // Some environments return the month name instead of a number.
-    const label = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long" }).format(date);
-    const key = label.replace("闰", "").replace("月", "");
-    const names = { "正": 1, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "十一": 11, "冬": 11, "十二": 12, "腊": 12 };
-    return key in names ? names[key] : null;
-  } catch (e) { return null; }
+/* 土王用事: the eighteen local days before each 四立 (立春 立夏 立秋 立冬),
+   i.e. from the 四立 day minus 18 up to the day before it — the 季月's
+   earth period of 《协纪辨方书》 (四立前十八日). Read on the same term
+   instants and local days as 节月. */
+const SI_LI_ANGLES = [315, 45, 135, 225];
+function tuWangYongShi(date) {
+  const { dayStart } = localDayBounds(date);
+  const next = solarTermsAround(date).find((t) => t.instant >= dayStart && SI_LI_ANGLES.includes(t.angle));
+  if (!next) return false;
+  const i = next.instant;
+  const liDay = new Date(i.getFullYear(), i.getMonth(), i.getDate());
+  return dayStart >= new Date(liDay.getFullYear(), liDay.getMonth(), liDay.getDate() - 18) && dayStart < liDay;
 }
+
+/* The Moon's phase (朔 上弦 望 下弦) of the day, or "": the phase whose
+   instant falls on the Beijing civil date that the lunar calendar maps
+   to this local date (see lunarDate), so 朔日 is always 初一 and the
+   phases never disagree with the lunar date shown beside them. */
+function moonPhaseOn(date) {
+  const dn = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const p = LUNAR.phasesBetween(dn - 8 * 3600000, dn + 16 * 3600000);
+  return p.length ? p[0].name : "";
+}
+
+/* The day context the 择日 rules read (see js/almanac-rules.js): 节月
+   index/branch and its season, the day stem/branch, the term crossing on
+   the next local day (四离/四绝), whether 土王用事 is in force, and — for
+   宜忌 — the term in force (霜降后…) and the term crossing today (二分二至);
+   since M5 also the lunar day and month length (月忌 晦日 十五日 人神), the
+   Moon's phase of the day (朔弦望, on the lunar calendar's Beijing date) and
+   the 立春-year stem (上朔). */
+function almanacRuleContext(date, gz, jm) {
+  const tomorrow = solarTermInfo(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12)).today;
+  const ti = solarTermInfo(date);
+  const lunar = lunarDate(date);
+  return {
+    ld: lunar.day,
+    monthDays: lunar.monthDays,
+    phase: moonPhaseOn(date),
+    ys: ((jm.jieYear - 4) % 10 + 10) % 10,
+    m: jm.monthIdx,
+    mb: jm.branchIdx,
+    season: Math.floor(jm.monthIdx / 3),
+    s: GAN.indexOf(gz[0]),
+    b: ZHI.indexOf(gz[1]),
+    gz,
+    eve: tomorrow ? tomorrow.name : "",
+    tuWang: tuWangYongShi(date),
+    qi: ti.current ? ti.current.name : "",
+    termToday: ti.today ? ti.today.name : "",
+  };
+}
+
 function currentSolarTerm(date) {
   return SOLAR_TERMS[Math.floor(sunApparentLongitudeDeg(date) / 15) % 24];
 }
 
 function computeAlmanac(date) {
-  const jdn = julianDayNumber(date);
-  let lunarLabel = "";
-  try {
-    lunarLabel = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(date);
-  } catch (e) { lunarLabel = ""; }
-  const yiCount = 4 + (jdn % 3);        // 4–6
-  const jiCount = 3 + ((jdn >> 2) % 3); // 3–5
-  const yi = seededDailyPick(ALMANAC_YI, yiCount, jdn * 2 + 1, null);
-  const ji = seededDailyPick(ALMANAC_JI, jiCount, jdn * 2 + 2, yi);
+  const lunar = lunarDate(date);
   const gz = dayGanzhi(date);
   const stem = gz[0], branch = gz[1];
   const branchIdx = ZHI.indexOf(branch);
-  const conflictBranch = ZHI[(branchIdx + 6) % 12];
-  // 十二建除： month branch = lunar month mapped 正月建寅； null when lunar month unknown.
-  let jianchu = null;
-  const lm = lunarMonthNumber(date);
-  if (lm !== null && branchIdx >= 0) {
-    const monthBranchIdx = (lm + 1) % 12;
-    jianchu = JIANCHU[((branchIdx - monthBranchIdx) % 12 + 12) % 12];
-  }
-  const jiShenObjs = seededDailyPick(JISHEN.map((g) => g.name), 3, jdn * 2 + 3, null)
-    .map((n) => JISHEN.find((g) => g.name === n));
-  const xiongShenObjs = seededDailyPick(XIONGSHEN.map((g) => g.name), 2, jdn * 2 + 4, null)
-    .map((n) => XIONGSHEN.find((g) => g.name === n));
+  // 十二建除 from the 节月 branch (not the lunar month): see jieMonthInfo.
+  const jm = jieMonthInfo(date);
+  const jianchu = jianchuOf(branchIdx, jm.branchIdx);
+  const chong = ZHI_ANIMAL[(branchIdx + 6) % 12];
+  const sha = shaDirectionOf(branchIdx);
+  // 黄道黑道值神 and the day's 神煞: js/almanac-rules.js (NAM_ALMANAC).
+  const zhiShen = NAM_ALMANAC.zhiShenOf(branchIdx, jm.branchIdx);
+  const ctx = almanacRuleContext(date, gz, jm);
+  const gods = NAM_ALMANAC.dayGods(ctx);
+  // 宜忌 from the 建除, the gods and the special days (卷十「宜忌」): see NAM_ALMANAC.yiJi.
+  const yiji = NAM_ALMANAC.yiJi(ctx, gods);
   return {
-    lunarLabel,
-    yearGanzhi: yearGanzhi(date),
+    lunarLabel: lunar.label,            // 「十月十八」
+    lunar,                              // { year, month, day, leap, monthDays, yearGanzhi, label }
+    yearGanzhi: lunar.yearGanzhi,       // lunar year, turns at 正月初一 (shown)
+    lichunYearGanzhi: ganzhiFromIndex(jm.jieYear - 4), // 立春-based (not shown)
+    monthGanzhi: jieMonthGanzhi(date),  // 节月 pillar, 五虎遁 (shown in the meta line)
+    jieMonth: { branchIdx: jm.branchIdx, branch: jm.branch, monthIdx: jm.monthIdx, jieYear: jm.jieYear, termName: jm.termName },
     dayGanzhi: gz,
-    yi,
-    ji,
+    yi: yiji.yi,                        // 用事 names, vocabulary (traditional) order
+    ji: yiji.ji,
+    yiJi: yiji,                         // + level (宜忌等第), allJi (诸事皆忌), trace
     termInfo: solarTermInfo(date),
     jianchu,
-    chongSha: `冲${ZHI_ANIMAL[(branchIdx + 6) % 12]}煞${ZHI_DIRECTION[conflictBranch]}`,
+    chong,
+    sha,
+    chongSha: `冲${chong}煞${sha}`,
     pengzu: [PENGZU_BY_STEM[stem], PENGZU_BY_BRANCH[branch]],
-    jiShen: jiShenObjs,
-    xiongShen: xiongShenObjs,
+    zhiShen,                            // { name, huangdao } — 黄道黑道十二值神
+    // 纳音 of the three pillars shown (lunar year, 节月, day) and the day's 吉神方位.
+    nayin: { year: NAM_ALMANAC.nayinOf(lunar.yearGanzhi), month: NAM_ALMANAC.nayinOf(jieMonthGanzhi(date)), day: NAM_ALMANAC.nayinOf(gz) },
+    directions: NAM_ALMANAC.godDirections(GAN.indexOf(stem)),
+    jiShen: gods.ji,                    // [{ name, gloss }], fixed rule order
+    xiongShen: gods.xiong,
   };
 }
+
+/* How many 宜 / 忌 the card shows before 「等N事」 (two lines at 375px). */
+const ALMANAC_CARD_YIJI = 8;
+const YONGSHI_GLOSS = Object.fromEntries(NAM_ALMANAC.YONGSHI.map((y) => [y.name, y.gloss]));
+
+/* The almanac's reading door (全文). The card already shows the pillars,
+   建除, 值神, 冲煞, the first 宜/忌, three directions and the god names;
+   the reading adds only what the card cannot hold, each thing once:
+   · 宜/忌 in full, grouped by the gods that decided them
+     （「月德·四相：祭祀 祈福 …」）, the resolution note on its group;
+   · each god's gloss where that god first decides something; gods that
+     decide nothing in our 用事 are glossed once in 「其余神煞」;
+   · a 用事 gloss only where the name is not plain modern Chinese;
+   · the 等第 only when a graded 凶煞 or 诸事皆忌 decided the day;
+   · the five 吉神方位 and the three 纳音.
+   almanacFullDoc is the single source; HTML and plain text render it. */
+const ALMANAC_FOOT = "以节气定月；福神取「甲己正北」一说。释义为本站白话概括。宜忌属传统择日民俗，不具科学预测效力。";
+const YONGSHI_PLAIN = new Set(NAM_ALMANAC.YONGSHI.filter((y) => y.plain).map((y) => y.name));
+
+/* Rows of the 宜忌 trace → groups sharing the same sources and note, in
+   the order their first 用事 appears (the book's 用事 order). */
+function almanacGroups(rows, side, withWhy = true, levelName = "") {
+  const groups = [], byKey = new Map();
+  for (const t of rows) {
+    const sources = side === "ji" ? t.ji : t.yi;
+    // A note that only restates the day's 等第 (「从忌不从宜」) is the strip's.
+    const why = withWhy && t.why && t.why !== levelName ? t.why : "";
+    const key = sources.join("·") + "|" + why;
+    let g = byKey.get(key);
+    if (!g) { g = { sources, why, glosses: [], items: [] }; byKey.set(key, g); groups.push(g); }
+    g.items.push({ name: t.name, gloss: YONGSHI_PLAIN.has(t.name) ? "" : YONGSHI_GLOSS[t.name] || "" });
+  }
+  return groups;
+}
+
+function almanacFullDoc(a) {
+  const yj = a.yiJi;
+  const rows = (result) => yj.trace.filter((t) => t.result === result);
+  const levelName = yj.level ? yj.level.name : "";
+  const yi = yj.allJi ? [] : almanacGroups(rows("宜"), "yi", true, levelName);
+  const ji = yj.allJi ? [] : almanacGroups(rows("忌"), "ji", true, levelName);
+  const quietRows = yj.allJi ? yj.trace.filter((t) => t.yi.length) : rows("不注").filter((t) => t.yi.length);
+  // Each god's gloss goes on the first visible group it decides.
+  const godGloss = new Map([...a.jiShen, ...a.xiongShen].map((g) => [g.name, g.gloss]));
+  const glossed = new Set();
+  for (const g of [...yi, ...ji]) {
+    for (const s of g.sources) {
+      if (godGloss.has(s) && !glossed.has(s)) { glossed.add(s); g.glosses.push({ name: s, gloss: godGloss.get(s) }); }
+    }
+  }
+  const rest = (list) => list.filter((g) => !glossed.has(g.name));
+  const count = (groups) => groups.reduce((n, g) => n + g.items.length, 0);
+  return {
+    kicker: [a.lunarLabel ? `农历${a.lunarLabel}` : "", `${a.dayGanzhi}日`].filter(Boolean).join(" · "),
+    level: yj.allJi
+      ? { strong: true, name: "诸事皆忌", note: "宜神所宜，本日皆不用" + (yj.level && yj.level.by.length ? `（${yj.level.by.join("、")}）` : "") }
+      : yj.level ? { strong: false, name: yj.level.name, note: yj.level.by.join("、") } : null,
+    allJi: !!yj.allJi,
+    yi: { count: count(yi), groups: yi },
+    ji: { count: count(ji), groups: ji },
+    quiet: {
+      title: yj.allJi ? "本有之宜" : "未注之事",
+      note: yj.allJi ? "以下各事本有宜神，因诸事皆忌，均不注宜。" : "以下各事本有宜神，按本日等第不注宜忌。",
+      count: quietRows.length,
+      // On a 诸事皆忌 day every row's note is that verdict — the banner says it once.
+      groups: almanacGroups(quietRows, "yi", !yj.allJi, levelName),
+    },
+    directions: a.directions,
+    nayin: [["年", a.yearGanzhi, a.nayin.year], ["月", a.monthGanzhi, a.nayin.month], ["日", a.dayGanzhi, a.nayin.day]]
+      .map(([label, gz, value]) => ({ label, gz, value })),
+    otherGods: { title: glossed.size ? "其余神煞" : "神煞", ji: rest(a.jiShen), xiong: rest(a.xiongShen) },
+    footnote: ALMANAC_FOOT,
+  };
+}
+
+/* Plain text of the reading (the door's presence check, copy, tests). */
+function almanacFullDocText(doc) {
+  const groupLines = (groups) => groups.flatMap((g) => [
+    `${g.sources.join("·")}${g.why ? `（${g.why}）` : ""}：${g.items.map((i) => i.name + (i.gloss ? `（${i.gloss}）` : "")).join(" ")}`,
+    ...g.glosses.map((x) => `  ${x.name}：${x.gloss}`),
+  ]);
+  const parts = [[doc.kicker, ...(doc.level ? [`等第：${doc.level.name}（${doc.level.note}）`] : [])].join("\n")];
+  if (doc.allJi) parts.push("宜：诸事不宜\n忌：诸事皆忌");
+  else {
+    parts.push([`宜（${doc.yi.count}）` + (doc.yi.count ? "" : "：诸事不宜"), ...groupLines(doc.yi.groups)].join("\n"));
+    parts.push([`忌（${doc.ji.count}）` + (doc.ji.count ? "" : "：诸事不忌"), ...groupLines(doc.ji.groups)].join("\n"));
+  }
+  if (doc.quiet.count) parts.push([`${doc.quiet.title}（${doc.quiet.count}）`, ...groupLines(doc.quiet.groups)].join("\n"));
+  parts.push("吉神方位 " + doc.directions.map((d) => `${d.name}${d.dir}`).join(" · ") + "\n" +
+    "纳音 " + doc.nayin.map((n) => `${n.label} ${n.value}`).join(" · "));
+  const og = doc.otherGods;
+  if (og.ji.length || og.xiong.length) {
+    parts.push([og.title, ...[...og.ji, ...og.xiong].map((g) => `${g.name}：${g.gloss}`)].join("\n"));
+  }
+  parts.push(doc.footnote);
+  return parts.join("\n\n");
+}
+
+function almanacReadingHtml(doc) {
+  const sec = (id, title, body, extra = "") =>
+    `<section class="hr-section${extra}" aria-labelledby="al-${id}-title"><h3 class="hr-section-title" id="al-${id}-title">${title}</h3>${body}</section>`;
+  const count = (n) => `<span class="al-count">${n}</span>`;
+  // Group head: each deciding god, with its gloss the first time it
+  // decides something, then the resolution note on its own line.
+  const groupsHtml = (groups, side) => groups.map((g) => {
+    const gloss = new Map(g.glosses.map((x) => [x.name, x.gloss]));
+    return `<div class="al-group al-group--${side}">` +
+      `<p class="al-src">${g.sources.map((n) =>
+        `<span class="al-god"><b>${esc(n)}</b>${gloss.has(n) ? `<span>${esc(gloss.get(n))}</span>` : ""}</span>`).join("")}</p>` +
+      (g.why ? `<p class="al-why">${esc(g.why)}</p>` : "") +
+      `<ul class="al-items">${g.items.map((i) =>
+        `<li><span class="al-item">${esc(i.name)}</span>${i.gloss ? `<span class="al-gloss">${esc(i.gloss)}</span>` : ""}</li>`).join("")}</ul>` +
+    `</div>`;
+  }).join("");
+  const kicker = `<p class="al-kicker">${esc(doc.kicker)}</p>`;
+  const level = doc.level
+    ? `<p class="al-level${doc.level.strong ? " al-level--strong" : ""}"><b>${esc(doc.level.name)}</b><span>${esc(doc.level.note)}</span></p>`
+    : "";
+  const yiji = doc.allJi
+    ? `<div class="al-allji"><p><span class="al-side al-side--yi">宜</span>诸事不宜</p><p><span class="al-side al-side--ji">忌</span>诸事皆忌</p></div>`
+    : sec("yi", `宜 ${count(doc.yi.count)}`, doc.yi.count ? groupsHtml(doc.yi.groups, "yi") : `<p class="hr-note">诸事不宜</p>`, " al-sec--yi") +
+      sec("ji", `忌 ${count(doc.ji.count)}`, doc.ji.count ? groupsHtml(doc.ji.groups, "ji") : `<p class="hr-note">诸事不忌</p>`, " al-sec--ji");
+  const quiet = doc.quiet.count
+    ? `<details class="al-quiet"><summary>${esc(doc.quiet.title)} ${count(doc.quiet.count)}</summary>` +
+      `<p class="hr-note">${esc(doc.quiet.note)}</p>${groupsHtml(doc.quiet.groups, "quiet")}</details>`
+    : "";
+  const dl = (cls, items) => `<dl class="al-grid ${cls}">${items.map(([k, v, sub]) =>
+    `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd>${sub ? `<dd class="al-grid-sub">${esc(sub)}</dd>` : ""}</div>`).join("")}</dl>`;
+  const dirs = sec("dirs", "吉神方位", dl("al-grid--dirs", doc.directions.map((d) => [d.name, d.dir])));
+  const nayin = sec("nayin", "纳音", dl("al-grid--nayin", doc.nayin.map((n) => [n.label, n.value, n.gz])));
+  const og = doc.otherGods;
+  const godItems = (list, side) => list.map((g) => `<li class="al-side--${side}"><b>${esc(g.name)}</b>${esc(g.gloss)}</li>`).join("");
+  const others = og.ji.length || og.xiong.length
+    ? sec("gods", og.title, `<ul class="al-gods">${godItems(og.ji, "yi")}${godItems(og.xiong, "ji")}</ul>`)
+    : "";
+  const foot = `<footer class="hr-foot"><p>${esc(doc.footnote)}</p></footer>`;
+  return kicker + level + yiji + quiet + dirs + nayin + others + foot;
+}
+
+function almanacFullText(a) { return almanacFullDocText(almanacFullDoc(a)); }
 
 /* ================= Astrology: see js/astro.js ================= */
 
@@ -899,19 +1203,11 @@ const FESTIVALS = {
   yuandan:   { key: "yuandan",   zh: "元旦",   en: "New Year's Day",          dress: "redgold", anim: null },
 };
 
-/* Lunar (month, day, leap?) via the same Intl chinese calendar the
-   almanac uses. Leap is read off the long month name （闰六月）. */
+/* Lunar (month, day, leap) of the local date — the almanac's own lunar
+   calendar (lunarDate, js/lunar.js). */
 function lunarParts(date) {
-  try {
-    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "numeric", day: "numeric" }).formatToParts(date);
-    const mp = parts.find((x) => x.type === "month");
-    const dp = parts.find((x) => x.type === "day");
-    const month = mp ? parseInt(mp.value, 10) : NaN;
-    const day = dp ? parseInt(dp.value, 10) : NaN;
-    if (Number.isNaN(month) || Number.isNaN(day)) return null;
-    const long = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long" }).format(date);
-    return { month, day, leap: long.includes("闰") };
-  } catch (e) { return null; }
+  const l = lunarDate(date);
+  return { month: l.month, day: l.day, leap: l.leap };
 }
 function sunLongitudeDeg(date) {
   return sunApparentLongitudeDeg(date);
@@ -933,7 +1229,6 @@ function solarTermDay(date) {
 }
 function lunarFestivalOn(date) {
   const lp = lunarParts(date);
-  if (!lp) return null;
   if (!lp.leap) {
     if (lp.month === 1 && lp.day === 1) return FESTIVALS.chunjie;
     if (lp.month === 1 && lp.day === 15) return FESTIVALS.yuanxiao;
@@ -945,7 +1240,7 @@ function lunarFestivalOn(date) {
   if (lp.month === 12) {
     // 除夕： the last day of the lunar year — tomorrow is 正月初一.
     const tm = lunarParts(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1));
-    if (tm && tm.month === 1 && tm.day === 1 && !tm.leap) return FESTIVALS.chuxi;
+    if (tm.month === 1 && tm.day === 1 && !tm.leap) return FESTIVALS.chuxi;
   }
   return null;
 }
@@ -990,7 +1285,7 @@ function matchPersonalDay(date) {
       if (date.getMonth() + 1 === d.month && date.getDate() === d.day) return d;
     } else {
       if (!lp) lp = lunarParts(date);
-      if (lp && !lp.leap && lp.month === d.month && lp.day === d.day) return d;
+      if (!lp.leap && lp.month === d.month && lp.day === d.day) return d;
     }
   }
   return null;
@@ -1475,9 +1770,7 @@ function easterSunday(year) {
   return { month, day };
 }
 function lunarLabelOf(date) {
-  try {
-    return new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(date);
-  } catch (e) { return null; }
+  return lunarDate(date).label;
 }
 
 /* Which postcard (if any) belongs to the LOCAL day containing `date`.
@@ -1488,7 +1781,7 @@ function postcardForDate(date) {
   const y = date.getFullYear(), mo = date.getMonth() + 1, d = date.getDate();
   const lp = lunarParts(date);
   // Tier 1a: lunar festivals.
-  if (lp && !lp.leap) {
+  if (!lp.leap) {
     const lunarKey =
       (lp.month === 1 && lp.day === 1) ? "chunjie" :
       (lp.month === 1 && lp.day === 15) ? "yuanxiao" :
@@ -1499,10 +1792,10 @@ function postcardForDate(date) {
       (lp.month === 9 && lp.day === 9) ? "chongyang" : null;
     if (lunarKey) return { key: lunarKey, termIdx: null, instantMs: null, lunarLabel: lunarLabelOf(date) };
   }
-  if (lp && lp.month === 12) {
+  if (lp.month === 12) {
     // 除夕： the last day of the lunar year — tomorrow is 正月初一.
     const tm = lunarParts(new Date(y, date.getMonth(), d + 1));
-    if (tm && tm.month === 1 && tm.day === 1 && !tm.leap) {
+    if (tm.month === 1 && tm.day === 1 && !tm.leap) {
       return { key: "chuxi", termIdx: null, instantMs: null, lunarLabel: lunarLabelOf(date) };
     }
   }
@@ -2012,6 +2305,10 @@ function fullTextItemForSelection(sel) {
     const doc = horoscopeFullDoc(sel.horo, lang);
     return { full: horoscopeFullDocText(doc), horoscope: doc };
   }
+  if (sel.cat === "almanac" && sel.data) {
+    const doc = almanacFullDoc(sel.data);
+    return { full: almanacFullDocText(doc), almanac: doc, source: "《钦定协纪辨方书》" };
+  }
   return sel.item;
 }
 
@@ -2110,8 +2407,9 @@ function openFullText(item, opener, cat) {
   fullOpener = opener || null;
   $("full-cat").textContent = t().categories[cat] || t().categories.classics;
   $("full-close").setAttribute("aria-label", lang === "zh" ? "关闭" : "Close");
-  $("full-body").className = item.horoscope ? "full-body hr" : "full-body";
-  $("full-body").innerHTML = item.horoscope ? horoscopeReadingHtml(item.horoscope) : full
+  $("full-body").className = item.horoscope ? "full-body hr" : item.almanac ? "full-body hr al" : "full-body";
+  $("full-body").innerHTML = item.horoscope ? horoscopeReadingHtml(item.horoscope)
+    : item.almanac ? almanacReadingHtml(item.almanac) : full
     .split(/\n\n+/)
     .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
     .join("");
@@ -2940,7 +3238,9 @@ function renderSelection(sel, surface) {
   if (sel.cat === "almanac") {
     const a = sel.data;
     const alm = s.almanac;
-    meta = a.lunarLabel ? `农历${a.lunarLabel} · ${a.yearGanzhi}年` : `${a.yearGanzhi}年`;
+    // Lunar date, then the lunar year and the 节月 pillar: 「农历十月十八 · 丙午年 己亥月」.
+    const pillars = `${a.yearGanzhi}年 ${a.monthGanzhi}月`;
+    meta = a.lunarLabel ? `农历${a.lunarLabel} · ${pillars}` : pillars;
     // 节气： the card speaks only of its own day. On a term day it
     // names the term and the exact local time it begins; on an
     // ordinary day it names the term currently in force — never the
@@ -2959,14 +3259,36 @@ function renderSelection(sel, surface) {
       termLine = `节气 <b>${tMain.name}</b> · ${tDisp.getMonth() + 1}月${tDisp.getDate()}日 <b>${localHM(tDisp)}</b> 交节`;
     }
     const bits = [termLine];
-    if (a.jianchu) bits.push(`值神 <b>${a.jianchu}</b>`);
+    // 建除十二神 — labelled 建除, not 值神 (值神 = 黄道黑道十二神).
+    if (a.jianchu) bits.push(`建除 <b>${a.jianchu}</b>`);
+    if (a.zhiShen) bits.push(`值神 <b>${a.zhiShen.name}</b>（${a.zhiShen.huangdao ? "黄道" : "黑道"}）`);
     bits.push(`<b>${a.chongSha}</b>`);
-    body = `<span class="big">${a.dayGanzhi}日</span>` +
+    // Each row holds 0–9 gods (about 3 a day): names only, in rule order, so it
+    // stays within two lines at phone width. The gloss rides on the title
+    // (hover) and in full on the 全文 reading.
+    const godRow = (label, gods) => `<div class="fact-row alm-gods"><span><b>${label}</b> ` +
+      (gods.length ? gods.map((g) => `<span title="${esc(g.gloss)}">${g.name}</span>`).join(" ") : "无") +
+      `</span></div>`;
+    // 宜 / 忌: rule-derived (NAM_ALMANAC.yiJi), in the book's order of 用事;
+    // the first ALMANAC_CARD_YIJI fit two lines at phone width, the rest
+    // (and where each came from) are in the 全文 reading.
+    const yjRow = (label, list, empty) => {
+      const shown = list.slice(0, ALMANAC_CARD_YIJI);
+      const more = list.length > shown.length ? ` <span class="alm-more">等${list.length}事</span>` : "";
+      return `<div class="fact-row alm-gods"><span><b>${label}</b> ` +
+        (list.length ? shown.map((n) => `<span title="${esc(YONGSHI_GLOSS[n] || "")}">${n}</span>`).join(" ") + more : empty) +
+        `</span></div>`;
+    };
+    const allJi = a.yiJi && a.yiJi.allJi;
+    // 喜神 财神 福神 fit one short line at phone width; the 贵神 are in 全文.
+    const dirs = a.directions.slice(0, 3).map((d) => `${d.name}<b>${d.dir}</b>`).join(" ");
+    body = `<span class="big">${a.dayGanzhi}日<span class="alm-nayin" title="日纳音">${a.nayin.day}</span></span>` +
       `<div class="fact-row">${bits.map((b) => `<span>${b}</span>`).join("")}</div>` +
-      `<div class="fact-row"><span><b>${alm.yi}</b> ${a.yi.join(" · ")}</span></div>` +
-      `<div class="fact-row"><span><b>${alm.ji}</b> ${a.ji.join(" · ")}</span></div>` +
-      `<div class="fact-row"><span><b>吉神</b> ${a.jiShen.map((g) => `${g.name}（${g.gloss}）`).join(" · ")}</span></div>` +
-      `<div class="fact-row"><span><b>凶神</b> ${a.xiongShen.map((g) => `${g.name}（${g.gloss}）`).join(" · ")}</span></div>` +
+      `<div class="fact-row"><span>${dirs}</span></div>` +
+      yjRow(alm.yi, a.yi, "诸事不宜") +
+      (allJi ? `<div class="fact-row alm-gods"><span><b>${alm.ji}</b> 诸事皆忌</span></div>` : yjRow(alm.ji, a.ji, "诸事不忌")) +
+      godRow("吉神", a.jiShen) +
+      godRow("凶神", a.xiongShen) +
       `<div class="fact-row"><span><b>彭祖百忌</b> ${a.pengzu[0]}；${a.pengzu[1]}</span></div>` +
       `<div class="sub">${alm.footnote}</div>`;
   }
@@ -3331,11 +3653,7 @@ function renderDateLine(now) {
     : "";
   if (lang === "zh") {
     const dateStr = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" }).format(now);
-    let lunar = "";
-    try {
-      lunar = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(now);
-    } catch (e) { lunar = ""; }
-    let text = lunar ? `${dateStr} · 农历${lunar}` : dateStr;
+    let text = `${dateStr} · 农历${lunarDate(now).label}`;
     if (note) text += ` · ${note}`;
     $("date-line").textContent = text;
   } else {
