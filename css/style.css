@@ -75,10 +75,13 @@
    keepsake renderer, which reads computed styles from body, picks the
    dressed palette up automatically. Ordinary days only get the seasonal
    glow whisper below; the vermillion accent itself never moves. */
-body[data-season="spring"] { --glow-color: rgba(122, 172, 92, 0.13); }
+/* Light theme: spring and winter are cool hues, and any cool hue that
+   is darker than the cream paper reads as a grey smudge. They are set
+   as light — paler than the paper — so they brighten it instead. */
+body[data-season="spring"] { --glow-color: rgba(226, 240, 208, 0.7); }
 body[data-season="summer"] { --glow-color: rgba(232, 152, 72, 0.13); }
 body[data-season="autumn"] { --glow-color: rgba(202, 152, 62, 0.14); }
-body[data-season="winter"] { --glow-color: rgba(112, 142, 182, 0.12); }
+body[data-season="winter"] { --glow-color: rgba(232, 241, 252, 0.78); }
 
 body[data-special="redgold"] { --accent: #c22f1d; --glow-color: rgba(216, 122, 42, 0.20); }
 body[data-special="moon"]    { --accent: #b57e1e; --glow-color: rgba(233, 182, 82, 0.22); }
@@ -110,6 +113,14 @@ body[data-special="warm"]    { --accent: #ba4a44; --glow-color: rgba(221, 112, 9
 
 * { box-sizing: border-box; }
 
+/* One keyboard focus ring for every control: vermillion, offset, and
+   following each control's own radius. :where() keeps it at zero
+   specificity, so dark-surface overrides (the lightbox) still win. */
+:where(button, a, select, input, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 [hidden] { display: none !important; }
 
 html, body { margin: 0; padding: 0; }
@@ -132,7 +143,10 @@ body {
   width: 55vmax;
   height: 55vmax;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--glow-color) 0%, transparent 65%);
+  /* Eased fall-off (a mid stop at half strength) so the edge does not
+     band into visible rings. */
+  background: radial-gradient(circle, var(--glow-color) 0%,
+    color-mix(in srgb, var(--glow-color) 50%, transparent) 32%, transparent 68%);
   pointer-events: none;
   z-index: 0;
   transition: transform 1.4s ease, opacity 1.4s ease;
@@ -206,18 +220,23 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
 /* ---------- Settings (one quiet button + panel) ---------- */
 .settings { position: relative; }
 
+/* A drawn sliders icon (the ⚙ character fell back to a sun-like glyph
+   in many system fonts), in the page's soft ink. */
 #settings-btn {
-  font-family: var(--sans);
-  font-size: 17px;
-  line-height: 1;
-  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: none;
+  border-radius: 10px;
   background: transparent;
   color: var(--ink-soft);
-  opacity: 0.55;
   cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
-#settings-btn:hover, #settings-btn:focus-visible { opacity: 1; color: var(--ink); }
+#settings-btn:hover, #settings-btn[aria-expanded="true"] { color: var(--ink); background: var(--bg-soft); }
 
 .settings-panel {
   position: absolute;
@@ -245,7 +264,9 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
 }
 
 .setting-row { display: flex; flex-direction: column; gap: 7px; }
-.setting-label { font-size: 12.5px; color: var(--ink-soft); letter-spacing: 0.16em; }
+/* Everything inside the panel is interface, so it is set in the sans
+   like the segments and chips beside it; the serif stays with content. */
+.setting-label { font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); letter-spacing: 0.16em; }
 
 .lang-segment {
   display: inline-flex;
@@ -377,10 +398,12 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   font-size: clamp(48px, 11vw, 84px);
   line-height: 1;
   color: var(--ink);
-  background: linear-gradient(180deg, var(--card-bg) 0%, var(--card-bg) 49%, rgba(0,0,0,0.07) 50%, var(--card-bg) 100%);
+  /* Flat paper leaf: the hinge is the single hairline below, not a
+     shaded lower half. */
+  background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .flip-card::after {
   content: "";
@@ -434,9 +457,15 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 #minute-progress { height: 100%; width: 0%; background: var(--accent); }
 
 /* ---------- Random stage card ---------- */
+/* The card reserves 216px — the height of roughly three in four text
+   cards — so the controls under it stop jumping on most draws. The
+   rows are head / body / foot; a short body is centred in the spare
+   height instead of leaving a blank strip at the bottom. */
 .card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   width: min(620px, 92vw);
-  min-height: 168px;
+  min-height: 216px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 14px;
@@ -447,7 +476,12 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   transition: opacity 0.35s ease, transform 0.35s ease;
   outline: none;
 }
-.card:focus-visible { border-color: var(--accent); }
+/* Keyboard focus on the stage card: a soft vermillion halo instead of
+   a full red frame, so pressing Space does not make the card shout. */
+.card:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--card-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent), 0 6px 24px rgba(0, 0, 0, 0.06);
+}
 .card.leaving { opacity: 0; transform: translateY(8px); }
 
 .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
@@ -460,7 +494,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .card-meta { font-size: 13px; color: var(--ink-soft); text-align: right; }
 
-.card-body { font-size: 19px; line-height: 1.75; }
+.card-body { font-size: 19px; line-height: 1.75; align-self: center; min-width: 0; }
+/* Picture cards are sized by their own composition. */
+.card.has-postcard, .card.has-skyart { min-height: 0; }
 .card-body .big { font-size: 30px; font-weight: 900; line-height: 1.4; }
 .card-body .poem-title { font-size: 21px; font-weight: 900; }
 .card-body .poem-author { color: var(--ink-soft); font-size: 15px; margin-left: 10px; }
@@ -594,7 +630,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
    off the card. */
 .postcard .pc-title-gloss { font-size: 0.66em; }
 .postcard .pc-sub {
-  margin: 0.35cqw 0 0;
+  margin: 0.9cqw 0 0;
   font-size: 2.35cqw;
   line-height: 1.35;
   color: #6f6656;
@@ -604,9 +640,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   text-overflow: ellipsis;
 }
 .postcard .pc-passage {
-  margin: 0.6cqw 0 0;
-  font-size: 3.65cqw;
-  line-height: 1.49;
+  margin: 1.1cqw 0 0;
+  font-size: 3.52cqw;
+  line-height: 1.45;
   /* Safeguard only: the copy is written to fit these three lines. */
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -1046,21 +1082,40 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 #note-fab:hover, #note-fab:focus-visible { color: var(--accent); }
 
 /* ---------- Controls ---------- */
-.controls { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
+/* Two actions, then a quiet counter: the actions are in ink, the
+   counter is a smaller status line set off by a hairline. */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 18px;
+  margin-top: 22px;
+}
 #draw-btn, #capture-btn {
   font-family: var(--serif);
   font-size: 15px;
   letter-spacing: 0.14em;
   padding: 6px 4px;
   border: none;
+  border-radius: 6px;
   background: transparent;
-  color: var(--ink-soft);
+  color: var(--ink);
   cursor: pointer;
 }
 #draw-btn:hover, #draw-btn:focus-visible,
 #capture-btn:hover, #capture-btn:focus-visible { color: var(--accent); }
 #capture-btn:disabled { opacity: 0.5; cursor: default; }
-.encounter { color: var(--ink-soft); font-size: 14px; letter-spacing: 0.1em; }
+.encounter {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  padding-left: 18px;
+  border-left: 1px solid var(--card-border);
+  line-height: 1.2;
+}
 .hint { color: var(--ink-soft); font-size: 12.5px; margin: 10px 0 0; letter-spacing: 0.08em; }
 
 /* ---------- Clock style chips (inside the settings panel) ---------- */
@@ -1142,6 +1197,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 
 /* ---------- A settings row that is a door （我的库 lives on its own page) ---------- */
 .panel-page-link {
+  font-family: var(--sans);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1159,7 +1215,6 @@ button.panel-page-link {
   width: 100%;
   background: none;
   border: none;
-  font-family: inherit;
   cursor: pointer;
   text-align: left;
 }

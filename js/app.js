@@ -2921,7 +2921,8 @@ function renderSelection(sel, surface) {
 
   if (sel.cat === "poem") {
     const p = lang === "zh" ? sel.poemZh : sel.poemEn;
-    meta = p.title;
+    // No meta: the title already heads the body, so repeating it in
+    // the corner only doubles it.
     body = `<span class="poem-title">${p.title}</span><span class="poem-author">${p.author}</span><br>` +
       p.lines.map((ln) => `<span class="poem-line">${ln}</span>`).join("");
   }
@@ -4033,7 +4034,9 @@ function renderKeepsakeCanvas(snap, pal) {
   ctx.fillRect(0, 0, KEEP_W, KEEP_H);
   const glow = ctx.createRadialGradient(KEEP_W * 0.86, 110, 0, KEEP_W * 0.86, 110, 720);
   glow.addColorStop(0, pal.glow);
-  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  // Fade to the same colour at zero alpha: fading to transparent black
+  // would draw a grey ring around the light seasonal tints.
+  glow.addColorStop(1, String(pal.glow).replace(/rgba?\(([^,]+),([^,]+),([^,)]+)(?:,[^)]*)?\)/, "rgba($1,$2,$3, 0)"));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, KEEP_W, KEEP_H);
 
@@ -4220,7 +4223,7 @@ function renderPostcardKeepsake(sel, img, serif) {
 
   // Title row: the title at the left, the meta right-aligned on the
   // same baseline — date in soft ink, the crossing time in vermillion.
-  const rowBaseline = 1146;
+  const rowBaseline = 1148;
   ctx.fillStyle = PC_INK;
   ctx.font = `900 50px ${serif}`;
   setLetterSpacing(ctx, "1px");
@@ -4261,21 +4264,23 @@ function renderPostcardKeepsake(sel, img, serif) {
   }
   if (mp.post) ctx.fillText(mp.post, mx, rowBaseline);
 
-  // Subtitle: one quiet line under the title row (baseline 1186).
+  // Subtitle: one quiet line under the title row (baseline 1192),
+  // with ~17px of air above it and ~15px below — the slots are spread
+  // over the whole text zone instead of stacked at its top.
   if (subtitle) {
     ctx.fillStyle = PC_INK_SOFT;
     ctx.font = `400 25px ${serif}`;
     setLetterSpacing(ctx, "1.5px");
-    ctx.fillText(subtitle, tx, 1186);
+    ctx.fillText(subtitle, tx, 1192);
     setLetterSpacing(ctx, "0px");
   }
 
-  // Passage: 39px at ~1.5 line height, up to the three lines the copy
-  // was written for (baselines 1228 / 1287 / 1346).
+  // Passage: 38px at ~1.45 line height, up to the three lines the copy
+  // was written for (baselines 1244 / 1299 / 1354).
   ctx.fillStyle = PC_INK;
-  ctx.font = `400 39px ${serif}`;
+  ctx.font = `400 38px ${serif}`;
   const lines = wrapText(ctx, passage, tw).slice(0, 3);
-  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1228 + i * 59));
+  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1244 + i * 55));
 
   // Footer: hairline, the 时 seal at the left, the brand at the right.
   ctx.strokeStyle = "rgba(43, 38, 32, 0.10)";
