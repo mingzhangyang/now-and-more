@@ -688,6 +688,7 @@ const NAM_ALMANAC = (() => {
       const sup = noYi.get(item) || [];
       if (!ys.length && !js.length && !sup.length && code !== "X") continue;
       const fixed = [], open = [], graded = [], dropped = [];
+      const blockedNotes = []; // 「X逢Y犹忌」 — the reason a fixed source stays, said once
       // 「從X論」: the follower's 忌 is X's; X (graded, and 忌 this 用事) decides.
       const follows = (src) => !GRADED[src] && followed(SOURCES[src]) && js.includes(followed(SOURCES[src]));
       // 鋪註條例: 德合赦願… days do not write the small 忌 (DE_DAY_SPARE), 「如遇徳猶忌及
@@ -708,7 +709,7 @@ const NAM_ALMANAC = (() => {
           if (deSpare) dropped.push(`${deDay}之日不注${src}之忌`); else open.push(src);
         } else {
           fixed.push(src);
-          if (s.unless && blocker(s)) dropped.push(`${src}逢${blocker(s)}犹忌`);
+          if (s.unless && blocker(s)) blockedNotes.push({ src, note: `${src}逢${blocker(s)}犹忌` });
         }
       }
       const wantYi = ys.length > 0 && sup.length === 0;
@@ -716,7 +717,9 @@ const NAM_ALMANAC = (() => {
       if (code === "X") {
         result = "忌"; why = `诸事皆忌（${by.join("、")}）`;
       } else if (fixed.length) {
-        result = "忌"; why = ys.length ? `${fixed.join("、")}之忌德不能解` : "";
+        // A blocked source gives its own reason (below); the rest are 德不能解.
+        const plain = fixed.filter((src) => !blockedNotes.some((b) => b.src === src));
+        result = "忌"; why = ys.length && plain.length ? `${plain.join("、")}之忌德不能解` : "";
       } else if (open.length) {
         result = "忌"; why = ys.length ? `${open.join("、")}之忌未解` : "";
       } else if (graded.length) {
@@ -729,7 +732,9 @@ const NAM_ALMANAC = (() => {
         result = "不注";
         why = sup.length ? `${sup.join("、")}不注宜` : "";
       }
-      if (dropped.length && code !== "X") why = [why, ...dropped].filter(Boolean).join("，");
+      if ((blockedNotes.length || dropped.length) && code !== "X") {
+        why = [why, ...blockedNotes.map((b) => b.note), ...dropped].filter(Boolean).join("，");
+      }
       if (result === "宜") yi.push(item); else if (result === "忌") ji.push(item);
       trace.push({ name: item, yi: ys, ji: js, result, why });
     }

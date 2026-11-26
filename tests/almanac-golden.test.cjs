@@ -459,8 +459,21 @@ test("worked example: 2025-10-09 辛亥 (戌月) — 四窮 與月德天德合�
     const t = traceOf(a, n);
     assert.equal(t.result, "忌", n);
     assert.match(t.why, /四穷逢(天德合|月德合)犹忌/, n);
+    assert.doesNotMatch(t.why, /四穷之忌德不能解/, `${n}: the blocked source gives its reason once`);
   }
   for (const n of ["纳采", "嫁娶", "安葬"]) assert.ok(a.ji.includes(n), n);
+});
+
+test("a 德猶忌 source is explained once: 「X逢Y犹忌」, never also 「X之忌德不能解」 (2025–2028)", () => {
+  const dupes = [];
+  for (let i = 0; i < 1461; i++) {
+    const d = new Date(2025, 0, 1 + i, 12);
+    for (const t of api.computeAlmanac(d).yiJi.trace) {
+      const m = /^(.+?)之忌德不能解/.exec(t.why || "");
+      if (m && m[1].split("、").some((src) => t.why.includes(`${src}逢`))) dupes.push(`${d.toDateString()} ${t.name}: ${t.why}`);
+    }
+  }
+  assert.deepEqual(dupes, []);
 });
 
 test("九空 從月破論 / 從月厭論: its 忌 stands or falls with 月破's / 月厌's, never with the 德日 rule alone", () => {
