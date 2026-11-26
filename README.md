@@ -137,3 +137,15 @@ Read this section before changing anything — every item is either a lesson lea
 ### V3.1 aspect dynamics
 
 Seven-body geocentric longitude velocities use a centered ±1-hour circular difference. Relative velocity and the nearest oriented aspect residual determine applying/separating; exact tolerance is 0.05°, stationary threshold 0.01°/day. Weights 1.10/1.15/0.90/1.00 respectively blend smoothly over 0.05–0.75° and 0.01–0.05°/day. Both signed contributions are scaled; existing caps and solar exclusions remain. Exact major aspects are calculated lazily for the full reader, without extra quadrature cuts or event scoring. Main cards show ingress/station events only; the full reader retains all exact aspects. The five-year comparison was regenerated against the optimized ingress/station-only quadrature (2026–2030 UTC, all twelve signs). Exact-aspect cuts are intentionally omitted to reduce cost; continuous relative-motion weights remain in the daily samples. Approximate model epochs are not precise observations. See `docs/horoscope-v3.1-backtest.json` for the five-year UTC comparison. Astrology scores are editorial entertainment, not scientific predictions.
+
+### Horoscope V3.2 (experimental domain rulers and pair weights)
+
+V3.2 adds traditional solar whole-sign domain rulers and bounded, symmetric body-pair/major-aspect multipliers to V3.1. The four domain ratings remain normalized, duration-weighted sums of the same six factors. Pair geometry is shared across endpoints and signs; endpoint contributions retain the V3.1 signed net cap. Zeroing both scales restores V3.1. The full reader explains participating rulers and nonzero weighted pair reflections in both languages. These are symbolic editorial rules, not scientifically validated forecasts.
+
+Run the pinned-baseline, five-year ablation with a full git history:
+
+```sh
+TZ=UTC node scripts/horoscope-v3.2-backtest.cjs 2026-01-01 2031-01-01 > horoscope-v3.2-backtest.json
+node --test tests/horoscope-v3.2.test.cjs
+```
+
