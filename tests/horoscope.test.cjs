@@ -200,7 +200,13 @@ test("full-text door opens the same calculated horoscope in both languages and p
     assert.ok(dialog.visible && dialog.stopped && dialog.opened && dialog.resetScroll && dialog.closeFocused);
     assert.ok(dialog.closed && dialog.restoredFocus);
     assert.equal(dialog.label, lang === "zh" ? "全文 ›" : "Full text ›");
-    assert.ok(dialog.body.includes(copy.evidence) && dialog.body.includes(copy.basis));
+    assert.ok(full.includes(copy.evidence) && full.includes(copy.basis));
+    // The modal renders escaped HTML, not the unescaped source text.
+    const escaped = value => value.replace(/[&<>"']/g, ch => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[ch]);
+    assert.ok(dialog.body.includes(escaped(copy.evidence)));
+    assert.ok(dialog.body.includes(escaped(copy.basis)));
     assert.match(dialog.body, lang === "zh" ? /仅供娱乐/ : /entertainment only/);
     assert.ok(!dialog.body.includes("undefined"));
     assert.equal((dialog.body.match(/<p>/g) || []).length, 8 + groups.size + eventParagraphs.length);
