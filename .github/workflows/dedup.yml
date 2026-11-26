@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --check js/dedup.js && node --check js/gossip.js && node --check gossip-service/news-id.js && node --check gossip-service/worker.js && node --check js/app.js && node --check js/data.js && node --check js/sky-engine-adapter.js && node --check sw.js && node --check scripts/update-sky-engine.mjs
+      - run: node --check js/dedup.js && node --check js/gossip.js && node --check gossip-service/news-id.js && node --check gossip-service/worker.js && node --check js/app.js && node --check js/horoscope-advice.js && node --check js/data.js && node --check js/sky-engine-adapter.js && node --check sw.js && node --check scripts/update-sky-engine.mjs
       - run: node --test tests/*.test.cjs
   picture-browser:
     # Playwright 1.57 supports Ubuntu 24.04, not Ubuntu 26.04.

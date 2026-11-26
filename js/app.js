@@ -1062,44 +1062,6 @@ const HORO_HOUSE_THEMES = [
 ];
 // Domain × strongest contributing body: the actual action changes even
 // when two days have the same rounded star rating or overall tone.
-const HORO_DOMAIN_ACTIONS = {
-  love: {
-    sun: ["坦诚表达自己的心意，同时尊重对方的选择", "express your feelings honestly while respecting the other person's choices"],
-    moon: ["说出自己的感受，并认真听听对方的需求", "name your feelings and listen to the other person's needs"],
-    mercury: ["把容易误解的话题说清楚，确认彼此的理解", "clarify a potentially misunderstood topic and check your mutual understanding"],
-    venus: ["表达具体的感谢，并安排双方都喜欢的小事", "express specific appreciation and make time for something you both enjoy"],
-    mars: ["坦率提出需求，遇到分歧先放慢回应", "state your needs openly and slow down if disagreement arises"],
-    jupiter: ["了解彼此的长远愿望，避免把自己的期待强加给对方", "explore each other's longer-term hopes without imposing your own expectations"],
-    saturn: ["核对彼此的承诺，给关系留出清晰而舒适的界限", "review mutual commitments and agree on comfortable boundaries"],
-  },
-  work: {
-    sun: ["明确最重要的目标，把精力放在自己能负责的成果上", "clarify your main goal and focus on a result you can take responsibility for"],
-    moon: ["留意自己的精力和工作节奏，合理安排任务", "notice your energy and working rhythm and arrange tasks accordingly"],
-    mercury: ["核对信息与任务要求，把关键想法写下来", "verify information and task requirements and write down key ideas"],
-    venus: ["从协作与表达质量入手，改善一项具体成果", "improve one concrete result through collaboration and thoughtful presentation"],
-    mars: ["把行动力用在一个明确的下一步，而不是同时推进多件事", "channel your energy into one clear next step rather than several competing tasks"],
-    jupiter: ["寻找值得学习的方向，把大的计划拆成可验证的小目标", "identify a worthwhile learning direction and break big plans into verifiable steps"],
-    saturn: ["核对期限、责任与资源，把长期任务安排得更稳妥", "check deadlines, responsibilities and resources and plan long-term tasks realistically"],
-  },
-  money: {
-    sun: ["按自己的实际目标梳理开销，分清必要支出与可选消费", "review spending against real goals and distinguish necessities from optional purchases"],
-    moon: ["留意情绪性消费，用实际需求而不是一时感受安排支出", "notice emotion-driven spending and base expenses on actual needs"],
-    mercury: ["核对账目、价格和条款，避免因信息不清而作决定", "check accounts, prices and terms before making decisions"],
-    venus: ["区分喜欢与需要，用现有预算衡量一项想要的消费", "distinguish wants from needs and evaluate a desired purchase against your budget"],
-    mars: ["给冲动消费留出冷静时间，先检查已有预算", "allow a cooling-off period for impulse purchases and check your budget first"],
-    jupiter: ["复核长期预算和假设，不把乐观预期当作确定收益", "review long-term budgets and assumptions without treating optimistic expectations as guaranteed returns"],
-    saturn: ["整理固定开支与已有义务，为必要支出留出余量", "organize recurring expenses and existing obligations and leave room for necessities"],
-  },
-  social: {
-    sun: ["清楚表达自己的立场，也给别人表达意见的机会", "express your position clearly and give others a chance to speak"],
-    moon: ["留意朋友的感受，先倾听再回应", "pay attention to friends' feelings and listen before responding"],
-    mercury: ["把重要消息再读一遍，有疑问时主动确认", "reread important messages and ask directly when something is unclear"],
-    venus: ["用具体的感谢或善意表达维护已有关系", "strengthen existing relationships through specific appreciation or kindness"],
-    mars: ["讨论分歧时聚焦事情本身，不急着争输赢", "keep disagreements focused on the issue rather than winning the argument"],
-    jupiter: ["分享一个值得交流的发现，同时认真听取不同观点", "share something worth discussing and listen to different viewpoints"],
-    saturn: ["明确能够兑现的承诺，尊重彼此的时间与界限", "make only commitments you can keep and respect each other's time and boundaries"],
-  },
-};
 const HORO_ADVICE_FRAMES = {
   support: [["不妨{action}。", "Consider making time to {action}."], ["可以试着{action}。", "Take the opportunity to {action}."]],
   neutral: [["今天可以{action}。", "Today, aim to {action}."], ["可把注意力放在这件事上：{action}。", "One useful focus today is to {action}."]],
@@ -1200,6 +1162,102 @@ function scoreHoroscope(signIdx, positions) {
   return { stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
     tone: horoscopeTone(primary.raw) };
 }
+/* Context matching is restricted to the preassigned date window to
+   guarantee a seven-day no-repeat interval without local storage, network
+   calls or a replay of unbounded history. A stable per-sign/domain/body
+   permutation partitions ten unique actions into windows of 3, 3, 2, 2.
+   Each action belongs to exactly one window. Across successive ten-day
+   cycles its closest possible recurrence is 10 - (3 - 1) = 8 days.
+   Within a window we replay at most two earlier local-noon snapshots and
+   remove any action already selected for the same domain/body. */
+const HORO_ADVICE_WINDOW_ENDS = [3, 6, 8, 10];
+const HORO_ADVICE_HOUSE_TAGS = [
+  ["express","boundary","act"], ["resources","balance","detail"],
+  ["express","detail","learn"], ["home","rest","connect"],
+  ["creative","express","connect"], ["routine","detail","act"],
+  ["connect","balance","boundary"], ["resources","reflect","boundary"],
+  ["learn","plan","reflect"], ["plan","act","resources"],
+  ["community","connect","learn"], ["rest","reflect","routine"],
+];
+const HORO_ADVICE_TONE_TAGS = {
+  support: ["act","connect","creative"], neutral: ["routine","reflect","learn"],
+  challenge: ["balance","boundary","detail"],
+};
+function horoscopeAdviceWeights(d) {
+  const f = d.focus, weights = new Map();
+  const add = (tags, weight) => {
+    for (const tag of tags) weights.set(tag, (weights.get(tag) || 0) + weight);
+  };
+  add(HORO_ADVICE_HOUSE_TAGS[f.house - 1], 3);
+  add(HORO_ADVICE_TONE_TAGS[horoscopeTone(d.raw)], 1);
+  const contribution = d.contributions?.find(t => t.key === f.key)?.value ?? d.raw;
+  add(HORO_ADVICE_TONE_TAGS[horoscopeTone(contribution === 0 ? 0 : Math.sign(contribution))], 2);
+  if (f.retrograde) add(["reflect","detail","rest"], 3);
+  if (f.aspect && f.aspect.strength > 0) {
+    const a = f.aspect;
+    const tags = a.angle === 0
+      ? HORO_ADVICE_TONE_TAGS[horoscopeTone(Math.sign(a.value))]
+      : a.angle === 60 ? ["act","connect","learn"]
+      : a.angle === 120 ? ["creative","connect","act"]
+      : a.angle === 90 ? ["balance","detail","reflect"]
+      : ["balance","boundary","connect"];
+    add(tags, 2 * a.strength);
+  }
+  return weights;
+}
+function bestHoroscopeAction(d, candidates) {
+  const weights = horoscopeAdviceWeights(d);
+  const score = action => action.tags.reduce((s,tag) => s + (weights.get(tag) || 0), 0);
+  // Stable order breaks ties; presentation language never enters selection.
+  return candidates.reduce((best, action) => score(action) > score(best) ? action : best);
+}
+function horoscopeActionOrder(signIdx, domain, body) {
+  const pool = HORO_DOMAIN_ACTIONS[domain][body].slice();
+  let hash = 2166136261;
+  for (const c of `${signIdx}/${domain}/${body}`) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619);
+  const rng = seededRng(hash >>> 0);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool;
+}
+function horoscopeActionWindow(noon) {
+  // Use civil-day numbers rather than elapsed local milliseconds, so the
+  // sequence does not skip or repeat a slot during daylight saving changes.
+  const ordinal = Math.floor(Date.UTC(noon.getFullYear(), noon.getMonth(), noon.getDate()) / DAY_MS);
+  const slot = ((ordinal % 10) + 10) % 10;
+  const index = HORO_ADVICE_WINDOW_ENDS.findIndex(end => slot < end);
+  const start = index === 0 ? 0 : HORO_ADVICE_WINDOW_ENDS[index - 1];
+  return { start, end: HORO_ADVICE_WINDOW_ENDS[index], elapsed: slot - start };
+}
+function chooseHoroscopeActions(noon, signIdx, scored) {
+  const window = horoscopeActionWindow(noon);
+  const earlier = [];
+  for (let back = window.elapsed; back > 0; back--) {
+    const date = new Date(noon);
+    date.setDate(date.getDate() - back);
+    earlier.push(scoreHoroscope(signIdx, planetPositions(date)));
+  }
+  const choices = {};
+  for (const d of scored.domains) {
+    const candidates = horoscopeActionOrder(signIdx, d.key, d.focus.key).slice(window.start, window.end);
+    for (const snapshot of earlier) {
+      const prev = snapshot.domains.find(x => x.key === d.key);
+      if (prev.focus.key !== d.focus.key) continue;
+      const selected = bestHoroscopeAction(prev, candidates);
+      candidates.splice(candidates.indexOf(selected), 1);
+    }
+    choices[d.key] = bestHoroscopeAction(d, candidates).id;
+  }
+  return choices;
+}
+function horoscopeActionFor(d, h) {
+  const pool = HORO_DOMAIN_ACTIONS[d.key][d.focus.key];
+  // Stored choices are authoritative for a real day's snapshot; fallback
+  // keeps the pure presentation usable with injected score-only fixtures.
+  return pool.find(action => action.id === h.actionChoices?.[d.key]) || bestHoroscopeAction(d, pool);
+}
 /* One local calendar day = one fixed local-noon ephemeris. Language,
    refresh time, Math.random, and lucky-cue choices cannot affect scores. */
 function makeHoroscope(date, signIdx) {
@@ -1210,7 +1268,8 @@ function makeHoroscope(date, signIdx) {
   const choose = list => list[Math.floor(rng() * list.length)];
   const domain = HORO_DOMAINS.find(d => d.key === scored.primary);
   const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
-  return { signIdx, ...scored, adviceIdx: Math.floor(rng() * HORO_ADVICE_FRAMES[scored.tone].length),
+  return { signIdx, ...scored, actionChoices: chooseHoroscopeActions(noon, signIdx, scored),
+    adviceIdx: Math.floor(rng() * HORO_ADVICE_FRAMES[scored.tone].length),
     // Symbolic entertainment cues, NOT astronomical predictions.
     luckyNumber: scored.focus.house + 12 * Math.floor(rng() * 8),
     colorIdx: choose(cues.colors), dirIdx: choose(cues.dirs), itemIdx: choose(domain.items) };
@@ -1242,7 +1301,7 @@ function horoscopeDomainCopy(d, h, lang) {
   const names = I18N[lang].astro.bodies;
   const house = HORO_HOUSE_THEMES[f.house - 1];
   const bodyTheme = HORO_BODY_THEMES[f.key][li];
-  const action = HORO_DOMAIN_ACTIONS[d.key][f.key][li];
+  const action = horoscopeActionFor(d, h).text[li];
   const frames = HORO_ADVICE_FRAMES[horoscopeTone(d.raw)];
   const variant = (h.adviceIdx + (d.key === h.primary ? 0 : HORO_DOMAINS.indexOf(domain))) % frames.length;
   const advice = frames[variant][li].replace("{action}", action);
