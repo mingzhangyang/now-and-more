@@ -691,6 +691,30 @@ function solarTermInstantsForYear(year) {
   return list;
 }
 
+/* All crossings of the UTC years y−1 … y+1 around `date`, in time
+   order (a window wide enough for any "last term before / first term
+   after" question about a day). Shared by solarTermInfo and the
+   almanac's 节月 helper so both read the very same instants. */
+function solarTermsAround(date) {
+  const y = date.getUTCFullYear();
+  return [
+    ...solarTermInstantsForYear(y - 1),
+    ...solarTermInstantsForYear(y),
+    ...solarTermInstantsForYear(y + 1),
+  ].sort((a, b) => a.instant - b.instant);
+}
+
+/* [dayStart, dayEnd) of the LOCAL civil day containing `date`. Every
+   calendar decision in the almanac is made on this half-open interval:
+   a crossing belongs to day D when D's local midnight ≤ instant < the
+   next local midnight. */
+function localDayBounds(date) {
+  return {
+    dayStart: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+    dayEnd: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1),
+  };
+}
+
 /* The term picture for the LOCAL day containing `date`:
    today   — the crossing whose local calendar date is that day, else null;
    next    — the first crossing on/after the next local midnight;
@@ -698,14 +722,8 @@ function solarTermInstantsForYear(year) {
              falls on it, else the last crossing before it.
    Entries carry { idx, angle, instant, name, nameEn }. */
 function solarTermInfo(date) {
-  const y = date.getUTCFullYear();
-  const all = [
-    ...solarTermInstantsForYear(y - 1),
-    ...solarTermInstantsForYear(y),
-    ...solarTermInstantsForYear(y + 1),
-  ].sort((a, b) => a.instant - b.instant);
-  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  const all = solarTermsAround(date);
+  const { dayStart, dayEnd } = localDayBounds(date);
   let today = null, next = null, current = null;
   for (const t of all) {
     if (t.instant >= dayEnd) { next = t; break; }
@@ -728,7 +746,16 @@ function termDisplayInstant(instant) {
   return new Date(Math.round(instant.getTime() / 60000) * 60000);
 }
 
-/* ================= Almanac (zh only, computed per day) ================= */
+/* ================= Almanac (zh only, computed per day) =================
+   Rules, conventions and sources: docs/almanac-rules.md. In short —
+   · day boundary = local civil midnight; the day ganzhi is that of the
+     local calendar date;
+   · 节月 (month branch): a 节 whose instant falls on local day D governs
+     from D onward (the whole day), decided on the same instants and the
+     same local-day interval as the card's 「今日交节」;
+   · the card's 「X年」 is the lunar year (changes at 正月初一); the
+     立春-based year is exposed separately for the month pillar;
+   · 宜忌 and 吉神/凶神 are still day-seeded picks (replaced later). */
 const GAN = "甲乙丙丁戊己庚辛壬癸";
 const ZHI = "子丑寅卯辰巳午未申酉戌亥";
 
@@ -749,15 +776,112 @@ function ganzhiFromIndex(idx) {
   return GAN[i % 10] + ZHI[i % 12];
 }
 function dayGanzhi(date) { return ganzhiFromIndex(julianDayNumber(date) + 49); }
+
+/* 节月 — the month of the 干支 calendar, which turns at each of the
+   twelve 节 (立春 寅, 惊蛰 卯, 清明 辰, 立夏 巳, 芒种 午, 小暑 未,
+   立秋 申, 白露 酉, 寒露 戌, 立冬 亥, 大雪 子, 小寒 丑); the twelve 中气
+   in between do not move it. A 节 sits at an apparent solar longitude
+   ≡ 15° (mod 30°); 立春 is 315°. The governing 节 of a local day is the
+   last 节 whose instant is before that day's END, i.e. a 节 crossing at
+   any time on day D already governs all of D — the convention of
+   printed almanacs, and the same rule solarTermInfo uses for `current`.
+   Returns
+     branchIdx — month branch as an index into ZHI (0 子 … 11 亥);
+     branch    — that branch, e.g. "寅";
+     monthIdx  — 0 for 寅月 (the first 节月, from 立春) … 11 for 丑月;
+     jieYear   — the 立春-based year number: the Gregorian year of the
+                 立春 that opened the current 节年 (Jan before 立春 →
+                 previous year);
+     termIdx / termName / instant — the governing 节 itself;
+     today     — true when that 节 crosses on this local day (交节日). */
+function jieMonthInfo(date) {
+  const { dayStart, dayEnd } = localDayBounds(date);
+  let gov = null;
+  for (const t of solarTermsAround(date)) {
+    if (t.instant >= dayEnd) break;
+    if (t.angle % 30 === 15) gov = t;
+  }
+  const monthIdx = ((gov.angle - 315 + 360) % 360) / 30; // 立春 → 0
+  // 小寒 (丑月, early January) is the only 节 that opens a month of the
+  // previous 节年; every other 节 shares its instant's Gregorian year.
+  const jieYear = gov.instant.getUTCFullYear() - (monthIdx === 11 ? 1 : 0);
+  return {
+    branchIdx: (monthIdx + 2) % 12,
+    branch: ZHI[(monthIdx + 2) % 12],
+    monthIdx,
+    jieYear,
+    termIdx: gov.idx,
+    termName: SOLAR_TERMS[gov.idx],
+    instant: gov.instant,
+    today: gov.instant >= dayStart,
+  };
+}
+
+/* Year ganzhi of the 立春-based year (the year pillar of 八字 and the
+   year a 节月 belongs to). Not shown on the card, which names the lunar
+   year; exposed for the month pillar. */
+function lichunYearGanzhi(date) {
+  return ganzhiFromIndex(jieMonthInfo(date).jieYear - 4);
+}
+
+/* Month ganzhi by 五虎遁 (甲己之年丙作首, 乙庚之岁戊为头, 丙辛必定寻庚起,
+   丁壬壬位顺行流, 戊癸何方发, 甲寅之上好追求): the 寅月 stem is fixed
+   by the 立春-year stem, and stems then advance one per 节月. Computed
+   and verified against the golden fixture but NOT displayed yet. */
+function jieMonthGanzhi(date) {
+  const jm = jieMonthInfo(date);
+  const yearStem = ((jm.jieYear - 4) % 10 + 10) % 10;
+  const stem = ((yearStem % 5) * 2 + 2 + jm.monthIdx) % 10;
+  return GAN[stem] + jm.branch;
+}
+
+/* Lunar-year ganzhi: the year that changes at 正月初一, as printed on
+   almanacs (「乙巳年」 until the 2026 Spring Festival on Feb 17). ICU's
+   chinese calendar reports the year as `relatedYear` (the Gregorian
+   year in which that lunar year began) plus a `yearName`; older or
+   other engines may give a plain `year` — either a Gregorian-like
+   number or the 1…60 cyclic position. Without a usable Intl chinese
+   calendar we fall back to the 立春-based year, which can differ from
+   the lunar year only in the few weeks between 立春 and 春节 (never the
+   five-plus weeks a Gregorian-year fallback would be wrong). */
 function yearGanzhi(date) {
-  let lunarYear = date.getFullYear();
   try {
     const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { year: "numeric" }).formatToParts(date);
-    const yp = parts.find((x) => x.type === "year");
-    const n = yp ? parseInt(yp.value, 10) : NaN;
-    if (!Number.isNaN(n)) lunarYear = n;
-  } catch (e) { /* fall back to Gregorian year */ }
-  return ganzhiFromIndex(lunarYear - 4);
+    const related = parts.find((x) => x.type === "relatedYear");
+    const ry = related ? parseInt(related.value, 10) : NaN;
+    if (!Number.isNaN(ry)) return ganzhiFromIndex(ry - 4);
+    const named = parts.find((x) => x.type === "yearName");
+    if (named && named.value.length === 2 && GAN.includes(named.value[0]) && ZHI.includes(named.value[1])) {
+      return named.value;
+    }
+    const plain = parts.find((x) => x.type === "year");
+    const n = plain ? parseInt(plain.value, 10) : NaN;
+    if (n >= 1 && n <= 60) return ganzhiFromIndex(n - 1); // cyclic year, 1 = 甲子
+    if (n > 60) return ganzhiFromIndex(n - 4);
+  } catch (e) { /* no chinese calendar: fall through */ }
+  return lichunYearGanzhi(date);
+}
+
+/* 十二建除: the officer of a day is fixed by the distance from the 节月
+   branch to the day branch — 建 when they are equal, then 除 满 平 定 执
+   破 危 成 收 开 闭 (《淮南子·天文训》; 《协纪辨方书·义例·建除十二神》).
+   Because the month branch advances on the 交节 day while the day branch
+   advances every day, the officer repeats on each 交节 day. */
+function jianchuOf(dayBranchIdx, monthBranchIdx) {
+  return JIANCHU[((dayBranchIdx - monthBranchIdx) % 12 + 12) % 12];
+}
+
+/* 煞方 of a day by its branch's 三合 group: 申子辰煞南, 巳酉丑煞东,
+   寅午戌煞北, 亥卯未煞西 — the 三煞 (劫煞·灾煞·岁煞) directions that
+   《协纪辨方书》 gives by year branch, applied by day branch the way
+   通书/printed almanacs print 「冲X煞Y」. It is the direction opposite
+   the group's own 三合 element (申子辰 water ↔ south fire, etc.), NOT
+   the direction of the clashing branch. The 三合 groups are exactly
+   the branches with equal index mod 4 (子辰申 0, 丑巳酉 1, 寅午戌 2,
+   卯未亥 3). */
+const SHA_BY_TRINE = ["南", "东", "北", "西"];
+function shaDirectionOf(dayBranchIdx) {
+  return SHA_BY_TRINE[dayBranchIdx % 4];
 }
 /* Deterministic per-day pseudo-random pick: the same calendar day always
    yields the same 宜/忌. Certainty hiding inside the chance pool. */
@@ -789,10 +913,6 @@ const PENGZU_BY_BRANCH = {
   "酉": "酉不会客，醉坐颠狂", "戌": "戌不吃犬，作怪上床", "亥": "亥不嫁娶，不利新郎",
 };
 const ZHI_ANIMAL = "鼠牛虎兔龙蛇马羊猴鸡狗猪";
-const ZHI_DIRECTION = {
-  "子": "北", "丑": "东北", "寅": "东北", "卯": "东", "辰": "东南", "巳": "东南",
-  "午": "南", "未": "西南", "申": "西南", "酉": "西", "戌": "西北", "亥": "西北",
-};
 /* 十二建除 in order, index 0 = 建 (day branch == month branch). */
 const JIANCHU = ["建", "除", "满", "平", "定", "执", "破", "危", "成", "收", "开", "闭"];
 /* Solar terms by 15° step of the Sun's apparent ecliptic longitude, index 0 = 0° (春分). */
@@ -814,21 +934,6 @@ const XIONGSHEN = [
   { name: "天火", gloss: "主火患之忧" }, { name: "四击", gloss: "主冲犯不利" },
 ];
 
-function lunarMonthNumber(date) {
-  try {
-    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "numeric" }).formatToParts(date);
-    const mp = parts.find((x) => x.type === "month");
-    const n = mp ? parseInt(mp.value, 10) : NaN;
-    if (!Number.isNaN(n)) return n;
-  } catch (e) { /* fall through to name parsing */ }
-  try {
-    // Some environments return the month name instead of a number.
-    const label = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long" }).format(date);
-    const key = label.replace("闰", "").replace("月", "");
-    const names = { "正": 1, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "十一": 11, "冬": 11, "十二": 12, "腊": 12 };
-    return key in names ? names[key] : null;
-  } catch (e) { return null; }
-}
 function currentSolarTerm(date) {
   return SOLAR_TERMS[Math.floor(sunApparentLongitudeDeg(date) / 15) % 24];
 }
@@ -846,27 +951,29 @@ function computeAlmanac(date) {
   const gz = dayGanzhi(date);
   const stem = gz[0], branch = gz[1];
   const branchIdx = ZHI.indexOf(branch);
-  const conflictBranch = ZHI[(branchIdx + 6) % 12];
-  // 十二建除： month branch = lunar month mapped 正月建寅； null when lunar month unknown.
-  let jianchu = null;
-  const lm = lunarMonthNumber(date);
-  if (lm !== null && branchIdx >= 0) {
-    const monthBranchIdx = (lm + 1) % 12;
-    jianchu = JIANCHU[((branchIdx - monthBranchIdx) % 12 + 12) % 12];
-  }
+  // 十二建除 from the 节月 branch (not the lunar month): see jieMonthInfo.
+  const jm = jieMonthInfo(date);
+  const jianchu = jianchuOf(branchIdx, jm.branchIdx);
+  const chong = ZHI_ANIMAL[(branchIdx + 6) % 12];
+  const sha = shaDirectionOf(branchIdx);
   const jiShenObjs = seededDailyPick(JISHEN.map((g) => g.name), 3, jdn * 2 + 3, null)
     .map((n) => JISHEN.find((g) => g.name === n));
   const xiongShenObjs = seededDailyPick(XIONGSHEN.map((g) => g.name), 2, jdn * 2 + 4, null)
     .map((n) => XIONGSHEN.find((g) => g.name === n));
   return {
     lunarLabel,
-    yearGanzhi: yearGanzhi(date),
+    yearGanzhi: yearGanzhi(date),       // lunar year, turns at 正月初一 (shown)
+    lichunYearGanzhi: ganzhiFromIndex(jm.jieYear - 4), // 立春-based (not shown)
+    monthGanzhi: jieMonthGanzhi(date),  // 节月 pillar, 五虎遁 (not shown yet)
+    jieMonth: { branchIdx: jm.branchIdx, branch: jm.branch, monthIdx: jm.monthIdx, jieYear: jm.jieYear, termName: jm.termName },
     dayGanzhi: gz,
     yi,
     ji,
     termInfo: solarTermInfo(date),
     jianchu,
-    chongSha: `冲${ZHI_ANIMAL[(branchIdx + 6) % 12]}煞${ZHI_DIRECTION[conflictBranch]}`,
+    chong,
+    sha,
+    chongSha: `冲${chong}煞${sha}`,
     pengzu: [PENGZU_BY_STEM[stem], PENGZU_BY_BRANCH[branch]],
     jiShen: jiShenObjs,
     xiongShen: xiongShenObjs,
@@ -2959,7 +3066,8 @@ function renderSelection(sel, surface) {
       termLine = `节气 <b>${tMain.name}</b> · ${tDisp.getMonth() + 1}月${tDisp.getDate()}日 <b>${localHM(tDisp)}</b> 交节`;
     }
     const bits = [termLine];
-    if (a.jianchu) bits.push(`值神 <b>${a.jianchu}</b>`);
+    // 建除十二神 — labelled 建除, not 值神 (值神 = 黄道黑道十二神).
+    if (a.jianchu) bits.push(`建除 <b>${a.jianchu}</b>`);
     bits.push(`<b>${a.chongSha}</b>`);
     body = `<span class="big">${a.dayGanzhi}日</span>` +
       `<div class="fact-row">${bits.map((b) => `<span>${b}</span>`).join("")}</div>` +
