@@ -327,7 +327,7 @@ test("worked example: 月破 day 2026-11-27 乙巳 (亥月) — 德 cannot lift 
   const groupOf = (side, n) => doc[side].groups.find((g) => g.items.some((i) => i.name === n));
   assert.ok(groupOf("ji", "修造动土").sources.includes("月破"), "full text traces 忌 to 月破");
   assert.ok(groupOf("yi", "祭祀").sources.includes("天德"));
-  assert.equal(groupOf("yi", "祭祀").items.find((i) => i.name === "祭祀").gloss, "祭神祀祖");
+  assert.equal(groupOf("yi", "祭祀").items.find((i) => i.name === "祭祀").gloss, "", "plain 用事 carry no gloss");
 });
 
 test("worked example: 天赦 day 2025-03-10 戊寅 (卯月, 闭日) — 吉凶相抵, 犹忌 stays", () => {

@@ -1669,21 +1669,11 @@ html.modal-open body {
    keeps that: 宜 groups carry the vermillion rule, 忌 groups the ink
    rule. Each group is one line of sources (small sans) over the 用事
    it decided, set as serif names with their plain gloss beneath. */
-.al-head { padding-bottom: 14px; border-bottom: 1px solid var(--hr-rule); }
-.al-day {
-  margin: 4px 0 0; font-size: 30px; font-weight: 700; line-height: 1.25; letter-spacing: 0.08em;
-  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px;
+.al-kicker {
+  padding-bottom: 12px; border-bottom: 1px solid var(--hr-rule);
+  font-family: var(--sans); font-size: 13px; letter-spacing: 0.16em; color: var(--ink-soft); text-align: center;
 }
-.al-nayin { font-family: var(--sans); font-size: 14px; font-weight: 400; letter-spacing: 0.12em; color: var(--ink-soft); }
-.al-chips { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.al-chips li {
-  font-family: var(--sans); font-size: 13px; line-height: 1.5; color: var(--ink);
-  padding: 3px 10px; border-radius: 999px; border: 1px solid var(--card-border); background: var(--card-bg);
-}
-.al-chip-k { margin-right: 6px; font-size: 11px; letter-spacing: 0.12em; color: var(--ink-soft); }
-.al-chips .al-chip--huang { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); background: var(--hr-tint); }
-.al-chips .al-chip--hei { color: var(--ink-soft); }
-
+.al-kicker + .hr-section { margin-top: 18px; }
 .al-level {
   margin-top: 14px !important; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px;
   padding: 9px 12px; border-radius: 8px; background: var(--bg-soft);
@@ -1707,13 +1697,17 @@ html.modal-open body {
 .al-group--ji { border-left-color: var(--ink); }
 .al-group--quiet { border-left-color: var(--card-border); }
 .al-src {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin-bottom: 6px !important;
-  font-family: var(--sans); font-size: 12px; line-height: 1.6;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px;
+  font-family: var(--sans); font-size: 12px; line-height: 1.6; color: var(--ink-soft);
 }
-.al-src-gods { font-weight: 600; letter-spacing: 0.1em; color: var(--accent); }
-.al-group--ji .al-src-gods { color: var(--ink); }
-.al-group--quiet .al-src-gods { color: var(--ink-soft); }
-.al-why { color: var(--ink-soft); }
+.al-god b { margin-right: 6px; font-size: 13px; font-weight: 600; letter-spacing: 0.1em; color: var(--accent); }
+.al-group--ji .al-god b { color: var(--ink); }
+.al-group--quiet .al-god b { color: var(--ink-soft); }
+.al-why {
+  margin-top: 2px !important; font-family: var(--sans); font-size: 12px; line-height: 1.6; color: var(--ink-soft);
+}
+.al-why::before { content: "注"; margin-right: 6px; padding: 0 4px; border-radius: 3px; font-size: 11px; color: var(--ink-soft); border: 1px solid var(--card-border); }
+.al-group .al-items { margin-top: 8px; }
 .al-items { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .al-items li { display: flex; flex-direction: column; min-width: 3.5em; }
 .al-item { font-size: 17px; font-weight: 600; line-height: 1.45; letter-spacing: 0.06em; }
@@ -1742,16 +1736,14 @@ html.modal-open body {
 .al-grid dd { margin: 2px 0 0; font-size: 16px; font-weight: 600; letter-spacing: 0.06em; }
 .al-grid .al-grid-sub { margin: 0; font-family: var(--sans); font-size: 11px; font-weight: 400; color: var(--ink-soft); }
 
-.al-gods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; }
-.al-gods-title { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; }
-.al-gods ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.al-gods { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .al-gods li { font-family: var(--sans); font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
-.al-gods li b { margin-right: 8px; font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--ink); }
+.al-gods li b { margin-right: 8px; font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.al-gods .al-side--yi b { color: var(--accent); }
+.al-gods .al-side--ji b { color: var(--ink); }
 @media (max-width: 520px) {
   .full-dialog:has(> .full-body.al) { padding: 22px 16px 18px; }
-  .al-day { font-size: 26px; }
   .al-grid--dirs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .al-gods { grid-template-columns: minmax(0, 1fr); }
   .al-group { padding: 9px 12px 11px; }
   .al-items { gap: 6px 14px; }
 }

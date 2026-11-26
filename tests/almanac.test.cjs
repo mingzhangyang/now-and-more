@@ -297,13 +297,14 @@ test("card shows the first 宜/忌 in vocabulary order, 「等N事」 for the re
       for (const i of g.items) {
         const t = long.yiJi.trace.find((r) => r.name === i.name);
         assert.deepEqual(g.sources, side === "yi" ? t.yi : t.ji, i.name);
-        assert.equal(g.why, t.why || "", i.name);
-        assert.ok(i.gloss, i.name);
+        assert.equal(g.why, t.why && t.why !== (long.yiJi.level || {}).name ? t.why : "", i.name);
+        const y = api.NAM_ALMANAC.YONGSHI.find((v) => v.name === i.name);
+        assert.equal(i.gloss, y.plain ? "" : y.gloss, i.name);
       }
     }
   }
   const full = api.almanacFullText(long);
-  assert.ok(full.includes("等第："));
+  assert.equal(full.includes("等第："), !!long.yiJi.level, "等第 only when a graded 凶煞 decided the day");
   assert.ok(!full.includes("趣味"));
   const html = api.almanacReadingHtml(doc);
   for (const n of [...long.yi, ...long.ji]) assert.ok(html.includes(`<span class="al-item">${n}</span>`), n);
@@ -399,8 +400,21 @@ test("card lists god names only (gloss on hover); the 全文 reading gives every
     assert.ok(body.includes(`<span title="${g.gloss}">${g.name}</span>`), g.name);
     assert.ok(!body.includes(`${g.name}（`), `${g.name} has no inline gloss`);
   }
+  // The reading repeats nothing the card shows (pillars, 建除, 值神, 冲煞)
+  // and glosses every god exactly once: on the first group it decides,
+  // else under 其余神煞.
   const full = api.almanacFullText(a);
-  assert.ok(full.includes("值神 天牢（黑道）"));
-  assert.ok(full.includes("丙午年 己亥月 壬寅日"));
-  for (const g of [...a.jiShen, ...a.xiongShen]) assert.ok(full.includes(`${g.name}：${g.gloss}`), g.name);
+  assert.ok(full.startsWith("农历") && full.split("\n")[0].endsWith("壬寅日"));
+  for (const x of ["值神", "建除", a.chongSha, "丙午年"]) assert.ok(!full.includes(x), x);
+  const doc = api.almanacFullDoc(a);
+  const glossedIn = [...doc.yi.groups, ...doc.ji.groups].flatMap((g) => g.glosses.map((x) => x.name));
+  const rest = [...doc.otherGods.ji, ...doc.otherGods.xiong].map((g) => g.name);
+  assert.deepEqual([...glossedIn, ...rest].sort(), [...a.jiShen, ...a.xiongShen].map((g) => g.name).sort());
+  for (const g of [...a.jiShen, ...a.xiongShen]) {
+    assert.equal(full.split(`${g.name}：${g.gloss}`).length - 1, 1, g.name);
+    const grp = [...doc.yi.groups, ...doc.ji.groups].find((x) => x.glosses.some((y) => y.name === g.name));
+    if (grp) assert.ok(grp.sources.includes(g.name), g.name);
+  }
+  // An ordinary day carries no 等第 strip; a graded day does.
+  assert.equal(api.almanacFullDoc(api.computeAlmanac(new Date(2026, 10, 26, 12))).level, null);
 });
