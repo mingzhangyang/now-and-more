@@ -2,23 +2,23 @@
   "days": 1461,
   "vocabulary": 36,
   "yi": {
-    "precision": 0.8201,
-    "recall": 0.6826,
-    "dayPrecision": 0.8035,
-    "dayRecall": 0.6759,
-    "ours": 9914,
+    "precision": 0.8209,
+    "recall": 0.6822,
+    "dayPrecision": 0.8053,
+    "dayRecall": 0.6757,
+    "ours": 9899,
     "ref": 11911
   },
   "ji": {
-    "precision": 0.7422,
-    "recall": 0.9184,
-    "dayPrecision": 0.6685,
-    "dayRecall": 0.8407,
-    "ours": 26626,
+    "precision": 0.742,
+    "recall": 0.9192,
+    "dayPrecision": 0.6682,
+    "dayRecall": 0.842,
+    "ours": 26659,
     "ref": 21518
   },
-  "contradictions": 1534,
-  "contradictionRate": 0.042,
+  "contradictions": 1538,
+  "contradictionRate": 0.0421,
   "contradictionDays": 463,
   "allJiDays": {
     "both": 120,
@@ -153,32 +153,32 @@
       "contradictions": 27
     },
     "开市": {
-      "yiPrecision": 0.7935,
-      "yiRecall": 0.781,
-      "jiPrecision": 0.7309,
-      "jiRecall": 0.8921,
-      "contradictions": 25
+      "yiPrecision": 0.798,
+      "yiRecall": 0.7778,
+      "jiPrecision": 0.7301,
+      "jiRecall": 0.9018,
+      "contradictions": 26
     },
     "立券交易": {
-      "yiPrecision": 0.7263,
-      "yiRecall": 0.6635,
-      "jiPrecision": 0.7,
-      "jiRecall": 0.8983,
-      "contradictions": 64
+      "yiPrecision": 0.7353,
+      "yiRecall": 0.6611,
+      "jiPrecision": 0.6958,
+      "jiRecall": 0.9033,
+      "contradictions": 65
     },
     "纳财": {
-      "yiPrecision": 0.79,
-      "yiRecall": 0.6966,
-      "jiPrecision": 0.6643,
-      "jiRecall": 0.9295,
-      "contradictions": 57
+      "yiPrecision": 0.7928,
+      "yiRecall": 0.6949,
+      "jiPrecision": 0.6644,
+      "jiRecall": 0.9413,
+      "contradictions": 58
     },
     "开仓": {
-      "yiPrecision": 0.6606,
-      "yiRecall": 0.7129,
-      "jiPrecision": 0.7871,
-      "jiRecall": 0.8453,
-      "contradictions": 36
+      "yiPrecision": 0.6651,
+      "yiRecall": 0.7079,
+      "jiPrecision": 0.7853,
+      "jiRecall": 0.8487,
+      "contradictions": 37
     },
     "开渠穿井": {
       "yiPrecision": 0.8205,

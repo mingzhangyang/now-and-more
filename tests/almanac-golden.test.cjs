@@ -398,3 +398,122 @@ test("worked example: 2026-11-24 壬寅 亥月 平日 — 「亥月又值時德�
   // 復日 遇 六合 不忌, 亦不註宜: 安葬 (天願 六合 宜) is written neither way.
   assert.equal(traceOf(a, "安葬").result, "不注");
 });
+
+/* ---------- 德猶忌 vs the 德日 rule (review of 2026-03-11) ----------
+   鋪註條例: 「凡徳合赦願月恩四相時徳等日不註忌進人口安牀經絡醖釀開市立劵交易納財開倉庫出貨財，
+   如遇徳猶忌及從忌不從宜之日則仍註忌」. A 忌 that the book says stays even with 德 (「猶忌」)
+   is not lifted by that rule either. */
+const SPARE = ["开市", "立券交易", "纳财", "开仓"];
+const godsOf = (a) => new Set([...a.jiShen, ...a.xiongShen].map((g) => g.name));
+const DE_DAY_GODS = ["天德", "月德", "天德合", "月德合", "天赦", "天愿", "月恩", "四相", "时德"];
+
+test("worked example: 2026-03-11 甲申 (卯月 执) — 小耗 逢 劫煞 雖與德合併猶忌, so 开市 is 忌 on a 德 day", () => {
+  const a = yj("2026-03-11");
+  assert.equal(a.dayGanzhi, "甲申");
+  assert.equal(a.jianchu, "执");
+  const g = godsOf(a);
+  for (const n of ["天德", "月德", "小耗", "劫煞"]) assert.ok(g.has(n), n);
+  // 劫煞 「子午夘酉月值執日與月德月德合併凡所忌者則不註宜所宜者亦不註忌」: 吉凶相抵, not 從忌不從宜.
+  assert.deepEqual(a.yiJi.level, { code: "D", name: "吉凶相抵", by: ["劫煞"] });
+  // 小耗 「與天德月德天德合月德合天願併則不忌；子午卯酉月值刼煞雖與德合併猶忌」: 德猶忌 → 仍註忌.
+  for (const n of SPARE) {
+    const t = traceOf(a, n);
+    assert.equal(t.result, "忌", n);
+    assert.ok(t.ji.includes("小耗") && t.ji.includes("劫煞"), n);
+    assert.match(t.why, /小耗逢劫煞犹忌/, n);
+    assert.doesNotMatch(t.why, /之日不注/, n);
+    assert.ok(a.ji.includes(n), n);
+  }
+  // 安牀 is 忌 too: 百忌「申日忌安牀」 has no 解 at all.
+  assert.equal(traceOf(a, "安床").result, "忌");
+});
+
+test("小耗 逢 劫煞 on a 德 day, 2025–2028: always 子午卯酉月, and 开市 立券 纳财 开仓 always 忌", () => {
+  let n = 0;
+  for (const r of rows) {
+    const a = yj(r.date), g = godsOf(a);
+    if (!g.has("小耗") || !g.has("劫煞") || !DE_DAY_GODS.some((d) => g.has(d))) continue;
+    n++;
+    assert.ok("子午卯酉".includes(r.month[1]), `${r.date} ${r.month}`);
+    for (const it of SPARE) {
+      const t = traceOf(a, it);
+      assert.equal(t.result, "忌", `${r.date} ${it}`);
+      assert.ok(t.ji.includes("小耗"), `${r.date} ${it}`);
+    }
+  }
+  assert.ok(n >= 30, `only ${n} days`);
+  // 2026-06-06 辛亥 (午月 执, 天德 月德合): 劫煞 吉凶相抵; 五富 宜开市, yet 小耗 猶忌 decides.
+  const b = yj("2026-06-06");
+  assert.equal(b.dayGanzhi, "辛亥");
+  assert.ok(godsOf(b).has("月德合") && godsOf(b).has("小耗") && godsOf(b).has("劫煞"));
+  for (const it of SPARE) assert.ok(b.ji.includes(it) && !b.yi.includes(it), it);
+});
+
+test("worked example: 2025-10-09 辛亥 (戌月) — 四窮 與月德天德合月德合併猶忌, even on a 从宜不从忌 day", () => {
+  const a = yj("2025-10-09");
+  assert.equal(a.dayGanzhi, "辛亥");
+  assert.ok(godsOf(a).has("四穷") && godsOf(a).has("月德合"));
+  assert.equal(a.yiJi.level.code, "Y");
+  // 四忌 四窮: 「…四窮又忌進人口修倉庫開市立劵交易納財開倉庫出貨財；與月德天德合月德合併猶忌」.
+  for (const n of SPARE) {
+    const t = traceOf(a, n);
+    assert.equal(t.result, "忌", n);
+    assert.match(t.why, /四穷逢(天德合|月德合)犹忌/, n);
+  }
+  for (const n of ["纳采", "嫁娶", "安葬"]) assert.ok(a.ji.includes(n), n);
+});
+
+test("九空 從月破論 / 從月厭論: its 忌 stands or falls with 月破's / 月厌's, never with the 德日 rule alone", () => {
+  // 九空 「寅申月值滿日子午卯酉月值開日與月德天德合月德合併則不忌；巳亥月值月厭從月厭論，辰戌丑未月值破日從月破論」.
+  const seen = { 月破: 0, 月厌: 0 };
+  for (const r of rows) {
+    const a = yj(r.date), g = godsOf(a);
+    if (!g.has("九空")) continue;
+    const x = ["月破", "月厌"].find((n) => g.has(n));
+    if (!x) continue;
+    seen[x]++;
+    assert.ok((x === "月破" ? "辰戌丑未" : "巳亥").includes(r.month[1]), `${r.date} ${r.month} ${x}`);
+    for (const it of SPARE) {
+      const t = traceOf(a, it);
+      assert.ok(t.ji.includes(x), `${r.date} ${it}: ${x} also 忌 it`);
+      if (!a.yiJi.allJi) assert.match(t.why, new RegExp(`九空从${x}论`), `${r.date} ${it}`);
+      // 月破 「與德併猶忌」 (辰戌丑未月 常例): 九空 then stays 忌 with it.
+      if (x === "月破") assert.equal(t.result, "忌", `${r.date} ${it}`);
+    }
+  }
+  assert.ok(seen.月破 > 0 && seen.月厌 > 0, JSON.stringify(seen));
+  // 2025-11-16 己丑 (亥月 满日, 月德合): 月厌 「己亥月值滿日與天德月德月德合併凡所忌者則不註宜所宜者亦不註忌」,
+  // not 從忌不從宜, so the 德日 rule leaves 开市 (满日 宜) 宜 — for 月厌 and so for 九空.
+  const a = yj("2025-11-16");
+  assert.equal(a.dayGanzhi, "己丑");
+  assert.ok(godsOf(a).has("九空") && godsOf(a).has("月厌") && godsOf(a).has("月德合"));
+  assert.equal(a.yiJi.level.code, "D");
+  assert.equal(traceOf(a, "开市").result, "宜");
+  assert.match(traceOf(a, "开市").why, /九空从月厌论/);
+});
+
+test("invariant, 2025–2028: a 忌 that is 德猶忌 that day is never dropped by a 德 exemption", () => {
+  // Written from the book, independently of the engine's tables: sources the book says
+  // 「(與德合赦願併)猶忌」 or gives no 解 (卷十; docs §3.3 rule 3), and the conditional ones.
+  const ALWAYS = ["游祸", "天贼", "四废", "九焦", "土符", "归忌", "往亡", "四离", "四绝", "上朔", "土王用事",
+    "天狗", "朔日", "弦日", "望日", "十五日", "人神", "甲日", "乙日", "丁日", "壬日", "寅日", "卯日", "巳日", "未日", "申日", "酉日", "亥日"];
+  const WHEN = {
+    小耗: ["劫煞"],                        // 「子午卯酉月值刼煞雖與德合併猶忌」
+    死气: ["月厌"],                        // 「辰戌月值月厭雖與德合併猶忌」
+    四忌: ["月德", "天德合", "月德合"],     // 「與月德天德合月德合併猶忌」
+    四穷: ["月德", "天德合", "月德合"],
+    八专: ["天德", "月德", "天德合", "月德合"], // 「與德合併猶忌」
+  };
+  let checked = 0;
+  for (const r of rows) {
+    const a = yj(r.date), g = godsOf(a);
+    for (const t of a.yiJi.trace) {
+      const barred = t.ji.filter((s) => ALWAYS.includes(s) || (WHEN[s] && WHEN[s].some((n) => g.has(n))));
+      if (!barred.length) continue;
+      checked++;
+      assert.equal(t.result, "忌", `${r.date} ${t.name}: ${barred.join("、")} 猶忌 (${t.why})`);
+      assert.doesNotMatch(t.why, /之日不注/, `${r.date} ${t.name}`);
+    }
+  }
+  assert.ok(checked > 1000, `checked ${checked}`);
+});

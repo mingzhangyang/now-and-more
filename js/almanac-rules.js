@@ -350,6 +350,7 @@ const NAM_ALMANAC = (() => {
   const WINTER = (c) => c.m >= 9; // 亥 子 丑月
 
   const DE4 = "天德 月德 天德合 月德合";
+  const SAN_DE = "月德 天德合 月德合";
 
   /* One entry per source of 宜/忌: a 吉神, a 凶神, a 建除 day (「建日」…),
      or a fixed special day. Fields:
@@ -358,7 +359,11 @@ const NAM_ALMANAC = (() => {
        unless    the 吉神 that neutralise its 忌 (「與…併則不忌」); `keep` then
                  lists what it still 忌 (「止忌…」). A source with no `unless`
                  that is not graded (below) is 猶忌: no 德 lifts its 忌;
-       blockedBy 凶神 in whose presence `unless` does not work (「…雖與德合併猶忌」);
+       blockedBy gods in whose presence its 忌 is 德猶忌 (「…雖與德合併猶忌」,
+                 「與月德天德合月德合併猶忌」): neither `unless` nor the 德日
+                 rule of the 鋪註條例 lifts it that day (`deLiftable` below);
+       follows   凶神 whose ruling its 忌 takes when they share the day
+                 (「從X論」): it stands or falls with X's 忌 of the same 用事;
        noYi      用事 it stops from being written as 宜 (「不註宜」);
        noYiIfLifted  ditto, but only once its 忌 is neutralised (復日 重日).
      A 吉神 with no entry (月空 阳德 阴德 要安 玉宇 金堂 生气 …) has no 宜 in
@@ -449,11 +454,11 @@ const NAM_ALMANAC = (() => {
     四废: { ji: FEI_JI },                          // 「與德合併猶忌，與月破併諸事皆忌」
     // 四忌 四窮: 「忌安撫邊境選將訓兵出師結婚姻納采問名嫁娶安葬；四窮又忌進人口修倉庫開市立劵交易納財開倉庫出貨財；
     // 與月德天德合月德合併猶忌，惟正月乙亥與天願併止忌安撫邊境選將訓兵出師餘皆不忌」
-    四忌: { ji: "纳采 嫁娶 安葬", unless: "天愿" },
-    四穷: { ji: "纳采 嫁娶 开市 立券交易 纳财 开仓 安葬", unless: "天愿" },
+    四忌: { ji: "纳采 嫁娶 安葬", unless: "天愿", blockedBy: SAN_DE },
+    四穷: { ji: "纳采 嫁娶 开市 立券交易 纳财 开仓 安葬", unless: "天愿", blockedBy: SAN_DE },
     五虚: { ji: "开仓", unless: DE4 + " 六合" },   // 「忌修倉庫開倉庫出貨財；與天德月德天德合月德合六合併則不忌」
     // 九空: 「忌進人口修倉庫開市立劵交易納財開倉庫出貨財；寅申月值滿日子午卯酉月值開日與月德天德合月德合併則不忌；巳亥月值月厭從月厭論，辰戌丑未月值破日從月破論」
-    九空: { ji: "开市 立券交易 纳财 开仓", unless: "月德 天德合 月德合", blockedBy: "月厌 月破" },
+    九空: { ji: "开市 立券交易 纳财 开仓", unless: SAN_DE, follows: "月厌 月破" },
     九焦: { ji: "栽种" },                          // 九坎「又為九焦忌鼓鑄栽種修築園圃；與德合併猶忌」
     土符: { ji: EARTH_JI },                        // 「與德合赦願併猶忌」
     归忌: { ji: "移徙" },                          // 「忌般移逺廻；與德合赦願併猶忌」
@@ -464,7 +469,7 @@ const NAM_ALMANAC = (() => {
     // 五離: 「忌慶賜賞賀宴㑹結婚姻納采問名立劵交易；與天德月德天德合月德合天赦三合六合併則不忌」
     五离: { ji: "会亲友 纳采 立券交易", unless: DE4 + " 天赦 三合 六合" },
     // 八專: 「忌安撫邊境選將訓兵出師結婚姻納采問名嫁娶；與德合併猶忌，與天願併止忌安撫邊境選將訓兵出師餘不忌」
-    八专: { ji: "纳采 嫁娶", unless: "天愿" },
+    八专: { ji: "纳采 嫁娶", unless: "天愿", blockedBy: DE4 },
     四离: { ji: LIJUE_JI },                        // 上朔 四離 四絶 晦日: 「……餘事皆忌；與徳合赦願併猶忌」
     四绝: { ji: LIJUE_JI },
     上朔: { ji: LIJUE_JI },
@@ -498,6 +503,7 @@ const NAM_ALMANAC = (() => {
     s.yiIf = (s.yiIf || []).map(([p, l]) => [p, items(l)]);
     s.unless = s.unless ? s.unless.split(" ") : null;
     s.blockedBy = s.blockedBy ? s.blockedBy.split(" ") : [];
+    s.follows = s.follows ? s.follows.split(" ") : [];
   }
 
   /* 宜忌等第 — the great 凶煞 whose 忌 the book settles month by month
@@ -515,7 +521,6 @@ const NAM_ALMANAC = (() => {
        X 諸事皆忌.
      Months not listed are 常例 (J). The strictest outcome of all graded
      gods present decides the day (「各從重論」). */
-  const SAN_DE = "月德 天德合 月德合";
   const GRADED = {
     // 月建: 「與天德月德天德合月德合天赦月恩四相併止忌營建宮室……伐木栽種破土餘皆不忌…子午月值月厭辰午酉亥月值月刑從刑厭論」
     建日: { keep: EARTH_JI + " 伐木", rows: [["子午", "→月厌"], ["辰酉亥", "→月刑"], ["*", DE4 + " 天赦 月恩 四相", "Y", "J"]] },
@@ -657,10 +662,18 @@ const NAM_ALMANAC = (() => {
     const qiong = ["四忌", "四穷"].find((n) => present.has(n));
     if (qiong && (present.has("鸣吠") || present.has("鸣吠对"))) for (const it of ["破土", "启攒"]) add(noYi, it, qiong);
     // Which sources' 忌 still stand, and why the others fell.
+    // One test for every 德 exemption — the source's own 「與…併則不忌」 and
+    // the 德日 rule of the 鋪註條例 alike: a 忌 is liftable by 德 today only
+    // if the source names gods that lift it (`unless`), is not 德猶忌 today
+    // (`blockedBy`, 「…雖與德合併猶忌」), and does not take another god's
+    // ruling today (`follows`, 「從X論」). Graded gods are settled by their 等第.
+    const blocker = (s) => s.blockedBy.find((n) => present.has(n));
+    const followed = (s) => s.follows.find((n) => present.has(n));
+    const deLiftable = (s) => !!s.unless && !blocker(s) && !followed(s);
     const lifted = new Map(); // source → the god that lifted it
     for (const name of active) {
       const s = SOURCES[name];
-      if (!s || !s.unless || s.blockedBy.some((n) => present.has(n))) continue;
+      if (!s || !deLiftable(s)) continue;
       const by1 = s.unless.find((n) => present.has(n));
       if (by1) {
         lifted.set(name, by1);
@@ -675,17 +688,28 @@ const NAM_ALMANAC = (() => {
       const sup = noYi.get(item) || [];
       if (!ys.length && !js.length && !sup.length && code !== "X") continue;
       const fixed = [], open = [], graded = [], dropped = [];
+      // 「從X論」: the follower's 忌 is X's; X (graded, and 忌 this 用事) decides.
+      const follows = (src) => !GRADED[src] && followed(SOURCES[src]) && js.includes(followed(SOURCES[src]));
+      // 鋪註條例: 德合赦願… days do not write the small 忌 (DE_DAY_SPARE), 「如遇徳猶忌及
+      // 從忌不從宜之日則仍註忌」 — not when any 忌 of this 用事 is 德猶忌 today.
+      const deSpare = deDay && DE_DAY_SPARE.has(item) && code !== "J" &&
+        !js.some((src) => !GRADED[src] && !follows(src) && !deLiftable(SOURCES[src]));
       for (const src of js) {
         const s = SOURCES[src];
         if (GRADED[src]) {
           if (code === "Y" && !GRADED[src].keep.includes(item)) dropped.push(`${src}之忌不从`);
-          else if (deDay && DE_DAY_SPARE.has(item) && code !== "J") dropped.push(`${deDay}之日不注${src}之忌`);
+          else if (deSpare) dropped.push(`${deDay}之日不注${src}之忌`);
           else graded.push(src);
+        } else if (follows(src)) {
+          dropped.push(`${src}从${followed(s)}论`);
         } else if (lifted.has(src)) {
           if (s.keep.includes(item)) open.push(src); else dropped.push(`${src}遇${lifted.get(src)}不忌`);
-        } else if (s.unless) {
-          if (deDay && DE_DAY_SPARE.has(item) && code !== "J") dropped.push(`${deDay}之日不注${src}之忌`); else open.push(src);
-        } else fixed.push(src);
+        } else if (deLiftable(s)) {
+          if (deSpare) dropped.push(`${deDay}之日不注${src}之忌`); else open.push(src);
+        } else {
+          fixed.push(src);
+          if (s.unless && blocker(s)) dropped.push(`${src}逢${blocker(s)}犹忌`);
+        }
       }
       const wantYi = ys.length > 0 && sup.length === 0;
       let result, why;
