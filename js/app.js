@@ -2009,9 +2009,98 @@ function fullTextOf(item) {
 function fullTextItemForSelection(sel) {
   if (!sel) return null;
   if (sel.cat === "astro" && sel.subtype === "horoscope" && sel.horo) {
-    return { full: horoscopeFullText(sel.horo, lang) };
+    const doc = horoscopeFullDoc(sel.horo, lang);
+    return { full: horoscopeFullDocText(doc), horoscope: doc };
   }
   return sel.item;
+}
+
+/* The horoscope reading as a laid-out document: a header with the overall
+   rating, four area tiles that jump to their sections, then sky events,
+   the four areas (suggestion first, its evidence beneath) and the shared
+   sky readings. Every sentence comes from horoscopeFullDoc(), the same
+   fields the plain full text joins. */
+const horoStarsHtml = (n) =>
+  `<span class="hr-stars" role="img" aria-label="${n}/5">${"★".repeat(n)}<span class="hr-stars-off">${"☆".repeat(5 - n)}</span></span>`;
+// "Label：rest" / "Label: rest" -> a quiet run-in label and the sentence.
+function horoLabelledHtml(text) {
+  const m = /^([^：:。.]{2,48}?)(：|: )([\s\S]+)$/.exec(text);
+  return m ? `<span class="hr-label">${esc(m[1])}</span>${esc(m[3])}` : esc(text);
+}
+const horoSigned = (n) => (n >= 0 ? "+" : "−") + Math.abs(n).toFixed(2);
+function horoTagsHtml(evidence, aspect) {
+  const tags = evidence.split(" · ").concat(aspect ? [aspect] : []);
+  return `<ul class="hr-tags">${tags.map((tag) => `<li>${esc(tag)}</li>`).join("")}</ul>`;
+}
+function horoContributionHtml(d, doc, scale) {
+  const c = d.contribution;
+  if (!c) return d.contributionText ? `<p class="hr-why-line">${esc(d.contributionText).replace(/\n/g, "<br>")}</p>` : "";
+  const L = doc.labels;
+  const fmt = horoSigned;
+  const rows = c.bodies.map((term) => {
+    const width = scale > 0 ? Math.min(50, (Math.abs(term.value) / scale) * 50) : 0;
+    const side = term.value >= 0 ? "pos" : "neg";
+    return `<li class="hr-bar-row"><span class="hr-bar-name">${esc(doc.bodyNames[term.key])}</span>` +
+      `<span class="hr-bar-track" aria-hidden="true"><span class="hr-bar hr-bar--${side}" style="width:${width.toFixed(2)}%"></span></span>` +
+      `<span class="hr-bar-value">${fmt(term.value)}</span></li>`;
+  }).join("");
+  const factors = c.factors.map((f, i) =>
+    `<li><span>${esc(doc.factorNames[i])}</span> <b>${fmt(f.value)}</b></li>`).join("");
+  return `<div class="hr-contrib">` +
+    `<div class="hr-contrib-head"><span class="hr-label">${esc(L.contributions)}</span>` +
+    `<span class="hr-contrib-total">${esc(L.total)} <b>${fmt(c.total)}</b></span></div>` +
+    `<ul class="hr-bars">${rows}</ul>` +
+    `<div class="hr-factors"><span class="hr-label">${esc(L.factors)}</span><ul>${factors}</ul></div>` +
+    (d.timeUnits ? `<div class="hr-factors"><p>${horoLabelledHtml(d.timeUnits)}</p></div>` : "") + `</div>`;
+}
+function horoscopeReadingHtml(doc) {
+  const L = doc.labels;
+  // One scale for all four areas, so bar lengths compare across sections.
+  const scale = Math.max(0, ...doc.domains.flatMap((d) => d.contribution ? d.contribution.bodies.map((t) => Math.abs(t.value)) : []));
+  const head = `<header class="hr-head"><div class="hr-sign">` +
+    `<span class="hr-symbol" aria-hidden="true">${esc(doc.sign.symbol)}\uFE0E</span>` +
+    `<div><div class="hr-kicker">${esc(doc.dailyLabel)}</div><h2 class="hr-name">${esc(doc.sign.name)}</h2></div></div>` +
+    `<div class="hr-overall"><span class="hr-kicker">${esc(doc.overallLabel)}</span>${horoStarsHtml(doc.stars)}</div></header>`;
+  const tiles = `<nav class="hr-tiles" aria-label="${esc(L.domains)}">` + doc.domains.map((d) =>
+    `<button type="button" class="hr-tile" data-jump="hr-area-${d.key}"><span class="hr-tile-name">${esc(d.label)}</span>${horoStarsHtml(d.stars)}</button>`).join("") + `</nav>`;
+  const intro = `<p class="hr-intro">${esc(doc.intro)}</p>`;
+  // V3.3 time scales: the first summary line becomes the section title and
+  // three totals; the representative and day-over-day lines follow.
+  const scaleLines = doc.timeSummary ? doc.timeSummary.split("\n") : [];
+  const scales = doc.timeScales && scaleLines.length ? `<section class="hr-section" aria-labelledby="hr-scales-title">` +
+    `<h3 class="hr-section-title" id="hr-scales-title">${esc(scaleLines[0].split(/：|: /)[0])}</h3>` +
+    `<dl class="hr-scales">${doc.timeScales.map((t) =>
+      `<div><dt>${esc(t.label)}</dt><dd>${horoSigned(t.value)}</dd></div>`).join("")}</dl>` +
+    (scaleLines.length > 1 ? `<div class="hr-scale-notes">${scaleLines.slice(1).map((l) => `<p>${horoLabelledHtml(l)}</p>`).join("")}</div>` : "") +
+    `</section>` : "";
+  const events = doc.events ? `<section class="hr-section hr-events" aria-labelledby="hr-events-title">` +
+    `<h3 class="hr-section-title" id="hr-events-title">${esc(doc.events.title)}</h3>` +
+    `<p class="hr-note">${esc(doc.events.note)}</p>` +
+    doc.events.items.map((e) => `<article class="hr-event"><h4 class="hr-event-title">${esc(e.title)}</h4>` +
+      `<p class="hr-meta">${esc(e.evidence)}</p><p>${esc(e.interpretation)}</p>` +
+      `<p class="hr-advice"><span class="hr-label">${esc(doc.events.suggestionLabel.replace(/[：:]\s*$/, ""))}</span>${esc(e.suggestion)}</p></article>`).join("") +
+    `</section>` : "";
+  const areas = `<section class="hr-section" aria-labelledby="hr-areas-title"><h3 class="hr-section-title" id="hr-areas-title">${esc(L.domains)}</h3>` +
+    doc.domains.map((d) => `<article class="hr-area" id="hr-area-${d.key}" tabindex="-1">` +
+      `<div class="hr-area-head"><h4 class="hr-area-name">${esc(d.label)}</h4>${horoStarsHtml(d.stars)}</div>` +
+      `<p class="hr-advice"><span class="hr-label">${esc(L.advice)}</span>${esc(d.advice)}</p>` +
+      `<div class="hr-why"><p class="hr-why-line"><span class="hr-label">${esc(L.basis)}</span>` +
+      `<button type="button" class="hr-ref" data-jump="hr-reading-${d.readingId}">${esc(d.readingTitle)}</button> · ${esc(d.body)}</p>` +
+      `<p class="hr-why-line">${horoLabelledHtml(d.balance)}</p>` +
+      horoContributionHtml(d, doc, scale) +
+      (d.ruler ? `<p class="hr-why-line">${horoLabelledHtml(d.ruler)}</p>` : "") +
+      `</div></article>`).join("") + `</section>`;
+  const readings = `<section class="hr-section" aria-labelledby="hr-readings-title"><h3 class="hr-section-title" id="hr-readings-title">${esc(L.readings)}</h3>` +
+    doc.readings.map((r) => `<article class="hr-reading" id="hr-reading-${r.id}" tabindex="-1">` +
+      `<div class="hr-reading-head"><span class="hr-badge" aria-hidden="true">${r.id}</span>` +
+      `<h4 class="hr-reading-title">${esc(r.title)}<span class="hr-reading-areas"> · ${esc(r.domainLabels.join(doc.lang === "zh" ? "、" : ", "))}</span></h4></div>` +
+      horoTagsHtml(r.evidence, r.aspect) +
+      r.paragraphs.flatMap((p) => p.split("\n")).map((p) => `<p>${horoLabelledHtml(p)}</p>`).join("") +
+      `</article>`).join("") + `</section>`;
+  const lucky = `<section class="hr-section" aria-labelledby="hr-lucky-title"><h3 class="hr-section-title" id="hr-lucky-title">${esc(doc.lucky.title)}</h3>` +
+    `<dl class="hr-lucky">${doc.lucky.items.map((i) => `<div><dt>${esc(i.label)}</dt><dd>${esc(i.value)}</dd></div>`).join("")}</dl></section>`;
+  const foot = `<footer class="hr-foot"><p>${esc(doc.basis)}</p><p>${esc(doc.footnote)}</p></footer>`;
+  return head + tiles + intro + scales + events + areas + readings + lucky + foot;
 }
 
 function openFullText(item, opener, cat) {
@@ -2021,7 +2110,8 @@ function openFullText(item, opener, cat) {
   fullOpener = opener || null;
   $("full-cat").textContent = t().categories[cat] || t().categories.classics;
   $("full-close").setAttribute("aria-label", lang === "zh" ? "关闭" : "Close");
-  $("full-body").innerHTML = full
+  $("full-body").className = item.horoscope ? "full-body hr" : "full-body";
+  $("full-body").innerHTML = item.horoscope ? horoscopeReadingHtml(item.horoscope) : full
     .split(/\n\n+/)
     .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
     .join("");
@@ -2042,6 +2132,16 @@ $("full-text-btn").addEventListener("click", (e) => {
   if (sel) openFullText(fullTextItemForSelection(sel), e.currentTarget, sel.cat);
 });
 $("full-close").addEventListener("click", closeFullText);
+// Area tiles and "Sky reading n" references scroll within the dialog and
+// move focus there, so keyboard and screen-reader users land on it too.
+$("full-body").addEventListener("click", (e) => {
+  const jump = e.target.closest && e.target.closest("[data-jump]");
+  const target = jump && document.getElementById(jump.dataset.jump);
+  if (!target) return;
+  const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
+  target.focus({ preventScroll: true });
+});
 $("full-overlay").addEventListener("click", (e) => {
   if (e.target === $("full-overlay")) closeFullText();
 });
@@ -3106,7 +3206,19 @@ function focusInsideModal(last = false) {
 function trapModalTab(e) {
   if (!activeModal || e.key !== "Tab") return;
   const items = modalFocusables();
-  const index = items.indexOf(document.activeElement);
+  const current = document.activeElement;
+  const index = items.indexOf(current);
+  // Focus can rest on a programmatic target inside the dialog (tabindex
+  // -1, e.g. a section the reading's tiles jump to). Continue from its
+  // place in document order; wrap only at the real first/last control.
+  if (index < 0 && items.length && current !== activeModal && activeModal.contains(current)) {
+    e.preventDefault();
+    const next = e.shiftKey
+      ? items.filter(el => current.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING && !el.contains(current)).pop()
+      : items.find(el => current.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (next) next.focus(); else focusInsideModal(e.shiftKey);
+    return;
+  }
   if (!items.length || index < 0 ||
       (e.shiftKey ? index === 0 : index === items.length - 1)) {
     e.preventDefault();

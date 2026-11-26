@@ -345,6 +345,67 @@ def check_horoscope_events(page, language):
     assert footer.is_visible(), language
 
 
+def check_horoscope_keyboard(page, language):
+    # Keyboard path through the structured reading in the real dialog:
+    # Enter on an area tile focuses that area (tabindex -1); Tab and
+    # Shift+Tab must continue from there in document order instead of
+    # bouncing to the dialog's first/last control. The "Sky reading n"
+    # link works the same way, and wrapping happens only at real edges.
+    page.evaluate("""() => {
+      currentSelection = {cat: 'astro', subtype: 'horoscope',
+        horo: makeHoroscope(new Date(2026, 10, 26, 12), 4)};
+      renderSelection(currentSelection);
+    }""")
+    footer = page.locator("#full-text-btn")
+    footer.focus()
+    page.keyboard.press("Enter")
+    assert page.locator("#full-overlay").is_visible(), language
+    active = lambda: page.evaluate("""() => {
+      const el = document.activeElement;
+      const area = el.closest('.hr-area');
+      return {id: el.id, cls: el.className, jump: el.dataset.jump || null, area: area ? area.id : null};
+    }""")
+    assert active()["id"] == "full-close", (language, active())
+    in_view = """id => {
+      const d = document.querySelector('.full-dialog').getBoundingClientRect();
+      const t = document.getElementById(id).getBoundingClientRect();
+      return t.top >= d.top - 1 && t.top < d.bottom - 40;
+    }"""
+    # Close -> tiles: love, work, money.
+    for expected in ("hr-area-love", "hr-area-work", "hr-area-money"):
+        page.keyboard.press("Tab")
+        assert active()["jump"] == expected, (language, expected, active())
+    page.keyboard.press("Enter")
+    assert active()["id"] == "hr-area-money", (language, active())
+    page.wait_for_function(in_view, arg="hr-area-money")
+    # Tab continues inside the money area: its "Main basis" link.
+    page.keyboard.press("Tab")
+    now = active()
+    assert "hr-ref" in now["cls"] and now["area"] == "hr-area-money", (language, now)
+    reading = now["jump"]
+    # Back on the area itself, Shift+Tab reaches the previous area's link.
+    page.locator("#hr-area-money").focus()
+    page.keyboard.press("Shift+Tab")
+    now = active()
+    assert "hr-ref" in now["cls"] and now["area"] == "hr-area-work", (language, now)
+    # The reading link jumps and focuses the shared sky reading.
+    page.locator("#hr-area-money .hr-ref").focus()
+    page.keyboard.press("Enter")
+    assert active()["id"] == reading, (language, reading, active())
+    page.wait_for_function(in_view, arg=reading)
+    # Nothing focusable follows the readings: Tab wraps to Close (real edge),
+    # while Shift+Tab steps back to the last area's link.
+    page.keyboard.press("Shift+Tab")
+    now = active()
+    assert "hr-ref" in now["cls"] and now["area"] == "hr-area-social", (language, now)
+    page.locator("#" + reading).focus()
+    page.keyboard.press("Tab")
+    assert active()["id"] == "full-close", (language, active())
+    page.keyboard.press("Escape")
+    assert not page.locator("#full-overlay").is_visible(), language
+    assert active()["id"] == "full-text-btn", (language, active())
+
+
 def check_locale(browser, origin, language):
     context = browser.new_context(viewport={"width": 390, "height": 844},
                                   locale="zh-CN" if language == "zh" else "en-US",
@@ -388,6 +449,7 @@ def check_locale(browser, origin, language):
             page.evaluate(OPEN_PICTURE, kind)
             check_ready_and_download(page, kind, language)
         check_horoscope_events(page, language)
+        check_horoscope_keyboard(page, language)
     finally:
         context.close()
 
@@ -404,4 +466,4 @@ if __name__ == "__main__":
                 check_locale(browser, origin, language)
         finally:
             browser.close()
-    print("Modal isolation, 8 picture compositions/downloads, 2 moon texture retries and bilingual horoscope event reader passed")
+    print("Modal isolation, 8 picture compositions/downloads, 2 moon texture retries, bilingual horoscope event reader and reading keyboard navigation passed")

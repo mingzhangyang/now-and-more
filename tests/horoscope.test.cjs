@@ -50,7 +50,7 @@ const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 1
     if (visible) $("full-text-btn").listeners.click({ currentTarget: $("full-text-btn"),
       stopPropagation() { stopped = true; } });
     const result = { visible, stopped, opened: activeModal === "full-overlay",
-      title: $("full-cat").textContent, body: $("full-body").innerHTML,
+      title: $("full-cat").textContent, body: $("full-body").innerHTML, bodyClass: $("full-body").className,
       source: $("full-source").textContent, label: $("full-text-btn").textContent,
       resetScroll: dialog.scrollTop === 0, closeFocused: $("full-close").focused };
     if (result.opened) $("full-close").listeners.click();
@@ -218,13 +218,34 @@ test("full-text door opens the same calculated horoscope in both languages and p
     const escaped = value => value.replace(/[&<>"']/g, ch => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     })[ch]);
-    assert.ok(dialog.body.includes(escaped(copy.evidence)));
+    // The evidence line is laid out as tags, one per " · " part.
+    for (const part of copy.evidence.split(" · ")) assert.ok(dialog.body.includes("<li>" + escaped(part) + "</li>"), part);
     assert.ok(dialog.body.includes(escaped(copy.basis)));
+    assert.ok(dialog.body.includes(escaped(copy.advice)));
     assert.match(dialog.body, lang === "zh" ? /因素分解/ : /Factor breakdown/);
     assert.match(dialog.body, lang === "zh" ? /代表采样/ : /Representative sample/);
     assert.match(dialog.body, lang === "zh" ? /仅供娱乐/ : /entertainment only/);
-    assert.ok(!dialog.body.includes("undefined"));
-    assert.equal((dialog.body.match(/<p>/g) || []).length, 8 + groups.size + eventParagraphs.length);
+    assert.ok(!dialog.body.includes("undefined") && !dialog.body.includes("NaN"));
+    // Structured layout: one tile and one section per area, one card per
+    // shared sky reading and per event, and working jump targets.
+    assert.equal(dialog.bodyClass, "full-body hr");
+    assert.equal((dialog.body.match(/class="hr-tile"/g) || []).length, 4);
+    assert.equal((dialog.body.match(/<article class="hr-area"/g) || []).length, 4);
+    assert.equal((dialog.body.match(/<article class="hr-reading"/g) || []).length, groups.size);
+    assert.equal((dialog.body.match(/<article class="hr-event"/g) || []).length, Math.max(0, eventParagraphs.length - 1));
+    for (const [, id] of dialog.body.matchAll(/data-jump="([^"]+)"/g)) assert.ok(dialog.body.includes(`id="${id}"`), id);
+    // V3.3 time scales: one section with three totals, its detail lines,
+    // and each area's own time-scale line inside its contribution box.
+    if (h.timeLayers) {
+      assert.equal((dialog.body.match(/class="hr-scales"/g) || []).length, 1);
+      assert.equal((dialog.body.match(/<dt>/g) || []).length, 3 + 4); // time scales + lucky cues
+      assert.equal((dialog.body.match(lang === "zh" ? /时间尺度（原始评分单位）/g : /Time scales \(raw score units\)/g) || []).length, 1 + 4);
+      if (h.timeChange) assert.match(dialog.body, lang === "zh" ? /较昨日的净评分变化/ : /Compared with yesterday/);
+    }
+    // Every domain's suggestion, balance line and every body's contribution row appear.
+    for (const d of h.domains) assert.ok(dialog.body.includes(escaped(api.horoscopeDomainCopy(d,h,lang).advice)));
+    assert.equal((dialog.body.match(/class="hr-bar-row"/g) || []).length,
+      h.domains.reduce((n, d) => n + d.contributions.length, 0));
     assert.equal(api.horoscopeFullText(h,lang), full);
   }
   assert.equal(JSON.stringify(sel),snapshot);
