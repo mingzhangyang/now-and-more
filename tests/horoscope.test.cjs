@@ -56,7 +56,7 @@ const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 1
     if (result.opened) $("full-close").listeners.click();
     return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
   }
-  return {makeHoroscope, planetPositions, horoscopeBodyState, horoscopeSky, scoreHoroscopeDay, scoreHoroscopeSamples, horoscopeSamplePlan, HORO_FACTORS, horoscopeStars, horoscopeDignity, horoscopeSolarCondition, HORO_MODEL, HORO_ADVICE_FRAMES, HORO_ADVICE_VARIANTS, HORO_CONDITION_LABELS, chooseHoroscopeActions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
+  return {longitudeVelocity, horoscopeAspectMotionCopy, makeHoroscope, planetPositions, horoscopeBodyState, horoscopeSky, scoreHoroscopeDay, scoreHoroscopeSamples, horoscopeSamplePlan, HORO_FACTORS, horoscopeStars, horoscopeDignity, horoscopeSolarCondition, HORO_MODEL, HORO_ADVICE_FRAMES, HORO_ADVICE_VARIANTS, HORO_CONDITION_LABELS, chooseHoroscopeActions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -797,3 +797,19 @@ test("PWA shell and all four HTML pages agree on the asset version", () => {
     assert.ok(versions.length && versions.every(v=>v===version));
   }
 });
+
+ test("v3.1 relative motion and circular velocity", () => {
+ const a=(lon,velocity)=>api.horoscopeAspect({lon,velocity},{lon:0,velocity:0});
+ assert.ok(Math.abs(api.longitudeVelocity(359.9,0.1,0.1)-1)<1e-9);
+ for(const [lon,v,state] of [[179,1,"applying"],[181,1,"separating"],[359,1,"applying"],[1,1,"separating"],[60,1,"exact"],[59,0,"stationary"]])assert.equal(a(lon,v).state,state);
+ assert.ok(Math.abs(a(59,1).dynamicWeight-1.1)<1e-12);
+ assert.ok(Math.abs(a(61,1).dynamicWeight-0.9)<1e-12);
+ for(const edge of [0.05,0.75])assert.ok(Math.abs(a(60+edge-1e-6,1).dynamicWeight-a(60+edge+1e-6,1).dynamicWeight)<1e-5);
+ });
+ test("v3.1 sampled aspect evidence adds to the capped factor",()=>{
+ const h=api.makeHoroscope(new Date(2026,10,25,12),7);
+ for(const d of h.domains)for(const term of d.contributions)for(const s of term.samples){
+ assert.ok(Math.abs(s.aspects.reduce((sum,a)=>sum+a.contribution,0)-s.components.aspect)<1e-12);
+ for(const a of s.aspects){assert.equal(a.sampleAt,s.at);assert.ok(Number.isFinite(a.relativeSpeed));}
+ }
+ });

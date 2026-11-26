@@ -89,9 +89,8 @@ function tropicalLongitudeOfDate(x, y, z, date) {
   const B = Math.cos(Pi) * x + Math.sin(Pi) * y;
   return norm360(p + (Pi - Math.atan2(A, B)) / RAD);
 }
-function planetLongitude(body, date) {
+function planetLongitude(body, date, e = helioRect("earth", date)) {
   const p = helioRect(body, date);
-  const e = helioRect("earth", date);
   return tropicalLongitudeOfDate(p.x - e.x, p.y - e.y, p.z - e.z, date);
 }
 /* Simplified lunar longitude: mean longitude plus the main perturbation
@@ -119,32 +118,30 @@ function signIndexFromLongitude(lon) { return Math.floor(norm360(lon) / 30) % 12
 /* Placements for the seven bodies at the requested instant. Use a short
    symmetric difference to estimate apparent geocentric longitude velocity
    at that instant, rather than averaging across a future station. */
+const HORO_BODIES = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
+const HORO_VELOCITY_HALF_DAYS = 1 / 24;
+function longitudeVelocity(before, after, halfDays = HORO_VELOCITY_HALF_DAYS) {
+  return norm180(after - before) / (2 * halfDays);
+}
 function planetPositions(date) {
-  const halfWindow = DAY_MS / 24;
-  const before = new Date(date.valueOf() - halfWindow);
-  const after = new Date(date.valueOf() + halfWindow);
-  const out = [];
-  const sunLon = sunLongitude(date);
-  out.push({ key: "sun", lon: sunLon, signIdx: signIndexFromLongitude(sunLon), retrograde: false });
-  const moonLon = moonLongitude(date);
-  out.push({ key: "moon", lon: moonLon, signIdx: signIndexFromLongitude(moonLon), retrograde: false });
-  for (const body of ["mercury", "venus", "mars", "jupiter", "saturn"]) {
-    const lon = planetLongitude(body, date);
-    const motion = norm180(planetLongitude(body, after) - planetLongitude(body, before));
-    out.push({
-      key: body,
-      lon,
-      signIdx: signIndexFromLongitude(lon),
-      retrograde: motion < 0,
-    });
-  }
-  return out;
+  const halfWindow = DAY_MS * HORO_VELOCITY_HALF_DAYS;
+  const epochs = [-halfWindow, 0, halfWindow].map(offset => new Date(date.valueOf() + offset));
+  // Share the Earth vector among all planets at each of the three epochs.
+  const earth = epochs.map(t => helioRect("earth", t));
+  return HORO_BODIES.map(key => {
+    const [before, lon, after] = epochs.map((t, i) => key === "sun" ? sunLongitude(t) :
+      key === "moon" ? moonLongitude(t) : planetLongitude(key, t, earth[i]));
+    const velocity = longitudeVelocity(before, after);
+    return { key, lon, signIdx: signIndexFromLongitude(lon),
+      retrograde: key !== "sun" && key !== "moon" && velocity < 0, velocity };
+  });
 }
 
 /* ---- Calendar-day sky events (the same approximate tropical ephemeris) ----
    The Sun and five classical planets get sign-ingress events, including
    backward crossings. For planets we also detect the two station types.
    Ordinary lunar sign changes are intentionally not treated as special.
+   Exact major aspects include all seven bodies, with separate card priority.
    Local days are half-open [midnight, next midnight), including DST days.
    The numerical event time is for ordering/day ownership, NOT a claim
    of precise observational timing. */
@@ -197,7 +194,66 @@ function detectHoroscopeEvents(start, end, positionsAt = planetPositions) {
         backward: (entered - fromSignIdx + 12) % 12 === 11 });
     }
   }
-  return events.sort((a,b) => a.at - b.at || HORO_EVENT_BODIES.indexOf(a.body) - HORO_EVENT_BODIES.indexOf(b.body));
+  events.push(...detectExactHoroscopeAspects(start, end, position));
+  return events.sort((a,b) => a.at - b.at || HORO_BODIES.indexOf(a.body) - HORO_BODIES.indexOf(b.body));
+}
+/* Unwrap signed relative longitude within each short interval. Refine
+   the phase extremum at a relative station so a brief approach and
+   return can yield two separate roots. Approximate numerical epochs
+   are for day ownership and quadrature, not observed event times. */
+function detectExactHoroscopeAspects(start, end, position) {
+  const ticks = [start - 1, start];
+  for (let at = start + DAY_MS / 24; at < end - 1; at += DAY_MS / 24) ticks.push(at);
+  if (ticks[ticks.length - 1] < end - 1) ticks.push(end - 1);
+  const targets = [0, 60, 90, 120, 180, 240, 270, 300];
+  const bodies = HORO_BODIES.slice().sort();
+  const events = new Map();
+  for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
+    const body = bodies[i], other = bodies[j], pair = body + "/" + other;
+    const longitude = at => norm360(position(body, at)?.lon - position(other, at)?.lon);
+    const speed = at => position(body, at)?.velocity - position(other, at)?.velocity;
+    if (!Number.isFinite(longitude(start)) || !Number.isFinite(speed(start))) continue;
+    for (let k = 1; k < ticks.length; k++) {
+      const lo = ticks[k - 1], hi = ticks[k], origin = longitude(lo);
+      const phase = at => origin + norm180(longitude(at) - origin);
+      const cuts = [lo, hi];
+      const v0 = speed(lo), v1 = speed(hi);
+      if (hi - lo > 2 && v0 * v1 < 0) {
+        const direction = v0 > 0 ? 1 : -1;
+        let left = lo, right = hi;
+        while (right - left > 4) {
+          const m1 = left + Math.floor((right - left) / 3);
+          const m2 = right - Math.floor((right - left) / 3);
+          if (direction * phase(m1) < direction * phase(m2)) left = m1;
+          else right = m2;
+        }
+        let extremum = left;
+        for (let at = left + 1; at <= right; at++)
+          if (direction * phase(at) > direction * phase(extremum)) extremum = at;
+        if (extremum > lo && extremum < hi) cuts.splice(1, 0, extremum);
+      }
+      for (let n = 1; n < cuts.length; n++) {
+        const a = cuts[n - 1], b = cuts[n], from = phase(a), to = phase(b);
+        for (const target of targets) {
+          const goal = target + 360 * Math.round((from - target) / 360);
+          const rising = from < goal && to >= goal;
+          const falling = from > goal && to <= goal;
+          if (!rising && !falling) continue;
+          let left = a, right = b;
+          while (right - left > 1) {
+            const mid = left + Math.floor((right - left) / 2);
+            if (rising ? phase(mid) < goal : phase(mid) > goal) left = mid;
+            else right = mid;
+          }
+          if (right < start || right >= end) continue;
+          const angle = Math.min(target, 360 - target);
+          events.set(pair + "/" + angle + "/" + right,
+            { type: "aspect", body, other, pair, angle, at: right });
+        }
+      }
+    }
+  }
+  return [...events.values()];
 }
 let horoscopeEventCache = null;
 function horoscopeEventsForDate(date) {
@@ -294,21 +350,50 @@ const HORO_ELEMENT_CUES = {
   air: { colors: [1, 2, 10, 12], dirs: [7, 0, 1] },
   water: { colors: [4, 7, 12, 15], dirs: [3, 4, 5] },
 };
+/* Nearest oriented exact branch is stable at conjunction/opposition;
+   reversing the bodies flips both residual and relative speed. */
+function horoscopeAspectResidual(delta, angle) {
+  const positive = norm180(delta - angle), negative = norm180(delta + angle);
+  return Math.abs(positive) <= Math.abs(negative) ? positive : negative;
+}
+function horoscopeSmoothstep(x) {
+  x = Math.max(0, Math.min(1, x));
+  return x * x * (3 - 2 * x);
+}
 function horoscopeAspect(a, b) {
-  const distance = Math.abs(norm180(a.lon - b.lon));
+  const delta = norm180(a.lon - b.lon);
   for (const rule of HORO_ASPECTS) {
-    const deviation = Math.abs(distance - rule.angle);
-    if (deviation <= rule.orb) {
-      return { angle: rule.angle, deviation, strength: 1 - deviation / rule.orb,
-        zh: rule.zh, en: rule.en, kind: rule.kind };
+    const residual = horoscopeAspectResidual(delta, rule.angle);
+    const deviation = Math.abs(residual);
+    if (deviation > rule.orb) continue;
+    const cfg = HORO_MODEL.aspectDynamics;
+    const relativeSpeed = Number.isFinite(a.velocity) && Number.isFinite(b.velocity)
+      ? a.velocity - b.velocity : null;
+    let state = null, dynamicWeight = 1;
+    // Missing velocities cannot justify a motion label; use neutral weight.
+    if (relativeSpeed !== null) {
+      const speed = Math.abs(relativeSpeed), applying = residual * relativeSpeed < 0;
+      state = deviation <= cfg.exactTolerance ? "exact" :
+        speed <= cfg.stationaryTolerance ? "stationary" : applying ? "applying" : "separating";
+      const speedMix = horoscopeSmoothstep((speed - cfg.stationaryTolerance) /
+        (cfg.speedBlend - cfg.stationaryTolerance));
+      const directional = cfg.stationary + speedMix *
+        ((applying ? cfg.applying : cfg.separating) - cfg.stationary);
+      const distanceMix = horoscopeSmoothstep((deviation - cfg.exactTolerance) /
+        (cfg.exactBlend - cfg.exactTolerance));
+      dynamicWeight = cfg.exact + distanceMix * (directional - cfg.exact);
     }
+    return { angle: rule.angle, deviation, strength: 1 - deviation / rule.orb,
+      zh: rule.zh, en: rule.en, kind: rule.kind, relativeSpeed, state, dynamicWeight };
   }
   return null;
 }
+
 const HORO_PLANETS = ["mercury", "venus", "mars", "jupiter", "saturn"];
 function horoscopeAspectValue(aspect, a, b) {
-  if (aspect.kind === "support") return 0.65 * aspect.strength;
-  if (aspect.kind === "challenge") return -0.85 * aspect.strength;
+  const strength = aspect.strength * (aspect.dynamicWeight ?? 1);
+  if (aspect.kind === "support") return 0.65 * strength;
+  if (aspect.kind === "challenge") return -0.85 * strength;
   // A planet conjunct the Sun is read through combustion/cazimi instead
   // (horoscopeSolarCondition), so the same closeness is not scored twice.
   if ((a.key === "sun" && HORO_PLANETS.includes(b.key)) ||
@@ -317,9 +402,9 @@ function horoscopeAspectValue(aspect, a, b) {
   const keys = [a.key, b.key];
   const favorable = keys.filter(k => k === "venus" || k === "jupiter").length;
   const demanding = keys.filter(k => k === "mars" || k === "saturn").length;
-  return 0.55 * (favorable - demanding) * aspect.strength;
+  return 0.55 * (favorable - demanding) * strength;
 }
-/* Editorial weights of the traditional-inspired model (v3.0 sampling). Kept in one
+/* Editorial weights of the traditional-inspired model (v3.1 dynamics). Kept in one
    table so the distribution simulation and tests can reason about them. */
 const HORO_MODEL = {
   // Jupiter and Saturn stay in one sign for one to three years. Their
@@ -336,6 +421,11 @@ const HORO_MODEL = {
   // closeness; within 17′ (cazimi) it is traditionally strengthened.
   combustOrb: 8.5, combust: -0.35, cazimiOrb: 17 / 60, cazimi: 0.3,
   houseBonus: 0.35,
+  aspectDynamics: {
+    applying: 1.10, exact: 1.15, separating: 0.90, stationary: 1.00,
+    exactTolerance: 0.05, exactBlend: 0.75, // degrees
+    stationaryTolerance: 0.01, speedBlend: 0.05, // degrees/day
+  },
   // raw score → 1..5 stars around 3.
   starScale: 2.0,
   // Midpoints of four equal elapsed-time intervals of the local civil day.
@@ -374,18 +464,37 @@ function horoscopeStars(raw) {
 function horoscopeTone(raw) {
   return raw >= 0.28 ? "support" : raw <= -0.28 ? "challenge" : "neutral";
 }
+/* Cache pair geometry across signs only for immutable sky snapshots.
+   Allocate the signed net aspect cap proportionally for an additive audit. */
+const horoscopeAspectCache = new WeakMap();
+function horoscopeBodyAspects(p, positions) {
+  const immutable = Object.isFrozen(positions) && positions.every(Object.isFrozen);
+  let byBody = immutable ? horoscopeAspectCache.get(positions) : null;
+  if (byBody?.has(p.key)) return byBody.get(p.key);
+  const aspects = positions.filter(q => q.key !== p.key).map(q => {
+    const aspect = horoscopeAspect(p, q);
+    return aspect && { ...aspect, body: p.key, other: q.key,
+      pair: [p.key, q.key].sort().join("/"), value: horoscopeAspectValue(aspect, p, q) };
+  }).filter(Boolean).sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.deviation - b.deviation);
+  const sum = aspects.reduce((total, aspect) => total + aspect.value, 0);
+  const total = Math.max(-0.9, Math.min(0.9, sum));
+  const scale = sum === 0 ? 1 : total / sum;
+  const result = { aspects: aspects.map(a => ({ ...a, cappedValue: a.value * scale })), total };
+  if (immutable) {
+    result.aspects.forEach(Object.freeze);
+    Object.freeze(result.aspects);
+    Object.freeze(result);
+    if (!byBody) horoscopeAspectCache.set(positions, byBody = new Map());
+    byBody.set(p.key, result);
+  }
+  return result;
+}
 /* One body's state against the selected solar sign in one snapshot. */
 function horoscopeBodyState(p, positions, signIdx) {
   const house = (p.signIdx - signIdx + 12) % 12 + 1;
   const distance = Math.min(house - 1, 13 - house);
   const relation = [0.55, 0, 0.55, -0.8, 0.95, 0, -0.85][distance];
-  const aspects = positions.filter(q => q.key !== p.key).map(q => {
-    const aspect = horoscopeAspect(p, q);
-    return aspect && { ...aspect, other: q.key, value: horoscopeAspectValue(aspect, p, q) };
-  }).filter(Boolean).sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.deviation - b.deviation);
-  // Limit the contribution of overlapping aspects so stelliums do not
-  // overwhelm house/sign interpretation.
-  const aspectValue = Math.max(-0.9, Math.min(0.9, aspects.reduce((sum, a) => sum + a.value, 0)));
+  const { aspects, total: aspectValue } = horoscopeBodyAspects(p, positions);
   const dignity = horoscopeDignity(p.key, p.signIdx);
   const solar = horoscopeSolarCondition(p, positions);
   const scale = HORO_MODEL.placementScale[p.key] ?? 1;
@@ -398,13 +507,13 @@ function horoscopeBodyState(p, positions, signIdx) {
   return { house, aspects, dignity: dignity.conditions, solar, base, components, placementScale: scale };
 }
 /* Pure scoring of one coherent sky snapshot. Every body's aspects see
-   exactly the same positions. These weights and the star conversion are
-   unchanged from v2; only the daily integration is new. */
+   exactly the same positions. Relative motion weights aspect strength;
+   other factors and the star conversion are unchanged. */
 const HORO_FACTORS = ["relation", "dignity", "aspect", "solar", "retrograde", "house"];
 const horoscopeFactorTotal = components => HORO_FACTORS.reduce((sum, key) => sum + components[key], 0);
-function horoscopeFocus(p) {
+function horoscopeFocus(p, aspects = p.aspects) {
   return { key: p.key, signIdx: p.signIdx, house: p.house, retrograde: p.retrograde,
-    dignity: p.dignity, solar: p.solar ? p.solar.kind : null, aspect: p.aspects[0] || null };
+    dignity: p.dignity, solar: p.solar ? p.solar.kind : null, aspect: aspects[0] || null };
 }
 function horoscopeDomainResult(key, contributions) {
   const raw = contributions.reduce((sum, term) => sum + term.value, 0);
@@ -432,7 +541,8 @@ function scoreHoroscope(signIdx, positions) {
       const factors = { ...p.components,
         house: domain.houses.includes(p.house) ? p.placementScale * HORO_MODEL.houseBonus : 0 };
       const components = Object.fromEntries(HORO_FACTORS.map(key => [key, factors[key] * share]));
-      return { key: p.key, value: horoscopeFactorTotal(components), components, focus: horoscopeFocus(p) };
+      const aspects = p.aspects.map(a => ({ ...a, contribution: a.cappedValue * share }));
+      return { key: p.key, value: horoscopeFactorTotal(components), components, aspects, focus: horoscopeFocus(p, aspects) };
     });
     return horoscopeDomainResult(domain.key, contributions);
   });
@@ -520,8 +630,10 @@ function scoreHoroscopeSamples(signIdx, samples) {
       const terms = scored.map(sample => {
         const term = sample.score.domains[i].contributions.find(t => t.key === initial.key);
         const components = Object.fromEntries(HORO_FACTORS.map(key => [key, term.components[key] * sample.weight]));
-        return { at: sample.at, weight: sample.weight, value: horoscopeFactorTotal(components), components,
-          focus: { ...term.focus, sampleAt: sample.at, sampleLabel: sample.label } };
+        const aspects = term.aspects.map(a => ({ ...a, sampleAt: sample.at,
+          contribution: a.contribution * sample.weight }));
+        return { at: sample.at, weight: sample.weight, value: horoscopeFactorTotal(components), components, aspects,
+          focus: { ...term.focus, aspect: aspects[0] || null, sampleAt: sample.at, sampleLabel: sample.label } };
       });
       const components = Object.fromEntries(HORO_FACTORS.map(key =>
         [key, terms.reduce((sum, term) => sum + term.components[key], 0)]));
@@ -675,6 +787,21 @@ function horoscopeFocusCopy(f, lang) {
    every explanatory sentence from the stored domain score and real focus.
    Aspect guidance describes that individual aspect, not the aggregate
    rating; a zero-strength orb boundary is explicitly non-contributing. */
+function horoscopeAspectMotionCopy(f, lang) {
+  const a = f.aspect;
+  if (!a?.state) return "";
+  const zh = lang === "zh", names = I18N[lang].astro.bodies;
+  const timing = f.sampleAt != null ? (zh ? "在该代表采样时刻，" : "At this representative sample, ") :
+    (zh ? "在该星位快照中，" : "In this sky snapshot, ");
+  const motion = {
+    applying: ["正在接近精确相位（入相）", "is approaching its exact angle (applying)"],
+    separating: ["正在远离精确相位（出相）", "is moving away from its exact angle (separating)"],
+    exact: ["处于近似精确相位容差内", "is within the near-exact angle tolerance"],
+    stationary: ["相对运动极小，入相与出相暂不确定", "has very little relative motion; applying or separating is uncertain"],
+  }[a.state];
+  return zh ? timing + names[f.key] + "与" + names[a.other] + "的" + a.zh + motion[0] + "。"
+    : timing + "the " + a.en + " between " + names[f.key] + " and " + names[a.other] + " " + motion[1] + ".";
+}
 function horoscopeDomainCopy(d, h, lang) {
   const zh = lang === "zh";
   const li = zh ? 0 : 1;
@@ -707,6 +834,8 @@ function horoscopeDomainCopy(d, h, lang) {
         : `The ${a.en} links ${names[f.key]} (${bodyTheme}) and ${names[a.other]} (${otherTheme}). ${guidance[0].toUpperCase() + guidance.slice(1)}.`;
     }
   }
+  const motion = horoscopeAspectMotionCopy(f, lang);
+  if (motion) aspectInterpretation += (aspectInterpretation ? " " : "") + motion;
   let conditionInterpretation = "";
   if (f.dignity?.length) {
     const labels = f.dignity.map(c => HORO_CONDITION_LABELS[c][li]).join(zh ? "、" : " and ");
@@ -761,7 +890,7 @@ function horoscopeBalanceCopy(d, lang) {
    reciprocal descriptions of the same aspect from being repeated. */
 function horoscopeFocusKey(f) {
   return JSON.stringify([f.sampleAt ?? null, f.key, f.signIdx, f.house, f.retrograde, f.dignity || [], f.solar || null,
-    f.aspect ? [f.aspect.other, f.aspect.angle, f.aspect.strength, f.aspect.value] : null]);
+    f.aspect ? [f.aspect.other, f.aspect.angle, f.aspect.strength, f.aspect.value, f.aspect.state, f.aspect.dynamicWeight] : null]);
 }
 function horoscopeFocusGroups(domains) {
   const groups = new Map();
@@ -796,6 +925,12 @@ const HORO_DIRECT_ACTIONS = {
 };
 function horoscopeEventLabel(event, lang) {
   const zh = lang === "zh", body = I18N[lang].astro.bodies[event.body];
+  if (event.type === "aspect") {
+    const rule = HORO_ASPECTS.find(a => a.angle === event.angle);
+    const other = I18N[lang].astro.bodies[event.other];
+    return zh ? body + "与" + other + "近似精确" + rule.zh :
+      body + " / " + other + " · near-exact " + rule.en;
+  }
   if (event.type === "ingress") {
     const sign = SIGNS[event.toSignIdx][lang];
     return zh ? body + (event.backward ? "逆行回到" : "进入") + sign
@@ -810,6 +945,18 @@ function horoscopeEventCopy(event, signIdx, lang) {
   const body = I18N[lang].astro.bodies[event.body];
   const title = horoscopeEventLabel(event, lang);
   const theme = HORO_BODY_THEMES[event.body][li];
+  if (event.type === "aspect") {
+    const other = I18N[lang].astro.bodies[event.other], rule = HORO_ASPECTS.find(a => a.angle === event.angle);
+    const otherTheme = HORO_BODY_THEMES[event.other][li];
+    const guidance = (event.angle === 0 ? HORO_CONJUNCTION_ACTIONS.neutral : HORO_ASPECT_ACTIONS[event.angle])[li];
+    return { title,
+      evidence: zh ? "近似星历显示，本地自然日内两者达到" + rule.angle + "°的主要相位；不是精确观测时刻。"
+        : "The approximate ephemeris places this " + rule.angle + "° major aspect within the local civil day; no precise observed timing is implied.",
+      interpretation: zh ? body + "象征" + theme + "，" + other + "象征" + otherTheme + "。这只是传统规则的象征性主题，不预示吉凶。"
+        : "Symbolically, " + body + " represents " + theme + " and " + other + " represents " + otherTheme + ". This is a traditional reflection prompt, not a prediction.",
+      suggestion: zh ? guidance + "。" : guidance[0].toUpperCase() + guidance.slice(1) + ".",
+    };
+  }
   if (event.type === "ingress") {
     const from = houseFor(event.fromSignIdx), to = houseFor(event.toSignIdx);
     const oldHouse = HORO_HOUSE_THEMES[from - 1], newHouse = HORO_HOUSE_THEMES[to - 1];
@@ -840,10 +987,16 @@ function horoscopeEventCopy(event, signIdx, lang) {
 function horoscopeEventSummary(events, lang) {
   if (!events?.length) return "";
   const zh = lang === "zh";
-  // A single quiet line even on dates with multiple crossings; all
-  // events (ordered by time) remain available in the existing reader.
-  const first = horoscopeEventLabel(events[0], lang);
-  const more = events.length - 1;
+  // Ingress/station > non-lunar aspect > new/full Moon. Routine lunar
+  // encounters stay in the reader and the sampling boundaries.
+  const priority = e => e.type !== "aspect" ? 0 :
+    e.body !== "moon" && e.other !== "moon" ? 1 :
+    e.pair === "moon/sun" && (e.angle === 0 || e.angle === 180) ? 2 : Infinity;
+  const important = events.filter(e => Number.isFinite(priority(e)))
+    .sort((a,b) => priority(a) - priority(b) || a.at - b.at);
+  if (!important.length) return "";
+  const first = horoscopeEventLabel(important[0], lang);
+  const more = important.length - 1;
   return zh ? "今日天象 · " + first + (more ? ` · 另有${more}项` : "")
     : "Sky event today · " + first + (more ? ` · ${more} more` : "");
 }
@@ -868,8 +1021,8 @@ function horoscopeCopy(h, lang) {
     advice: detail.advice, eventSummary: horoscopeEventSummary(h.events, lang),
     basis: h.samples?.length
       ? (zh
-        ? "评分：按本地自然日分为四个等时长区间，月亮及其他天体换座、顺逆行转换时细分；每段中点统一计算七颗天体，按时长平均原始贡献后转换为星级。星位解读为实际代表采样，而非全天固定状态。传统占星规则（太阳星座宫位）"
-        : "Ratings integrate all seven bodies at the midpoints of four equal elapsed-time intervals of the local civil day, splitting at ingresses and stations. Unrounded contributions are duration-weighted before conversion to stars. Sky readings describe representative samples, not fixed all-day placements. Traditional-inspired solar-sign rules")
+        ? "评分：按本地自然日分为四个等时长区间，月亮及其他天体换座、顺逆行转换与主要精确相位时细分；每段中点统一计算七颗天体及相对运动，按时长平均原始贡献后转换为星级。星位解读为实际代表采样，而非全天固定状态。传统占星规则（太阳星座宫位）"
+        : "Ratings integrate all seven bodies at the midpoints of four equal elapsed-time intervals of the local civil day, splitting at ingresses, stations and exact major aspects. Relative motion weights aspect strength. Unrounded contributions are duration-weighted before conversion to stars. Sky readings describe representative samples, not fixed all-day placements. Traditional-inspired solar-sign rules")
       : (zh ? "评分：单次近似星位快照；传统占星规则（太阳星座宫位）"
         : "Ratings use one approximate sky snapshot. Traditional-inspired solar-sign rules"),
     cues: zh ? "趣味幸运提示" : "Playful lucky cues" };
