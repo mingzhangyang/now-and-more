@@ -9,8 +9,8 @@
    - 星位 star positions: REAL astronomy, computed live from JPL Keplerian
      elements (approximate, sign-level accuracy).
    - 每日运势 daily horoscope: traditional-inspired entertainment rules
-     based on a fixed local-noon ephemeris (the Moon is averaged over
-     three local-time samples); seeded variation is confined to advice
+     based on duration-weighted complete ephemeris snapshots over the local
+     civil day; seeded variation is confined to advice
      wording and symbolic lucky cues. Weights: HORO_MODEL. */
 
 /* Deterministic PRNG (mulberry32) for date-seeded picks. */
@@ -319,7 +319,7 @@ function horoscopeAspectValue(aspect, a, b) {
   const demanding = keys.filter(k => k === "mars" || k === "saturn").length;
   return 0.55 * (favorable - demanding) * aspect.strength;
 }
-/* Editorial weights of the traditional-inspired model (v2). Kept in one
+/* Editorial weights of the traditional-inspired model (v3.0 sampling). Kept in one
    table so the distribution simulation and tests can reason about them. */
 const HORO_MODEL = {
   // Jupiter and Saturn stay in one sign for one to three years. Their
@@ -338,10 +338,9 @@ const HORO_MODEL = {
   houseBonus: 0.35,
   // raw score → 1..5 stars around 3.
   starScale: 2.0,
-  // A daily reading covers the day, not one instant: the fast Moon (about
-  // 13° a day) is scored as the mean of three local-time samples. The
-  // displayed evidence remains the noon placement.
-  moonSampleHours: [6, 12, 18],
+  // Midpoints of four equal elapsed-time intervals of the local civil day.
+  // Split at approximate ingresses/stations, including lunar ingresses.
+  dayIntervals: 4,
 };
 const HORO_EXALTATION_SIGNS = { sun: 0, moon: 1, mercury: 5, venus: 11, mars: 9, jupiter: 3, saturn: 6 };
 const HORO_CONDITION_LABELS = {
@@ -391,81 +390,152 @@ function horoscopeBodyState(p, positions, signIdx) {
   const solar = horoscopeSolarCondition(p, positions);
   const scale = HORO_MODEL.placementScale[p.key] ?? 1;
   const retrograde = p.retrograde ? HORO_MODEL.retrograde[p.key] ?? 0 : 0;
+  const components = {
+    relation: scale * relation, dignity: scale * dignity.value,
+    aspect: aspectValue, solar: solar ? solar.value : 0, retrograde: -retrograde,
+  };
   const base = scale * (relation + dignity.value) + aspectValue + (solar ? solar.value : 0) - retrograde;
-  return { house, aspects, dignity: dignity.conditions, solar, base, placementScale: scale };
+  return { house, aspects, dignity: dignity.conditions, solar, base, components, placementScale: scale };
 }
-/* Pure, injectable scoring. The date seed does NOT participate in scores.
-   Whole-sign aspects to the selected solar sign, relevant solar houses,
-   ruler weighting, essential dignity, combustion, retrograde and
-   degree-based planet-to-planet aspects are an explicitly editorial model
-   inspired by traditional astrology. `moonSamples` (optional) are Moon
-   placements across the day; without them the Moon uses `positions`. */
-function scoreHoroscope(signIdx, positions, moonSamples) {
-  const ruler = HORO_RULERS[signIdx];
-  const planets = positions.map(p => {
-    const state = horoscopeBodyState(p, positions, signIdx);
-    // Share of the day each solar house holds this body (Moon may change sign).
-    let houseShare = { [state.house]: 1 }, base = state.base;
-    if (p.key === "moon" && moonSamples?.length) {
-      houseShare = {};
-      base = 0;
-      for (const m of moonSamples) {
-        const snapshot = positions.map(q => q.key === "moon" ? m : q);
-        const s = horoscopeBodyState(m, snapshot, signIdx);
-        houseShare[s.house] = (houseShare[s.house] || 0) + 1 / moonSamples.length;
-        base += s.base / moonSamples.length;
-      }
-    }
-    return { ...p, ...state, base, houseShare };
-  });
-  const domains = HORO_DOMAINS.map(domain => {
-    // Always include the traditional ruler; weight relevant bodies more.
-    const relevant = planets.filter(p => domain.bodies.includes(p.key) || p.key === ruler);
-    const values = relevant.map(p => {
-      const weight = (domain.bodies.includes(p.key) ? 1 : 0.6) + (p.key === ruler ? 0.5 : 0);
-      const share = domain.houses.reduce((s, h) => s + (p.houseShare[h] || 0), 0);
-      const value = p.base + p.placementScale * HORO_MODEL.houseBonus * share;
-      return { planet: p, value, weight, impact: value * weight };
-    });
-    const totalWeight = values.reduce((s, v) => s + v.weight, 0);
-    const raw = values.reduce((s, v) => s + v.impact, 0) / totalWeight;
-    // Preserve each body's signed contribution to the unrounded domain
-    // score for explanations. This is a decomposition of the existing
-    // weighted mean, not another scoring rule.
-    const contributions = values.map(v => ({ key: v.planet.key, value: v.impact / totalWeight }));
-    // Pick the focus from the same numbers the explanation reports, so
-    // floating-point ties cannot name a different body than the balance.
-    const driver = contributions.reduce((best, t, i) =>
-      Math.abs(t.value) > Math.abs(contributions[best].value) ? i : best, 0);
-    const p = values[driver].planet;
-    return { key: domain.key, raw, stars: horoscopeStars(raw), contributions,
-      focus: { key: p.key, signIdx: p.signIdx, house: p.house, retrograde: p.retrograde,
-        dignity: p.dignity, solar: p.solar ? p.solar.kind : null,
-        aspect: p.aspects[0] || null } };
-  });
-  const raw = domains.reduce((s, d) => s + d.raw, 0) / domains.length;
-  // Spotlight the strongest deviation from neutral, not a random topic.
+/* Pure scoring of one coherent sky snapshot. Every body's aspects see
+   exactly the same positions. These weights and the star conversion are
+   unchanged from v2; only the daily integration is new. */
+const HORO_FACTORS = ["relation", "dignity", "aspect", "solar", "retrograde", "house"];
+const horoscopeFactorTotal = components => HORO_FACTORS.reduce((sum, key) => sum + components[key], 0);
+function horoscopeFocus(p) {
+  return { key: p.key, signIdx: p.signIdx, house: p.house, retrograde: p.retrograde,
+    dignity: p.dignity, solar: p.solar ? p.solar.kind : null, aspect: p.aspects[0] || null };
+}
+function horoscopeDomainResult(key, contributions) {
+  const raw = contributions.reduce((sum, term) => sum + term.value, 0);
+  const driver = contributions.reduce((best, term) =>
+    Math.abs(term.value) > Math.abs(best.value) ? term : best);
+  return { key, raw, stars: horoscopeStars(raw), contributions, focus: driver.focus };
+}
+function horoscopeRatingResult(domains) {
+  const raw = domains.reduce((sum, d) => sum + d.raw, 0) / domains.length;
   const primary = domains.reduce((best, d) => Math.abs(d.raw) > Math.abs(best.raw) ? d : best);
-  return { stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
+  return { raw, stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
     tone: horoscopeTone(primary.raw) };
 }
-/* The day's sky for one local calendar date: the noon snapshot (shown as
-   evidence) plus Moon samples for scoring. Every caller that scores a
-   real date — including the advice-rotation replay — must use this so
-   replayed days match what was actually shown. */
+function scoreHoroscope(signIdx, positions) {
+  const ruler = HORO_RULERS[signIdx];
+  const planets = positions.map(p => ({ ...p, ...horoscopeBodyState(p, positions, signIdx) }));
+  const domains = HORO_DOMAINS.map(domain => {
+    const relevant = planets.filter(p => domain.bodies.includes(p.key) || p.key === ruler);
+    const weighted = relevant.map(p => ({
+      p, weight: (domain.bodies.includes(p.key) ? 1 : 0.6) + (p.key === ruler ? 0.5 : 0),
+    }));
+    const totalWeight = weighted.reduce((sum, term) => sum + term.weight, 0);
+    const contributions = weighted.map(({p, weight}) => {
+      const share = weight / totalWeight;
+      const factors = { ...p.components,
+        house: domain.houses.includes(p.house) ? p.placementScale * HORO_MODEL.houseBonus : 0 };
+      const components = Object.fromEntries(HORO_FACTORS.map(key => [key, factors[key] * share]));
+      return { key: p.key, value: horoscopeFactorTotal(components), components, focus: horoscopeFocus(p) };
+    });
+    return horoscopeDomainResult(domain.key, contributions);
+  });
+  return horoscopeRatingResult(domains);
+}
+
+/* Split the actual elapsed local day, not a nominal 24-hour UTC day.
+   Equal-width midpoint quadrature includes the night; split intervals at
+   known discontinuities so short-lived pre/post-event states get their
+   correct duration share. The event epochs themselves are approximate. */
+function horoscopeSamplePlan(start, end, cuts = []) {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return [];
+  const edges = [...new Set([
+    start, end,
+    ...Array.from({length: HORO_MODEL.dayIntervals - 1}, (_, i) =>
+      Math.round(start + (end - start) * (i + 1) / HORO_MODEL.dayIntervals)),
+    ...cuts.filter(at => Number.isFinite(at) && at > start && at < end).map(Math.round),
+  ])].sort((a,b) => a - b);
+  return edges.slice(1).map((to, i) => {
+    const from = edges[i];
+    return { from, to, at: from + Math.floor((to - from) / 2), weight: (to - from) / (end - start) };
+  });
+}
+function horoscopeSampleLabel(at) {
+  const date = new Date(at), offset = -date.getTimezoneOffset();
+  const pad = n => String(n).padStart(2, "0");
+  return pad(date.getHours()) + ":" + pad(date.getMinutes()) +
+    " UTC" + (offset < 0 ? "-" : "+") + pad(Math.floor(Math.abs(offset) / 60)) + ":" + pad(Math.abs(offset) % 60);
+}
+/* The Moon's routine ingress is a scoring boundary, not a special card
+   event. On one civil day its longitude moves monotonically by <30°. */
+function horoscopeMoonIngress(start, end) {
+  const signAt = at => signIndexFromLongitude(moonLongitude(new Date(at)));
+  const first = signAt(start);
+  if (first === signAt(end - 1)) return null;
+  let lo = start, hi = end - 1;
+  while (hi - lo > 1) {
+    const mid = lo + Math.floor((hi - lo) / 2);
+    if (signAt(mid) === first) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+const horoscopeSkyCache = new Map();
 function horoscopeSky(date) {
   const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
-  const positions = planetPositions(new Date(y, m, d, 12));
-  const moonSamples = HORO_MODEL.moonSampleHours.map(h => {
-    if (h === 12) return positions.find(p => p.key === "moon");
-    const lon = moonLongitude(new Date(y, m, d, h));
-    return { key: "moon", lon, signIdx: signIndexFromLongitude(lon), retrograde: false };
+  const start = new Date(y,m,d).valueOf(), end = new Date(y,m,d+1).valueOf();
+  const key = start + "/" + end;
+  if (horoscopeSkyCache.has(key)) {
+    const cached = horoscopeSkyCache.get(key);
+    horoscopeSkyCache.delete(key);
+    horoscopeSkyCache.set(key, cached);
+    return cached;
+  }
+  const events = horoscopeEventsForDate(date);
+  const moonIngress = horoscopeMoonIngress(start, end);
+  const cuts = events.map(event => event.at);
+  if (moonIngress !== null) cuts.push(moonIngress);
+  const samples = horoscopeSamplePlan(start, end, cuts).map(sample => Object.freeze({
+    ...sample, label: horoscopeSampleLabel(sample.at),
+    positions: Object.freeze(planetPositions(new Date(sample.at)).map(Object.freeze)),
+  }));
+  const sky = Object.freeze({ start, end, events, moonIngress, samples: Object.freeze(samples) });
+  // A handful of civil days covers advice replay and all twelve signs.
+  horoscopeSkyCache.set(key, sky);
+  if (horoscopeSkyCache.size > 4) horoscopeSkyCache.delete(horoscopeSkyCache.keys().next().value);
+  return sky;
+}
+/* Integrate unrounded, normalized contributions (never rounded stars).
+   Each daily term retains its six additive factors and each sample's
+   weighted value/evidence. Pick the strongest actual contributing sample
+   in the direction of the integrated term; ties keep chronological order.
+   Consequently displayed evidence is a real sampled sky, not a noon proxy. */
+function scoreHoroscopeSamples(signIdx, samples) {
+  const totalWeight = samples.reduce((sum, sample) => sum + sample.weight, 0);
+  if (!samples.length || !Number.isFinite(totalWeight) || totalWeight <= 0 ||
+      samples.some(sample => !Number.isFinite(sample.weight) || sample.weight <= 0))
+    throw new RangeError("Invalid horoscope samples");
+  const scored = samples.map(sample => ({
+    ...sample, weight: sample.weight / totalWeight,
+    score: scoreHoroscope(signIdx, sample.positions),
+  }));
+  const domains = HORO_DOMAINS.map((domain, i) => {
+    const contributions = scored[0].score.domains[i].contributions.map(initial => {
+      const terms = scored.map(sample => {
+        const term = sample.score.domains[i].contributions.find(t => t.key === initial.key);
+        const components = Object.fromEntries(HORO_FACTORS.map(key => [key, term.components[key] * sample.weight]));
+        return { at: sample.at, weight: sample.weight, value: horoscopeFactorTotal(components), components,
+          focus: { ...term.focus, sampleAt: sample.at, sampleLabel: sample.label } };
+      });
+      const components = Object.fromEntries(HORO_FACTORS.map(key =>
+        [key, terms.reduce((sum, term) => sum + term.components[key], 0)]));
+      const value = horoscopeFactorTotal(components);
+      const strength = term => value === 0 ? Math.abs(term.value) : Math.sign(value) * term.value;
+      const representative = terms.reduce((best, term) => strength(term) > strength(best) ? term : best);
+      return { key: initial.key, value, components, focus: representative.focus, samples: terms };
+    });
+    return horoscopeDomainResult(domain.key, contributions);
   });
-  return { positions, moonSamples };
+  return { ...horoscopeRatingResult(domains), samples: scored.map(({from,to,at,weight,label}) => ({from,to,at,weight,label})) };
 }
 function scoreHoroscopeDay(date, signIdx) {
-  const sky = horoscopeSky(date);
-  return scoreHoroscope(signIdx, sky.positions, sky.moonSamples);
+  return scoreHoroscopeSamples(signIdx, horoscopeSky(date).samples);
 }
 /* Context matching is restricted to the preassigned date window to
    guarantee a seven-day no-repeat interval without local storage, network
@@ -473,7 +543,7 @@ function scoreHoroscopeDay(date, signIdx) {
    permutation partitions ten unique actions into windows of 3, 3, 2, 2.
    Each action belongs to exactly one window. Across successive ten-day
    cycles its closest possible recurrence is 10 - (3 - 1) = 8 days.
-   Within a window we replay at most two earlier local-noon snapshots and
+   Within a window we replay at most two earlier local-day integrated scores and
    remove any action already selected for the same domain/body. */
 const HORO_ADVICE_WINDOW_ENDS = [3, 6, 8, 10];
 const HORO_ADVICE_HOUSE_TAGS = [
@@ -563,18 +633,19 @@ function horoscopeActionFor(d, h) {
   // keeps the pure presentation usable with injected score-only fixtures.
   return pool.find(action => action.id === h.actionChoices?.[d.key]) || bestHoroscopeAction(d, pool);
 }
-/* One local calendar day = one fixed sky (noon, plus Moon samples). Language,
+/* One local calendar day = one set of coherent weighted sky samples. Language,
    refresh time, Math.random, and lucky-cue choices cannot affect scores. */
 function makeHoroscope(date, signIdx) {
   const noon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
-  const scored = scoreHoroscopeDay(noon, signIdx);
+  const sky = horoscopeSky(noon);
+  const scored = scoreHoroscopeSamples(signIdx, sky.samples);
   const seed = (date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()) * 16 + signIdx;
   const rng = seededRng(seed);
   const choose = list => list[Math.floor(rng() * list.length)];
   const domain = HORO_DOMAINS.find(d => d.key === scored.primary);
   const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
   return { signIdx, ...scored, actionChoices: chooseHoroscopeActions(noon, signIdx, scored),
-    events: horoscopeEventsForDate(noon),
+    events: sky.events,
     adviceIdx: Math.floor(rng() * HORO_ADVICE_VARIANTS),
     // Symbolic entertainment cues, NOT astronomical predictions.
     luckyNumber: scored.focus.house + 12 * Math.floor(rng() * 8),
@@ -597,7 +668,8 @@ function horoscopeFocusCopy(f, lang) {
     ? (zh ? body + "与" + a.bodies[f.aspect.other] + f.aspect.zh
       : body + " / " + a.bodies[f.aspect.other] + " · " + f.aspect.en)
     : "";
-  return { evidence, aspect };
+  const prefix = f.sampleLabel ? (zh ? "代表采样约 " : "Representative sample ~") + f.sampleLabel + " · " : "";
+  return { evidence: prefix + evidence, aspect };
 }
 /* Select a wording frame from the date seed, but derive the action and
    every explanatory sentence from the stored domain score and real focus.
@@ -624,8 +696,8 @@ function horoscopeDomainCopy(d, h, lang) {
     const otherTheme = HORO_BODY_THEMES[a.other][li];
     if (a.strength === 0) {
       aspectInterpretation = zh
-        ? `${a.zh}处于容许度边缘，在本次评分中不产生相位贡献。`
-        : `The ${a.en} is at the edge of its orb and contributes no aspect weight to this rating.`;
+        ? `${a.zh}处于容许度边缘，在${f.sampleLabel ? "该采样时刻" : "本次评分中"}不产生相位贡献。`
+        : `The ${a.en} is at the edge of its orb and contributes no aspect weight ${f.sampleLabel ? "at this sample" : "to this rating"}.`;
     } else {
       const guidance = a.angle === 0
         ? HORO_CONJUNCTION_ACTIONS[a.value > 0 ? "support" : a.value < 0 ? "challenge" : "neutral"][li]
@@ -684,11 +756,11 @@ function horoscopeBalanceCopy(d, lang) {
   return zh ? "规则评分：" + parts.join("；") + "。"
     : "Rule-based score: " + parts.join("; ") + ".";
 }
-/* A single stored noon snapshot can give several domains the same focus.
+/* Several domains can share evidence from the same representative sample.
    Group by evidence, not by localized text or rounded score, and keep
    reciprocal descriptions of the same aspect from being repeated. */
 function horoscopeFocusKey(f) {
-  return JSON.stringify([f.key, f.signIdx, f.house, f.retrograde, f.dignity || [], f.solar || null,
+  return JSON.stringify([f.sampleAt ?? null, f.key, f.signIdx, f.house, f.retrograde, f.dignity || [], f.solar || null,
     f.aspect ? [f.aspect.other, f.aspect.angle, f.aspect.strength, f.aspect.value] : null]);
 }
 function horoscopeFocusGroups(domains) {
@@ -701,11 +773,12 @@ function horoscopeFocusGroups(domains) {
   return groups;
 }
 function horoscopeAspectKey(f) {
-  return f.aspect ? JSON.stringify([[f.key, f.aspect.other].sort(), f.aspect.angle]) : null;
+  return f.aspect ? JSON.stringify([f.sampleAt ?? null, [f.key, f.aspect.other].sort(), f.aspect.angle]) : null;
 }
 /* The daily event interpretation is a separate editorial layer: it
    describes the actual crossing/station and the selected sign's solar
-   house, without modifying daily ratings, lucky cues or advice choices. */
+   house. The event text never adds an independent scoring bonus; its
+   epoch only splits the daily integration interval. */
 const HORO_INGRESS_ACTIONS = {
   sun: ["重新审视近期目标，确定一件接下来值得投入的事", "review your recent goals and identify one worthwhile next priority"],
   mercury: ["挑一个值得深入了解的话题，先核实关键信息", "choose a topic worth exploring and verify its key details"],
@@ -778,8 +851,8 @@ function horoscopeEventParagraphs(h, lang) {
   if (!h.events?.length) return [];
   const zh = lang === "zh";
   const note = zh
-    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；事件可能在正午前或后发生，以下象征提示不改变当天运势评分。"
-    : "Today's sky events | Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. These symbolic prompts do not change the daily ratings.";
+    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；星位变化已通过全天采样计入评分，以下象征提示不另行加减分。"
+    : "Today's sky events | Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. The changing sky is included in the daily samples; these symbolic prompts do not add an independent score adjustment.";
   return [note, ...h.events.map(event => {
     const detail = horoscopeEventCopy(event, h.signIdx, lang);
     return [detail.title, detail.evidence, detail.interpretation,
@@ -793,11 +866,32 @@ function horoscopeCopy(h, lang) {
   const detail = horoscopeDomainCopy(primary, h, lang);
   return { topic: domain[lang], evidence: detail.evidence, aspect: detail.aspect,
     advice: detail.advice, eventSummary: horoscopeEventSummary(h.events, lang),
-    basis: zh ? "评分：其余天体采用本地正午近似星位，月亮贡献取本地 06:00、12:00、18:00 三次采样的平均；展示的星位与相位均为正午快照。传统占星规则（太阳星座宫位）"
-      : "Ratings use approximate local-noon positions for the other bodies; the Moon's contribution averages local 06:00, 12:00 and 18:00 samples. Displayed positions and aspects are noon snapshots. Traditional-inspired solar-sign rules",
+    basis: h.samples?.length
+      ? (zh
+        ? "评分：按本地自然日分为四个等时长区间，月亮及其他天体换座、顺逆行转换时细分；每段中点统一计算七颗天体，按时长平均原始贡献后转换为星级。星位解读为实际代表采样，而非全天固定状态。传统占星规则（太阳星座宫位）"
+        : "Ratings integrate all seven bodies at the midpoints of four equal elapsed-time intervals of the local civil day, splitting at ingresses and stations. Unrounded contributions are duration-weighted before conversion to stars. Sky readings describe representative samples, not fixed all-day placements. Traditional-inspired solar-sign rules")
+      : (zh ? "评分：单次近似星位快照；传统占星规则（太阳星座宫位）"
+        : "Ratings use one approximate sky snapshot. Traditional-inspired solar-sign rules"),
     cues: zh ? "趣味幸运提示" : "Playful lucky cues" };
 }
-/* The reading dialog expands the same stored snapshot into four domain
+/* Show the additive daily audit in scoring units, not percentages or
+   probabilities. Only presentation rounds; stored terms retain precision. */
+function horoscopeContributionCopy(d, lang) {
+  if (!d.contributions?.[0]?.samples) return "";
+  const zh = lang === "zh";
+  const names = I18N[lang].astro.bodies;
+  const labels = zh ? ["宫位关系","庙旺","相位","太阳状态","逆行","领域宫位"]
+    : ["House relation","Dignity","Aspects","Solar condition","Retrograde","Domain houses"];
+  const fmt = n => (n >= 0 ? "+" : "-") + Math.abs(n).toFixed(2);
+  const sep = zh ? "；" : "; ";
+  const bodies = d.contributions.map(term => names[term.key] + " " + fmt(term.value)).join(sep);
+  const factors = HORO_FACTORS.map((key, i) =>
+    labels[i] + " " + fmt(d.contributions.reduce((sum, term) => sum + term.components[key], 0))).join(sep);
+  return (zh ? "全天贡献（约值）：" : "Daily contributions (approx.): ") + bodies + "\n" +
+    (zh ? "因素分解：" : "Factor breakdown: ") + factors +
+    (zh ? "；合计 " : "; total ") + fmt(d.raw);
+}
+/* The reading dialog expands the same stored daily result into four domain
    explanations. No fresh Date, ephemeris calculation, RNG or deck draw. */
 function horoscopeFullText(h, lang) {
   const zh = lang === "zh";
@@ -822,8 +916,9 @@ function horoscopeFullText(h, lang) {
       zh ? `主要依据：${title(group.id)}（${A.bodies[d.focus.key]}）`
         : `Main basis: ${title(group.id)} (${A.bodies[d.focus.key]})`,
       horoscopeBalanceCopy(d, lang),
+      horoscopeContributionCopy(d, lang),
       `${zh ? "建议：" : "Suggestion: "}${detail.advice}`,
-    ].join("\n"));
+    ].filter(Boolean).join("\n"));
   }
   const aspectOwners = new Map();
   for (const group of groups.values()) {

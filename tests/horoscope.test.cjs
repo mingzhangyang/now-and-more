@@ -56,7 +56,7 @@ const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 1
     if (result.opened) $("full-close").listeners.click();
     return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
   }
-  return {makeHoroscope, planetPositions, horoscopeBodyState, horoscopeSky, scoreHoroscopeDay, horoscopeDignity, horoscopeSolarCondition, HORO_MODEL, HORO_ADVICE_FRAMES, HORO_ADVICE_VARIANTS, HORO_CONDITION_LABELS, chooseHoroscopeActions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
+  return {makeHoroscope, planetPositions, horoscopeBodyState, horoscopeSky, scoreHoroscopeDay, scoreHoroscopeSamples, horoscopeSamplePlan, HORO_FACTORS, horoscopeStars, horoscopeDignity, horoscopeSolarCondition, HORO_MODEL, HORO_ADVICE_FRAMES, HORO_ADVICE_VARIANTS, HORO_CONDITION_LABELS, chooseHoroscopeActions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -68,8 +68,10 @@ test("actual date calculation is stable for all 12 signs across local-day times"
       const evening = api.makeHoroscope(new Date(y,m,d,23,59), sign);
       assert.deepEqual(morning, evening);
       const sky = api.horoscopeSky(new Date(y,m,d,7));
-      assert.deepEqual(sky.positions, api.planetPositions(new Date(y,m,d,12)));
-      const computed = api.scoreHoroscope(sign, sky.positions, sky.moonSamples);
+      assert.ok(sky.samples.length >= 4);
+      for (const sample of sky.samples)
+        assert.deepEqual(sample.positions, api.planetPositions(new Date(sample.at)));
+      const computed = api.scoreHoroscopeSamples(sign, sky.samples);
       assert.equal(morning.stars, computed.stars);
       assert.deepEqual(morning.domains, computed.domains);
     }
@@ -98,11 +100,11 @@ test("major aspects handle 0/360 wrap and reject out-of-orb pairs", () => {
   assert.ok(api.horoscopeAspectValue(api.horoscopeAspect(a,b),a,b)>0);
   assert.ok(api.horoscopeAspectValue(api.horoscopeAspect(c,d),c,d)<0);
 });
-test("every day's focus and aspect are traceable to its noon positions; scores and cue indices stay bounded", () => {
+test("every day's focus and additive contributions are traceable to sampled positions; scores and cues stay bounded", () => {
   const seen = new Set();
   for (let offset = 0; offset < 366; offset++) {
     const date = new Date(2026,0,1+offset,12);
-    const positions = api.planetPositions(date);
+    const sky = api.horoscopeSky(date);
     for(let sign = 0; sign < 12; sign++) {
       const h = api.makeHoroscope(date, sign);
       seen.add(h.stars);
@@ -115,7 +117,18 @@ test("every day's focus and aspect are traceable to its noon positions; scores a
         assert.ok(d.contributions.every(t=>keys.includes(t.key)&&Number.isFinite(t.value)));
         const largest=d.contributions.reduce((best,t)=>Math.abs(t.value)>Math.abs(best.value)?t:best);
         assert.equal(largest.key,d.focus.key);
-        const f = d.focus, actual = positions.find(p => p.key === f.key);
+        for (const term of d.contributions) {
+          assert.ok(Math.abs(api.HORO_FACTORS.reduce((s,k)=>s+term.components[k],0)-term.value)<1e-12);
+          assert.ok(Math.abs(term.samples.reduce((s,t)=>s+t.value,0)-term.value)<1e-12);
+          assert.equal(term.samples.length,sky.samples.length);
+          for (const key of api.HORO_FACTORS)
+            assert.ok(Math.abs(term.samples.reduce((s,t)=>s+t.components[key],0)-term.components[key])<1e-12);
+        }
+        const f = d.focus;
+        const sample = sky.samples.find(s => s.at === f.sampleAt);
+        assert.ok(sample);
+        assert.equal(f.sampleLabel, sample.label);
+        const positions = sample.positions, actual = positions.find(p => p.key === f.key);
         assert.ok(actual);
         assert.equal(f.signIdx, actual.signIdx);
         assert.equal(f.retrograde, actual.retrograde);
@@ -207,6 +220,8 @@ test("full-text door opens the same calculated horoscope in both languages and p
     })[ch]);
     assert.ok(dialog.body.includes(escaped(copy.evidence)));
     assert.ok(dialog.body.includes(escaped(copy.basis)));
+    assert.match(dialog.body, lang === "zh" ? /因素分解/ : /Factor breakdown/);
+    assert.match(dialog.body, lang === "zh" ? /代表采样/ : /Representative sample/);
     assert.match(dialog.body, lang === "zh" ? /仅供娱乐/ : /entertainment only/);
     assert.ok(!dialog.body.includes("undefined"));
     assert.equal((dialog.body.match(/<p>/g) || []).length, 8 + groups.size + eventParagraphs.length);
@@ -489,9 +504,9 @@ test("event snapshot is sign-independent, stable through the local day and conte
   assert.deepEqual(h,api.makeHoroscope(evening,0));
   const event=h.events.find(e=>e.body==="sun"&&e.type==="ingress");
   assert.ok(event);
-  const expectedNoon=api.scoreHoroscopeDay(date,0);
-  assert.deepEqual(h.domains,expectedNoon.domains);
-  assert.equal(h.stars,expectedNoon.stars);
+  const expectedDay=api.scoreHoroscopeDay(date,0);
+  assert.deepEqual(h.domains,expectedDay.domains);
+  assert.equal(h.stars,expectedDay.stars);
   for(const lang of ["zh","en"]){
     const first=api.horoscopeEventCopy(event,0,lang), second=api.horoscopeEventCopy(event,6,lang);
     assert.match(first.evidence,lang==="zh"?/第12宫 → 第1宫/:/house 12 → 1/);
@@ -631,54 +646,97 @@ test("retrograde caution is body-specific and slow-planet placements are damped"
   assert.ok(shift("jupiter") > 0 && shift("jupiter") < 0.5 * shift("venus"));
   assert.ok(shift("saturn") < 0.5 * shift("mars"));
 });
-test("the Moon is scored across the day while noon remains the displayed evidence", () => {
-  const base = fixture(120);
-  const moon = lon => ({key:"moon", lon, signIdx: Math.floor(lon / 30), retrograde:false});
-  const same = api.scoreHoroscope(0, base, [moon(120), moon(120), moon(120)]);
-  assert.deepEqual(same, api.scoreHoroscope(0, base));
-  // Moon leaves the trine sign for a square sign late in the day.
-  const moving = api.scoreHoroscope(0, base, [moon(120), moon(120), moon(95)]);
-  const love = h => h.domains.find(d => d.key === "love");
-  assert.ok(love(moving).raw < love(same).raw);
-  for (const d of moving.domains) if (d.focus.key === "moon") assert.equal(d.focus.signIdx, 4);
-  // Real dates: makeHoroscope uses the 06/12/18 local samples.
-  assert.deepEqual(api.HORO_MODEL.moonSampleHours, [6, 12, 18]);
-  const sky = api.horoscopeSky(new Date(2026, 10, 25, 21));
-  assert.equal(sky.moonSamples.length, 3);
-  assert.equal(sky.moonSamples[1], sky.positions.find(p => p.key === "moon"));
-  assert.ok(sky.moonSamples[0].lon !== sky.moonSamples[2].lon);
-});
-test("lunar ingress ratings explain the three local Moon samples in both languages", () => {
-  const previousTZ = process.env.TZ;
-  try {
-    process.env.TZ = "UTC";
-    const date = new Date(2026, 0, 2, 12);
-    const sky = api.horoscopeSky(date);
-    assert.equal(sky.moonSamples[1].signIdx, 2); // Gemini at noon
-    assert.equal(sky.moonSamples[2].signIdx, 3); // Cancer by 18:00
-    const h = api.makeHoroscope(date, 11); // Pisces
-    const love = reading => reading.domains.find(d => d.key === "love");
-    assert.equal(love(api.scoreHoroscope(11, sky.positions)).stars, 2);
-    assert.equal(love(h).stars, 3);
-    assert.equal(love(h).focus.key, "moon");
-    assert.equal(love(h).focus.signIdx, 2);
-    assert.equal(love(h).focus.house, 4);
-    const eventDay = api.makeHoroscope(new Date(2026, 2, 20, 12), 11);
-    assert.ok(eventDay.events.length);
-    for (const lang of ["zh", "en"]) {
-      const copy = api.horoscopeCopy(h, lang);
-      const full = api.horoscopeFullText(h, lang);
-      assert.ok(full.includes(copy.basis));
-      for (const hour of ["06:00", "12:00", "18:00"]) assert.ok(copy.basis.includes(hour));
-      assert.match(copy.basis, lang === "zh" ? /月亮贡献.*平均.*正午快照/ : /Moon's contribution averages.*noon snapshots/);
-      const eventText = api.horoscopeFullText(eventDay, lang);
-      assert.match(eventText, lang === "zh" ? /不改变当天运势评分/ : /do not change the daily ratings/);
-      assert.doesNotMatch(eventText, /不改变原正午运势评分|do not change the noon ratings/);
+test("all bodies use coherent snapshots and weighted raw contributions, not rounded ratings", () => {
+  const at = (key, lon) => ({key, lon, signIdx:Math.floor(lon/30),retrograde:false});
+  // Isolate a supportive Moon–Venus sextile: the other bodies stay
+  // away from Venus's major aspects, avoiding the aspect-sum cap.
+  const longitudes={sun:10,moon:180,mercury:14,venus:120,mars:20,jupiter:35,saturn:42};
+  const base=Object.keys(longitudes).map(key=>at(key,longitudes[key]));
+  const shifted=base.map(p=>p.key==="moon"?at("moon",165):p);
+  const samples=[
+    {at:0,label:"03:00 UTC+00:00",weight:0.25,positions:base},
+    {at:1,label:"15:00 UTC+00:00",weight:0.75,positions:shifted},
+  ];
+  const a=api.scoreHoroscope(0,base),b=api.scoreHoroscope(0,shifted);
+  const integrated=api.scoreHoroscopeSamples(0,samples);
+  const close=(x,y)=>assert.ok(Math.abs(x-y)<1e-12,x+" vs "+y);
+  for(const [i,d] of integrated.domains.entries()){
+    close(d.raw,0.25*a.domains[i].raw+0.75*b.domains[i].raw);
+    assert.equal(d.stars,api.horoscopeStars(d.raw));
+    for(const [j,term] of d.contributions.entries()){
+      close(term.value,0.25*a.domains[i].contributions[j].value+0.75*b.domains[i].contributions[j].value);
+      close(term.samples[0].value,a.domains[i].contributions[j].value*0.25);
+      close(term.samples[1].value,b.domains[i].contributions[j].value*0.75);
+      for(const factor of api.HORO_FACTORS)
+        close(term.components[factor],0.25*a.domains[i].contributions[j].components[factor]+0.75*b.domains[i].contributions[j].components[factor]);
+      assert.ok(term.samples.some(s=>s.focus===term.focus));
     }
-  } finally {
-    if (previousTZ === undefined) delete process.env.TZ;
-    else process.env.TZ = previousTZ;
   }
+  close(integrated.raw,0.25*a.raw+0.75*b.raw);
+  assert.equal(integrated.stars,api.horoscopeStars(integrated.raw));
+  const love=s=>s.domains.find(d=>d.key==="love");
+  assert.ok(love(a).contributions.find(t=>t.key==="venus").components.aspect >
+    love(b).contributions.find(t=>t.key==="venus").components.aspect);
+  assert.notEqual(love(integrated).raw,love(a).raw);
+  const same=api.scoreHoroscopeSamples(0,samples.map(s=>({...s,positions:base})));
+  close(same.raw,a.raw);
+  assert.equal(same.stars,a.stars);
+});
+test("sample intervals cover normal, short and long civil days without overlapping, including event splits", () => {
+  const hour=3600000;
+  for(const hours of [23,24,25]){
+    const start=0,end=hours*hour,cut=2*hour;
+    const plan=api.horoscopeSamplePlan(start,end,[start,cut,cut,end]);
+    assert.equal(plan.length,5);
+    assert.equal(plan[0].from,start);
+    assert.equal(plan.at(-1).to,end);
+    assert.ok(plan.some(s=>s.to===cut));
+    assert.ok(Math.abs(plan.reduce((s,x)=>s+x.weight,0)-1)<1e-12);
+    for(const [i,s] of plan.entries()){
+      assert.ok(s.from<=s.at && s.at<s.to && s.weight>0);
+      assert.equal(s.weight,(s.to-s.from)/(end-start));
+      if(i)assert.equal(plan[i-1].to,s.from);
+    }
+  }
+  assert.equal(api.HORO_MODEL.dayIntervals,4);
+});
+test("real lunar ingress and other events split the local day; evidence and copy describe the integrated model", () => {
+  const previousTZ=process.env.TZ;
+  try{
+    process.env.TZ="UTC";
+    const date=new Date(2026,0,2,12),sky=api.horoscopeSky(date);
+    assert.ok(sky.moonIngress>sky.start && sky.moonIngress<sky.end);
+    assert.ok(sky.samples.some(s=>s.to===sky.moonIngress));
+    assert.ok(new Set(sky.samples.map(s=>s.positions.find(p=>p.key==="moon").signIdx)).size>1);
+    const h=api.makeHoroscope(date,11);
+    const eventDate=new Date(2026,2,20,12),eventSky=api.horoscopeSky(eventDate);
+    const eventDay=api.makeHoroscope(eventDate,11);
+    assert.ok(eventDay.events.length);
+    for(const e of eventDay.events)if(e.at>eventSky.start)
+      assert.ok(eventSky.samples.some(s=>s.to===e.at));
+    assert.equal(h.samples.length,sky.samples.length);
+    for(const lang of ["zh","en"]){
+      const copy=api.horoscopeCopy(h,lang),full=api.horoscopeFullText(h,lang);
+      assert.ok(full.includes(copy.basis));
+      assert.match(copy.basis,lang==="zh"?/七颗天体.*按时长平均.*代表采样/:/all seven bodies.*duration-weighted.*representative samples/);
+      assert.match(full,lang==="zh"?/因素分解/:/Factor breakdown/);
+      assert.match(full,lang==="zh"?/代表采样约/:/Representative sample/);
+      const eventText=api.horoscopeFullText(eventDay,lang);
+      assert.match(eventText,lang==="zh"?/不另行加减分/:/do not add an independent score adjustment/);
+      assert.doesNotMatch(eventText,/不改变原正午运势评分|do not change the noon ratings/);
+    }
+  }finally{
+    if(previousTZ===undefined)delete process.env.TZ;
+    else process.env.TZ=previousTZ;
+  }
+});
+test("reciprocal aspects are deduplicated only within the same sample", () => {
+  const f={key:"sun",signIdx:0,house:1,retrograde:false,sampleAt:10,
+    aspect:{other:"moon",angle:90,strength:0.5,value:-0.425}};
+  const reciprocal={...f,key:"moon",aspect:{...f.aspect,other:"sun"}};
+  assert.equal(api.horoscopeAspectKey(f),api.horoscopeAspectKey(reciprocal));
+  assert.notEqual(api.horoscopeAspectKey(f),api.horoscopeAspectKey({...reciprocal,sampleAt:20}));
+  assert.notEqual(api.horoscopeFocusKey(f),api.horoscopeFocusKey({...f,sampleAt:20}));
 });
 test("wording frames have one shared variant count for every tone", () => {
   for (const frames of Object.values(api.HORO_ADVICE_FRAMES)) assert.equal(frames.length, api.HORO_ADVICE_VARIANTS);
@@ -713,17 +771,17 @@ test("five-year distribution stays fair across signs and uses the full rating ra
   const days = [], low = new Array(12).fill(0), yearMeans = [];
   const stars = {1:0,2:0,3:0,4:0,5:0};
   for (let d = new Date(2026, 0, 1); d < new Date(2031, 0, 1); d.setDate(d.getDate() + 1)) days.push(new Date(d));
-  for (let sign = 0; sign < 12; sign++) {
-    const byYear = new Map();
-    for (const date of days) {
-      const h = api.scoreHoroscopeDay(date, sign);
+  const bySign=Array.from({length:12},()=>new Map());
+  for(const date of days){
+    for(let sign=0;sign<12;sign++){
+      const h=api.scoreHoroscopeDay(date,sign);
       stars[h.stars]++;
-      if (h.stars <= 2) low[sign]++;
-      const y = date.getFullYear(), acc = byYear.get(y) || [0, 0];
-      acc[0] += h.stars; acc[1]++; byYear.set(y, acc);
+      if(h.stars<=2)low[sign]++;
+      const byYear=bySign[sign],y=date.getFullYear(),acc=byYear.get(y)||[0,0];
+      acc[0]+=h.stars;acc[1]++;byYear.set(y,acc);
     }
-    for (const [sum, n] of byYear.values()) yearMeans.push(sum / n);
   }
+  for(const byYear of bySign)for(const [sum,n] of byYear.values())yearMeans.push(sum/n);
   const share = low.map(x => x / days.length);
   // Without damping, Saturn/Jupiter placements gave 12%–25% (2.49–3.57 yearly means).
   assert.ok(Math.max(...share) - Math.min(...share) < 0.09, share.map(x => x.toFixed(2)).join(" "));

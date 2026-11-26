@@ -314,6 +314,9 @@ def check_horoscope_events(page, language):
     assert title in text, language
     assert ("第12宫 → 第1宫" if language == "zh" else "house 12 → 1") in text, language
     assert ("专题建议" if language == "zh" else "Event reflection") in text, language
+    assert ("代表采样" if language == "zh" else "Representative sample") in text, language
+    assert ("因素分解" if language == "zh" else "Factor breakdown") in text, language
+    assert ("按时长平均" if language == "zh" else "duration-weighted") in text, language
     assert ("仅供娱乐" if language == "zh" else "entertainment only") in text, language
     assert page.evaluate("() => encounter") == special["count"], language
     assert page.evaluate("() => JSON.stringify(currentSelection)") == special["snapshot"], language

@@ -3,23 +3,23 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v54";
+var CACHE_NAME = "nam-v55";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=54",
-  "/css/pwa-update.css?v=54",
-  "/js/pwa-update.js?v=54",
-  "/js/data.js?v=54",
-  "/js/dedup.js?v=54",
-  "/gossip-service/news-id.js?v=54",
-  "/js/gossip.js?v=54",
-  "/js/sky-engine-adapter.js?v=54",
-  "/js/horoscope-advice.js?v=54",
-  "/js/astro.js?v=54",
-  "/js/app.js?v=54",
+  "/css/style.css?v=55",
+  "/css/pwa-update.css?v=55",
+  "/js/pwa-update.js?v=55",
+  "/js/data.js?v=55",
+  "/js/dedup.js?v=55",
+  "/gossip-service/news-id.js?v=55",
+  "/js/gossip.js?v=55",
+  "/js/sky-engine-adapter.js?v=55",
+  "/js/horoscope-advice.js?v=55",
+  "/js/astro.js?v=55",
+  "/js/app.js?v=55",
   "/vendor/sky-engine/0.2.0/sky-engine.mjs",
   "/vendor/sky-engine/0.2.0/stars.json",
   "/vendor/sky-engine/0.2.0/manifest.json",
