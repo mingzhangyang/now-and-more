@@ -519,7 +519,7 @@ test("event snapshot is sign-independent, stable through the local day and conte
     assert.ok(!card.body.includes(first.interpretation));
     assert.ok(full.includes(first.title) && full.includes(first.suggestion));
     assert.ok(!full.includes("undefined"));
-    const noEvent={...h,events:[]};
+    const noEvent={...h,events:[],cardEvents:[]};
     assert.ok(!api.render({cat:"astro",subtype:"horoscope",horo:noEvent},lang).body.includes("astro-event"));
     assert.equal(api.horoscopeEventParagraphs(noEvent,lang).length,0);
     assert.ok(!api.horoscopeFullText(noEvent,lang).includes(first.title));
@@ -712,7 +712,7 @@ test("real lunar ingress and other events split the local day; evidence and copy
     const eventDate=new Date(2026,2,20,12),eventSky=api.horoscopeSky(eventDate);
     const eventDay=api.makeHoroscope(eventDate,11);
     assert.ok(eventDay.events.length);
-    for(const e of eventDay.events)if(e.at>eventSky.start)
+    for(const e of eventDay.events)if(e.type!=="aspect" && e.at>eventSky.start)
       assert.ok(eventSky.samples.some(s=>s.to===e.at));
     assert.equal(h.samples.length,sky.samples.length);
     for(const lang of ["zh","en"]){
@@ -813,3 +813,11 @@ test("PWA shell and all four HTML pages agree on the asset version", () => {
  for(const a of s.aspects){assert.equal(a.sampleAt,s.at);assert.ok(Number.isFinite(a.relativeSpeed));}
  }
  });
+
+test("v3.1 card uses boundary events while reader retains exact aspects", () => {
+  const h=api.makeHoroscope(new Date(2026,10,25,12),7);
+  assert.ok(h.cardEvents.every(e=>e.type!=="aspect"));
+  assert.ok(h.events.some(e=>e.type==="aspect"));
+  assert.ok(h.cardEvents.every(e=>h.events.includes(e)));
+  assert.ok(h.events===h.events);
+});

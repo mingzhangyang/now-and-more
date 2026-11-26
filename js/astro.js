@@ -146,9 +146,8 @@ function planetPositions(date) {
    The numerical event time is for ordering/day ownership, NOT a claim
    of precise observational timing. */
 const HORO_EVENT_BODIES = ["sun", "mercury", "venus", "mars", "jupiter", "saturn"];
-function detectHoroscopeEvents(start, end, positionsAt = planetPositions) {
+function detectHoroscopeEvents(start, end, positionsAt = planetPositions, includeAspects = true, cache = new Map()) {
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return [];
-  const cache = new Map();
   const position = (body, time) => {
     if (!cache.has(time)) cache.set(time, positionsAt(new Date(time)));
     return cache.get(time).find(p => p.key === body);
@@ -194,7 +193,7 @@ function detectHoroscopeEvents(start, end, positionsAt = planetPositions) {
         backward: (entered - fromSignIdx + 12) % 12 === 11 });
     }
   }
-  events.push(...detectExactHoroscopeAspects(start, end, position));
+  if (includeAspects) events.push(...detectExactHoroscopeAspects(start, end, position));
   return events.sort((a,b) => a.at - b.at || HORO_BODIES.indexOf(a.body) - HORO_BODIES.indexOf(b.body));
 }
 /* Unwrap signed relative longitude within each short interval. Refine
@@ -527,6 +526,12 @@ function horoscopeRatingResult(domains) {
   return { raw, stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
     tone: horoscopeTone(primary.raw) };
 }
+function weightedHoroscopeAspect(a, contribution, sampleAt) {
+  return { angle:a.angle, deviation:a.deviation, strength:a.strength, zh:a.zh, en:a.en,
+    kind:a.kind, relativeSpeed:a.relativeSpeed, state:a.state, dynamicWeight:a.dynamicWeight,
+    body:a.body, other:a.other, pair:a.pair, value:a.value, cappedValue:a.cappedValue,
+    contribution, sampleAt };
+}
 function scoreHoroscope(signIdx, positions) {
   const ruler = HORO_RULERS[signIdx];
   const planets = positions.map(p => ({ ...p, ...horoscopeBodyState(p, positions, signIdx) }));
@@ -541,7 +546,7 @@ function scoreHoroscope(signIdx, positions) {
       const factors = { ...p.components,
         house: domain.houses.includes(p.house) ? p.placementScale * HORO_MODEL.houseBonus : 0 };
       const components = Object.fromEntries(HORO_FACTORS.map(key => [key, factors[key] * share]));
-      const aspects = p.aspects.map(a => ({ ...a, contribution: a.cappedValue * share }));
+      const aspects = p.aspects.map(a => weightedHoroscopeAspect(a, a.cappedValue * share));
       return { key: p.key, value: horoscopeFactorTotal(components), components, aspects, focus: horoscopeFocus(p, aspects) };
     });
     return horoscopeDomainResult(domain.key, contributions);
@@ -597,15 +602,28 @@ function horoscopeSky(date) {
     horoscopeSkyCache.set(key, cached);
     return cached;
   }
-  const events = horoscopeEventsForDate(date);
+  const cache = new Map();
+  const boundaryEvents = detectHoroscopeEvents(start, end, planetPositions, false, cache);
   const moonIngress = horoscopeMoonIngress(start, end);
-  const cuts = events.map(event => event.at);
+  const cuts = boundaryEvents.map(event => event.at);
   if (moonIngress !== null) cuts.push(moonIngress);
   const samples = horoscopeSamplePlan(start, end, cuts).map(sample => Object.freeze({
     ...sample, label: horoscopeSampleLabel(sample.at),
     positions: Object.freeze(planetPositions(new Date(sample.at)).map(Object.freeze)),
   }));
-  const sky = Object.freeze({ start, end, events, moonIngress, samples: Object.freeze(samples) });
+  let events;
+  const sky = Object.freeze({ start, end, get events() {
+    if (!events) {
+      const position = (body, at) => {
+        if (!cache.has(at)) cache.set(at, planetPositions(new Date(at)));
+        return cache.get(at).find(p => p.key === body);
+      };
+      events = Object.freeze([...boundaryEvents, ...detectExactHoroscopeAspects(start, end, position)]
+        .sort((a,b) => a.at - b.at || HORO_BODIES.indexOf(a.body) - HORO_BODIES.indexOf(b.body)).map(Object.freeze));
+      cache.clear();
+    }
+    return events;
+  }, boundaryEvents: Object.freeze(boundaryEvents.map(Object.freeze)), moonIngress, samples: Object.freeze(samples) });
   // A handful of civil days covers advice replay and all twelve signs.
   horoscopeSkyCache.set(key, sky);
   if (horoscopeSkyCache.size > 4) horoscopeSkyCache.delete(horoscopeSkyCache.keys().next().value);
@@ -630,8 +648,7 @@ function scoreHoroscopeSamples(signIdx, samples) {
       const terms = scored.map(sample => {
         const term = sample.score.domains[i].contributions.find(t => t.key === initial.key);
         const components = Object.fromEntries(HORO_FACTORS.map(key => [key, term.components[key] * sample.weight]));
-        const aspects = term.aspects.map(a => ({ ...a, sampleAt: sample.at,
-          contribution: a.contribution * sample.weight }));
+        const aspects = term.aspects.map(a => weightedHoroscopeAspect(a, a.contribution * sample.weight, sample.at));
         return { at: sample.at, weight: sample.weight, value: horoscopeFactorTotal(components), components, aspects,
           focus: { ...term.focus, aspect: aspects[0] || null, sampleAt: sample.at, sampleLabel: sample.label } };
       });
@@ -757,7 +774,8 @@ function makeHoroscope(date, signIdx) {
   const domain = HORO_DOMAINS.find(d => d.key === scored.primary);
   const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
   return { signIdx, ...scored, actionChoices: chooseHoroscopeActions(noon, signIdx, scored),
-    events: sky.events,
+    cardEvents: sky.boundaryEvents,
+    get events() { return sky.events; },
     adviceIdx: Math.floor(rng() * HORO_ADVICE_VARIANTS),
     // Symbolic entertainment cues, NOT astronomical predictions.
     luckyNumber: scored.focus.house + 12 * Math.floor(rng() * 8),
@@ -988,7 +1006,7 @@ function horoscopeEventSummary(events, lang) {
   if (!events?.length) return "";
   const zh = lang === "zh";
   // Ingress/station > non-lunar aspect > new/full Moon. Routine lunar
-  // encounters stay in the reader and the sampling boundaries.
+  // encounters stay in the reader.
   const priority = e => e.type !== "aspect" ? 0 :
     e.body !== "moon" && e.other !== "moon" ? 1 :
     e.pair === "moon/sun" && (e.angle === 0 || e.angle === 180) ? 2 : Infinity;
@@ -1004,7 +1022,7 @@ function horoscopeEventParagraphs(h, lang) {
   if (!h.events?.length) return [];
   const zh = lang === "zh";
   const note = zh
-    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；星位变化已通过全天采样计入评分，以下象征提示不另行加减分。"
+    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；星位变化通过全天采样反映于评分，以下象征提示不另行加减分。"
     : "Today's sky events | Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. The changing sky is included in the daily samples; these symbolic prompts do not add an independent score adjustment.";
   return [note, ...h.events.map(event => {
     const detail = horoscopeEventCopy(event, h.signIdx, lang);
@@ -1018,11 +1036,11 @@ function horoscopeCopy(h, lang) {
   const primary = h.domains.find(d => d.key === h.primary);
   const detail = horoscopeDomainCopy(primary, h, lang);
   return { topic: domain[lang], evidence: detail.evidence, aspect: detail.aspect,
-    advice: detail.advice, eventSummary: horoscopeEventSummary(h.events, lang),
+    advice: detail.advice, eventSummary: horoscopeEventSummary(h.cardEvents ?? h.events, lang),
     basis: h.samples?.length
       ? (zh
-        ? "评分：按本地自然日分为四个等时长区间，月亮及其他天体换座、顺逆行转换与主要精确相位时细分；每段中点统一计算七颗天体及相对运动，按时长平均原始贡献后转换为星级。星位解读为实际代表采样，而非全天固定状态。传统占星规则（太阳星座宫位）"
-        : "Ratings integrate all seven bodies at the midpoints of four equal elapsed-time intervals of the local civil day, splitting at ingresses, stations and exact major aspects. Relative motion weights aspect strength. Unrounded contributions are duration-weighted before conversion to stars. Sky readings describe representative samples, not fixed all-day placements. Traditional-inspired solar-sign rules")
+        ? "评分：按本地自然日分为四个等时长区间，月亮及其他天体换座、顺逆行转换时细分；每段中点统一计算七颗天体及相对运动，按时长平均原始贡献后转换为星级。星位解读为实际代表采样，而非全天固定状态。传统占星规则（太阳星座宫位）"
+        : "Ratings integrate all seven bodies at the midpoints of four equal elapsed-time intervals of the local civil day, splitting at ingresses and stations. Relative motion weights aspect strength. Unrounded contributions are duration-weighted before conversion to stars. Sky readings describe representative samples, not fixed all-day placements. Traditional-inspired solar-sign rules")
       : (zh ? "评分：单次近似星位快照；传统占星规则（太阳星座宫位）"
         : "Ratings use one approximate sky snapshot. Traditional-inspired solar-sign rules"),
     cues: zh ? "趣味幸运提示" : "Playful lucky cues" };

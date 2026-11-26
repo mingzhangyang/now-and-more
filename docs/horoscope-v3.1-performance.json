@@ -1,0 +1,14 @@
+{
+  "runtime": "V8 isolate, actual repository sources; not browser timing",
+  "card180": {
+    "baselineMs": 569,
+    "previousCandidateMs": 2068,
+    "optimizedMs": 674
+  },
+  "reader30": {
+    "baselineMs": 96,
+    "previousCandidateMs": 406,
+    "optimizedMs": 364
+  },
+  "limitations": "No Node/browser regression run or heap measurement. Card benchmark includes makeHoroscope and horoscopeCopy. Previous candidate is bfa471d; original V3.1 is slower still."
+}
