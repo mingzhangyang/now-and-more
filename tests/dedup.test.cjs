@@ -559,7 +559,7 @@ test("HTML load order and offline precache match the release version", () => {
   const cached = new Set([...shell[1].matchAll(/"([^"\n]+)"/g)].map(m => m[1]));
   const scripts = [
     "js/data.js", "js/dedup.js", "gossip-service/news-id.js",
-    "js/gossip.js", "js/sky-engine-adapter.js", "js/app.js",
+    "js/gossip.js", "js/sky-engine-adapter.js", "js/horoscope-advice.js", "js/astro.js", "js/app.js",
   ];
   const html = read("index.html");
   let previous = -1;

@@ -873,147 +873,7 @@ function computeAlmanac(date) {
   };
 }
 
-/* ================= Astrology (astro) ================= */
-/* Self-contained on purpose: everything below depends only on the data.js
-   pools and on Math/Date, never on the DOM, so it can be exercised in Node.
-   Two kinds of content live here:
-   - 星位 star positions: REAL astronomy, computed live from JPL Keplerian
-     elements (approximate, sign-level accuracy).
-   - 每日运势 daily horoscope: pure entertainment, but deterministic — a
-     date+sign seed, so the same sign sees the same fortune all day,
-     exactly like the almanac. */
-
-/* Deterministic PRNG (mulberry32) for date-seeded picks. */
-function seededRng(seed) {
-  let a = (seed >>> 0) || 1;
-  return function () {
-    a = (a + 0x6D2B79F5) | 0;
-    let x = Math.imul(a ^ (a >>> 15), 1 | a);
-    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/* ---- Approximate ephemeris (JPL Keplerian elements, valid 1800–2050) ----
-   Each row: a (AU), a-rate, e, e-rate, I (deg), I-rate, L (deg), L-rate,
-   long. perihelion (deg), its rate, long. node (deg), its rate.
-   Rates are per Julian century from J2000. */
-const KEPLER_ELEMENTS = {
-  mercury: [0.38709927, 0.00000037, 0.20563593, 0.00001906, 7.00497902, -0.00594749, 252.25032350, 149472.67411175, 77.45779628, 0.16047689, 48.33076593, -0.12534081],
-  venus: [0.72333566, 0.00000390, 0.00677672, -0.00004107, 3.39467605, -0.00078890, 181.97909950, 58517.81538729, 131.60246718, 0.00268329, 76.67984255, -0.27769418],
-  earth: [1.00000261, 0.00000562, 0.01671123, -0.00004392, -0.00001531, -0.01294668, 100.46457166, 35999.37244981, 102.93768193, 0.32327364, 0.0, 0.0],
-  mars: [1.52371034, 0.00001847, 0.09339410, 0.00007882, 1.84969142, -0.00813131, -4.55343205, 19140.30268499, -23.94362959, 0.44441088, 49.55953891, -0.29257343],
-  jupiter: [5.20288700, -0.00011607, 0.04838624, -0.00013253, 1.30439695, -0.00183714, 34.39644051, 3034.74612775, 14.72847983, 0.21252668, 100.47390909, 0.20469106],
-  saturn: [9.53667594, -0.00125060, 0.05386179, -0.00050991, 2.48599187, 0.00193609, 49.95424423, 1222.49362201, 92.59887831, -0.41897216, 113.66242448, -0.28867794],
-};
-const norm360 = (deg) => ((deg % 360) + 360) % 360;
-const norm180 = (deg) => norm360(deg + 180) - 180;
-
-function julianCenturies(date) {
-  const jd = date.valueOf() / DAY_MS + 2440587.5; // Unix epoch = JD 2440587.5
-  return (jd - 2451545.0) / 36525;
-}
-
-/* Heliocentric ecliptic rectangular coordinates (AU) via Kepler's equation. */
-function helioRect(body, date) {
-  const el = KEPLER_ELEMENTS[body];
-  const T = julianCenturies(date);
-  const a = el[0] + el[1] * T;
-  const e = el[2] + el[3] * T;
-  const I = (el[4] + el[5] * T) * RAD;
-  const L = el[6] + el[7] * T;
-  const peri = el[8] + el[9] * T;
-  const node = el[10] + el[11] * T;
-  const w = (peri - node) * RAD;            // argument of perihelion
-  const Om = node * RAD;                    // longitude of ascending node
-  const M = norm360(L - peri) * RAD;        // mean anomaly
-  // Solve Kepler's equation E - e*sinE = M (Newton iterations).
-  let E = M + e * Math.sin(M);
-  for (let i = 0; i < 6; i++) {
-    E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
-  }
-  const nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
-  const r = a * (1 - e * Math.cos(E));
-  const u = w + nu; // argument of latitude
-  return {
-    x: r * (Math.cos(Om) * Math.cos(u) - Math.sin(Om) * Math.sin(u) * Math.cos(I)),
-    y: r * (Math.sin(Om) * Math.cos(u) + Math.cos(Om) * Math.sin(u) * Math.cos(I)),
-    z: r * (Math.sin(u) * Math.sin(I)),
-  };
-}
-
-function sunLongitude(date) {
-  const e = helioRect("earth", date);
-  return norm360(Math.atan2(-e.y, -e.x) / RAD);
-}
-function planetLongitude(body, date) {
-  const p = helioRect(body, date);
-  const e = helioRect("earth", date);
-  return norm360(Math.atan2(p.y - e.y, p.x - e.x) / RAD);
-}
-/* Simplified lunar longitude: mean longitude plus the main perturbation
-   terms (evection, variation, equation of centre...). ~1° accuracy. */
-function moonLongitude(date) {
-  const T = julianCenturies(date);
-  const Lp = norm360(218.3164477 + 481267.88123421 * T); // mean longitude
-  const D = norm360(297.8501921 + 445267.1114034 * T);   // mean elongation
-  const Ms = norm360(357.5291092 + 35999.0502909 * T);   // Sun mean anomaly
-  const Mm = norm360(134.9633964 + 477198.8675055 * T);  // Moon mean anomaly
-  const F = norm360(93.2720950 + 483202.0175233 * T);    // argument of latitude
-  const s = (deg) => Math.sin(deg * RAD);
-  const lon = Lp
-    + 6.289 * s(Mm)
-    + 1.274 * s(2 * D - Mm)
-    + 0.658 * s(2 * D)
-    + 0.214 * s(2 * Mm)
-    - 0.186 * s(Ms)
-    - 0.114 * s(2 * F);
-  return norm360(lon);
-}
-
-function signIndexFromLongitude(lon) { return Math.floor(norm360(lon) / 30) % 12; }
-
-/* Placements for the seven bodies. Retrograde (planets only) is decided by
-   comparing today's geocentric longitude with the one 5 days later:
-   decreasing longitude = apparent retrograde motion. */
-function planetPositions(date) {
-  const later = new Date(date.valueOf() + 5 * DAY_MS);
-  const out = [];
-  const sunLon = sunLongitude(date);
-  out.push({ key: "sun", lon: sunLon, signIdx: signIndexFromLongitude(sunLon), retrograde: false });
-  const moonLon = moonLongitude(date);
-  out.push({ key: "moon", lon: moonLon, signIdx: signIndexFromLongitude(moonLon), retrograde: false });
-  for (const body of ["mercury", "venus", "mars", "jupiter", "saturn"]) {
-    const lon = planetLongitude(body, date);
-    const lon2 = planetLongitude(body, later);
-    out.push({
-      key: body,
-      lon,
-      signIdx: signIndexFromLongitude(lon),
-      retrograde: norm180(lon2 - lon) < 0,
-    });
-  }
-  return out;
-}
-
-/* Daily horoscope for one sign on one (local) calendar day. Returns pool
-   indices, not text, so a language switch re-renders the same fortune in
-   the other language. Same inputs → same output, all day long. */
-function makeHoroscope(date, signIdx) {
-  const seed = (date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()) * 16 + signIdx;
-  const rng = seededRng(seed);
-  return {
-    signIdx,
-    stars: 1 + Math.floor(rng() * 5),
-    openIdx: Math.floor(rng() * HORO_OPENINGS_ZH.length),
-    adviceIdx: Math.floor(rng() * HORO_ADVICE_ZH.length),
-    luckyNumber: 1 + Math.floor(rng() * 99),
-    colorIdx: Math.floor(rng() * LUCKY_COLORS.length),
-    dirIdx: Math.floor(rng() * LUCKY_DIRECTIONS.length),
-    itemIdx: Math.floor(rng() * LUCKY_ITEMS.length),
-  };
-}
-/* ================= End astrology ================= */
+/* ================= Astrology: see js/astro.js ================= */
 
 /* ================= Special days: dressing + micro-animation ================= */
 /* The calendar dresses the page on days that mean something — solar
@@ -2144,6 +2004,16 @@ function fullTextOf(item) {
   return typeof item.full === "string" ? item.full : "";
 }
 
+/* Static pools and calculated horoscope snapshots share one reading door.
+   Generate only the currently selected language; never mutate the selection. */
+function fullTextItemForSelection(sel) {
+  if (!sel) return null;
+  if (sel.cat === "astro" && sel.subtype === "horoscope" && sel.horo) {
+    return { full: horoscopeFullText(sel.horo, lang) };
+  }
+  return sel.item;
+}
+
 function openFullText(item, opener, cat) {
   if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   const full = fullTextOf(item);
@@ -2168,9 +2038,8 @@ function closeFullText() {
 }
 $("full-text-btn").addEventListener("click", (e) => {
   e.stopPropagation(); // the card itself advances the draw on click
-  if (currentSelection && fullTextOf(currentSelection.item)) {
-    openFullText(currentSelection.item, e.currentTarget, currentSelection.cat);
-  }
+  const sel = currentSelection;
+  if (sel) openFullText(fullTextItemForSelection(sel), e.currentTarget, sel.cat);
 });
 $("full-close").addEventListener("click", closeFullText);
 $("full-overlay").addEventListener("click", (e) => {
@@ -3008,16 +2877,17 @@ function renderSelection(sel, surface) {
     if (sel.subtype === "horoscope") {
       const h = sel.horo;
       const sg = SIGNS[h.signIdx];
-      const openings = lang === "zh" ? HORO_OPENINGS_ZH : HORO_OPENINGS_EN;
-      const advices = lang === "zh" ? HORO_ADVICE_ZH : HORO_ADVICE_EN;
+      const copy = horoscopeCopy(h, lang);
       const color = LUCKY_COLORS[h.colorIdx];
       const dir = LUCKY_DIRECTIONS[h.dirIdx];
       const item = LUCKY_ITEMS[h.itemIdx];
       meta = `${A.daily} · ${sg.symbol} ${signName(sg)}`;
       body = `<span class="big">${sg.symbol} ${signName(sg)}</span>` +
         `<div class="fact-row"><span>${A.overall} <b class="astro-stars">${"★".repeat(h.stars)}${"☆".repeat(5 - h.stars)}</b></span></div>` +
-        `<span class="poem-line">${openings[h.openIdx % openings.length]}</span>` +
-        `<span class="poem-line">${advices[h.adviceIdx % advices.length]}</span>` +
+        `<div class="fact-row">${h.domains.map(d => `<span>${HORO_DOMAINS.find(x => x.key === d.key)[lang]} <b class="astro-stars" aria-label="${d.stars}/5">${"★".repeat(d.stars)}${"☆".repeat(5 - d.stars)}</b></span>`).join("")}</div>` +
+        `<span class="poem-line">${copy.topic} · ${copy.advice}</span>` +
+        (copy.eventSummary ? `<div class="sub astro-event">${esc(copy.eventSummary)}</div>` : "") +
+        `<div class="sub">${copy.cues}</div>` +
         `<div class="fact-row"><span>${A.luckyNumber} <b>${h.luckyNumber}</b></span>` +
         `<span>${A.luckyColor}<span class="swatch-sm" style="background:${color.hex}"></span><b>${lang === "zh" ? color.zh : color.en}</b></span>` +
         `<span>${A.luckyDirection} <b>${lang === "zh" ? dir.zh : dir.en}</b></span>` +
@@ -3088,10 +2958,10 @@ function renderSelection(sel, surface) {
   surface.meta.textContent = meta;
   surface.body.innerHTML = body;
 
-  // An item whose complete text is on file (a classics passage, a
-  // full tale) gets a quiet door to it at the card's foot (outside
-  // the body, so the keepsake keeps capturing the card text only).
-  if (surface.foot && surface.fullBtn && sel.item && fullTextOf(sel.item)) {
+  // Static full passages and generated horoscope explanations get the same
+  // quiet reading door, outside the body so keepsakes stay faithful to
+  // the compact stage card.
+  if (surface.foot && surface.fullBtn && ((sel.cat === "astro" && sel.subtype === "horoscope" && sel.horo) || fullTextOf(fullTextItemForSelection(sel)))) {
     surface.fullBtn.textContent = `${s.fullText} ›`;
     surface.foot.hidden = false;
   }

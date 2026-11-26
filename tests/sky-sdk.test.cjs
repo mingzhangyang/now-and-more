@@ -46,7 +46,7 @@ test("app keeps business astronomy and drops the ported illustration engine", ()
   assert.match(app, /function sunTimes/);
   assert.match(app, /function moonPhase/);
   assert.match(app, /function computeAlmanac/);
-  assert.match(app, /function planetPositions/);
+  assert.match(read("js/astro.js"), /function planetPositions/);
   assert.match(app, /NAM_SKY\.sceneFor/);
   assert.match(app, /NAM_SKY\.paintIllustration/);
   assert.match(app, /NAM_SKY\.paintChart/);
