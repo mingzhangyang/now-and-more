@@ -143,10 +143,7 @@ body {
   width: 55vmax;
   height: 55vmax;
   border-radius: 50%;
-  /* Eased fall-off (a mid stop at half strength) so the edge does not
-     band into visible rings. */
-  background: radial-gradient(circle, var(--glow-color) 0%,
-    color-mix(in srgb, var(--glow-color) 50%, transparent) 32%, transparent 68%);
+  background: radial-gradient(circle, var(--glow-color) 0%, transparent 65%);
   pointer-events: none;
   z-index: 0;
   transition: transform 1.4s ease, opacity 1.4s ease;
@@ -171,6 +168,17 @@ body {
   transition: opacity 1.4s ease;
 }
 body[data-special="moon"] #moon-glow { opacity: 1; }
+/* Eased fall-off (a mid stop at half strength) so the edge does not
+   band into visible rings. Behind @supports: the value holds var(), so
+   an engine without color-mix() would otherwise drop the whole
+   background at computed-value time instead of keeping the plain
+   gradient above (Safari < 16.2). */
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  #glow {
+    background: radial-gradient(circle, var(--glow-color) 0%,
+      color-mix(in srgb, var(--glow-color) 50%, transparent) 32%, transparent 68%);
+  }
+}
 
 /* Full-screen micro-animation layer (meteors / snow / petals / leaves):
    above the glow, below the stage, never interactive. */
@@ -285,6 +293,10 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
   cursor: pointer;
 }
 .seg-btn.active { color: var(--accent); font-weight: 600; background: var(--bg-soft); }
+/* The segment clips its buttons (overflow: hidden), which would cut
+   off the shared outside focus ring: draw it inside the pill instead. */
+.seg-btn { border-radius: 999px; }
+.seg-btn:focus-visible { outline-offset: -2px; }
 
 /* ---------- Stage ---------- */
 .stage {
@@ -1042,21 +1054,29 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   cursor: pointer;
 }
 .gift-notice-close:hover, .gift-notice-close:focus-visible { color: var(--accent); }
-/* When the stretch between brand and gear is too short for the line,
-   the pill covers the brand instead (left edge to just short of the
-   gear) and may take two lines. */
-@media (max-width: 860px) {
+/* When the stretch between brand and gear is too short for the longest
+   line ("Chinese New Year's Eve today · a postcard for you" needs about
+   412px, i.e. a 932px+ window), the pill covers the brand instead: from
+   the left edge, as wide as its words, never past the gear, taking two
+   balanced lines when it must. */
+@media (max-width: 959px) {
   .gift-notice {
     left: 12px;
-    right: 56px;
-    width: auto;
-    max-width: none;
+    right: auto;
+    width: max-content;
+    max-width: calc(100vw - 82px); /* gear: 22px gutter + 36px button + 12px air */
     transform: translateY(-6px);
     border-radius: 18px;
     font-size: 13px;
   }
   .gift-notice.show { transform: translateY(0); }
   .gift-notice-text { white-space: normal; text-wrap: balance; }
+}
+/* The narrowest phones: a touch smaller and tighter, so even the
+   longest English line stays within two lines above the tagline. */
+@media (max-width: 360px) {
+  .gift-notice { font-size: 12px; padding: 6px 4px 6px 14px; gap: 4px; }
+  .gift-notice-close { padding: 3px 6px; }
 }
 
 /* ---------- Add-a-note floating button ----------
