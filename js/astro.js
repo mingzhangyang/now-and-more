@@ -416,6 +416,69 @@ function horoscopeV31AspectValue(aspect, a, b) {
 const HORO_V32 = Object.freeze({
   houseRulerScale: 0.2, combinationScale: 0.5,
 });
+/* V3.3: adjust the existing normalized factor ledger, never a second score. */
+const HORO_TIME_LAYERS = Object.freeze(["background", "trend", "daily"]);
+const HORO_TIME_NEUTRAL = Object.freeze({background:1, trend:1, daily:1});
+// Keep V3.2 numerical behavior until the pinned training/holdout release check passes.
+const HORO_V33 = Object.freeze({...HORO_V32, timeLayers:HORO_TIME_NEUTRAL});
+function horoscopeTimeLayer(body, factor, other) {
+  const slow = key => key === "jupiter" || key === "saturn";
+  if (factor === "aspect") {
+    if (body === "moon" || other === "moon") return "daily";
+    return slow(body) && slow(other) ? "background" : "trend";
+  }
+  if (factor === "solar") return "trend";
+  return body === "moon" ? "daily" : slow(body) ? "background" : "trend";
+}
+function horoscopeTimeAdjust(body, domain, components, aspects, share, weights) {
+  const adjusted = {...components}, factors = [];
+  const add = (factor, raw, other, capScale = 1, angle = null) => {
+    const layer = horoscopeTimeLayer(body, factor, other), coefficient = weights[layer];
+    const value = raw * coefficient * capScale;
+    factors.push({body, other, domain, factor, angle, layer, raw, coefficient, capScale, adjusted:value});
+    return value;
+  };
+  for (const factor of HORO_FACTORS) if (factor !== "aspect")
+    adjusted[factor] = add(factor, components[factor], factor === "solar" ? "sun" : null);
+  const neutral = HORO_TIME_LAYERS.every(layer => weights[layer] === 1);
+  // V3.2 apportions its signed net endpoint cap to individual aspects first.
+  // Different layer gains may undo cancellation: keep the same endpoint cap.
+  const net = aspects.reduce((sum,a) => sum + a.contribution * weights[horoscopeTimeLayer(body,"aspect",a.other)],0);
+  const cap = 0.9 * share;
+  const capScale = !neutral && Math.abs(net)>cap && net!==0 ? cap/Math.abs(net) : 1;
+  const weighted = aspects.map(a => {
+    const layer = horoscopeTimeLayer(body,"aspect",a.other);
+    return {...a, rawContribution:a.contribution, layer, coefficient:weights[layer], capScale,
+      contribution:add("aspect",a.contribution,a.other,capScale,a.angle)};
+  });
+  adjusted.aspect = neutral ? components.aspect : weighted.reduce((sum,a)=>sum+a.contribution,0);
+  if (!neutral) weighted.sort((a,b)=>Math.abs(b.contribution)-Math.abs(a.contribution)||a.deviation-b.deviation);
+  return {components:adjusted, aspects:weighted, timeFactors:factors};
+}
+function horoscopeEmptyTimeLayers() {
+  return Object.fromEntries(HORO_TIME_LAYERS.map(layer=>[layer,{raw:0,adjusted:0,rawAbsolute:0,absolute:0}]));
+}
+function horoscopeTimeTotals(contributions) {
+  const totals = horoscopeEmptyTimeLayers();
+  for (const term of contributions) for (const sample of term.samples || [term])
+    for (const f of sample.timeFactors || []) {
+      const t=totals[f.layer];t.raw+=f.raw;t.adjusted+=f.adjusted;
+      t.rawAbsolute+=Math.abs(f.raw);t.absolute+=Math.abs(f.adjusted);
+    }
+  return totals;
+}
+function horoscopeOverallTimeLayers(domains) {
+  const totals=horoscopeEmptyTimeLayers();
+  for (const d of domains) for (const layer of HORO_TIME_LAYERS)
+    for (const key of Object.keys(totals[layer])) totals[layer][key]+=d.timeLayers[layer][key]/domains.length;
+  return totals;
+}
+function horoscopeTimeChanges(today, yesterday) {
+  const delta=(a,b)=>({raw:a.raw-b.raw,layers:Object.fromEntries(HORO_TIME_LAYERS.map(layer=>
+    [layer,a.timeLayers[layer].adjusted-b.timeLayers[layer].adjusted]))});
+  return {...delta(today,yesterday),domains:today.domains.map((d,i)=>({key:d.key,...delta(d,yesterday.domains[i])}))};
+}
+
 const HORO_V31 = Object.freeze({ houseRulerScale: 0, combinationScale: 0 });
 const HORO_ROLE_WEIGHTS = Object.freeze({
   natural: 1, other: 0.6, solarRuler: 0.5,
@@ -621,13 +684,15 @@ function horoscopeDomainResult(key, contributions) {
   const raw = contributions.reduce((sum, term) => sum + term.value, 0);
   const driver = contributions.reduce((best, term) =>
     Math.abs(term.value) > Math.abs(best.value) ? term : best);
-  return { key, raw, stars: horoscopeStars(raw), contributions, focus: driver.focus };
+  return { key, raw, stars: horoscopeStars(raw), contributions, focus: driver.focus,
+    ...(contributions.some(t=>t.timeFactors || t.samples?.[0]?.timeFactors) ? {timeLayers:horoscopeTimeTotals(contributions)} : {}) };
 }
 function horoscopeRatingResult(domains) {
   const raw = domains.reduce((sum, d) => sum + d.raw, 0) / domains.length;
   const primary = domains.reduce((best, d) => Math.abs(d.raw) > Math.abs(best.raw) ? d : best);
   return { raw, stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
-    tone: horoscopeTone(primary.raw) };
+    tone: horoscopeTone(primary.raw),
+    ...(domains.every(d=>d.timeLayers) ? {timeLayers:horoscopeOverallTimeLayers(domains)} : {}) };
 }
 function weightedHoroscopeAspect(a, contribution, sampleAt) {
   return { angle:a.angle, deviation:a.deviation, strength:a.strength, zh:a.zh, en:a.en,
@@ -637,7 +702,9 @@ function weightedHoroscopeAspect(a, contribution, sampleAt) {
     valueBeforeCombination:a.valueBeforeCombination, value:a.value, cappedValue:a.cappedValue,
     contribution, sampleAt };
 }
-function scoreHoroscope(signIdx, positions, model = HORO_V32) {
+function scoreHoroscope(signIdx, positions, model = HORO_V33) {
+  if (model.timeLayers && !HORO_TIME_LAYERS.every(layer=>Number.isFinite(model.timeLayers[layer]) && model.timeLayers[layer]>=0 && model.timeLayers[layer]<=2))
+    throw new RangeError("Invalid horoscope time-layer coefficients");
   const snapshot = horoscopeSnapshotAspects(positions, model);
   const planets = positions.map(p => ({ ...p, ...horoscopeBodyState(p, positions, signIdx, model, snapshot) }));
   const domains = HORO_DOMAINS.map(domain => {
@@ -650,8 +717,8 @@ function scoreHoroscope(signIdx, positions, model = HORO_V32) {
         house: domain.houses.includes(p.house) ? p.placementScale * HORO_MODEL.houseBonus : 0 };
       const components = Object.fromEntries(HORO_FACTORS.map(key => [key, factors[key] * share]));
       const aspects = p.aspects.map(a => weightedHoroscopeAspect(a, a.cappedValue * share));
-      return { key: p.key, role, share, value: horoscopeFactorTotal(components), components, aspects,
-        focus: horoscopeFocus(p, aspects) };
+      const timed = model.timeLayers ? horoscopeTimeAdjust(p.key,domain.key,components,aspects,share,model.timeLayers) : {components,aspects};
+      return { key:p.key,role,share,...timed,value:horoscopeFactorTotal(timed.components),focus:horoscopeFocus(p,timed.aspects) };
     });
     return horoscopeDomainResult(domain.key, contributions);
   });
@@ -738,7 +805,7 @@ function horoscopeSky(date) {
    weighted value/evidence. Pick the strongest actual contributing sample
    in the direction of the integrated term; ties keep chronological order.
    Consequently displayed evidence is a real sampled sky, not a noon proxy. */
-function scoreHoroscopeSamples(signIdx, samples, model = HORO_V32) {
+function scoreHoroscopeSamples(signIdx, samples, model = HORO_V33) {
   const totalWeight = samples.reduce((sum, sample) => sum + sample.weight, 0);
   if (!samples.length || !Number.isFinite(totalWeight) || totalWeight <= 0 ||
       samples.some(sample => !Number.isFinite(sample.weight) || sample.weight <= 0))
@@ -752,8 +819,10 @@ function scoreHoroscopeSamples(signIdx, samples, model = HORO_V32) {
       const terms = scored.map(sample => {
         const term = sample.score.domains[i].contributions.find(t => t.key === initial.key);
         const components = Object.fromEntries(HORO_FACTORS.map(key => [key, term.components[key] * sample.weight]));
-        const aspects = term.aspects.map(a => weightedHoroscopeAspect(a, a.contribution * sample.weight, sample.at));
-        return { at: sample.at, weight: sample.weight, value: horoscopeFactorTotal(components), components, aspects,
+        const aspects = term.aspects.map(a => ({...weightedHoroscopeAspect(a, a.contribution * sample.weight, sample.at),
+          ...(a.layer ? {layer:a.layer,coefficient:a.coefficient,capScale:a.capScale,rawContribution:a.rawContribution*sample.weight} : {})}));
+        const timeFactors = term.timeFactors?.map(f=>({...f,sampleAt:sample.at,raw:f.raw*sample.weight,adjusted:f.adjusted*sample.weight}));
+        return { at: sample.at, weight: sample.weight, value: horoscopeFactorTotal(components), components, aspects, ...(timeFactors ? {timeFactors} : {}),
           focus: { ...term.focus, aspect: aspects[0] || null, sampleAt: sample.at, sampleLabel: sample.label } };
       });
       const components = Object.fromEntries(HORO_FACTORS.map(key =>
@@ -765,9 +834,9 @@ function scoreHoroscopeSamples(signIdx, samples, model = HORO_V32) {
     });
     return horoscopeDomainResult(domain.key, contributions);
   });
-  return { ...horoscopeRatingResult(domains), samples: scored.map(({from,to,at,weight,label}) => ({from,to,at,weight,label})) };
+  return { ...horoscopeRatingResult(domains), samples: scored.map(({from,to,at,weight,label,positions}) => ({from,to,at,weight,label,...(model.timeLayers ? {positions} : {})})) };
 }
-function scoreHoroscopeDay(date, signIdx, model = HORO_V32) {
+function scoreHoroscopeDay(date, signIdx, model = HORO_V33) {
   return scoreHoroscopeSamples(signIdx, horoscopeSky(date).samples, model);
 }
 /* Context matching is restricted to the preassigned date window to
@@ -839,13 +908,13 @@ function horoscopeActionWindow(noon) {
   const start = index === 0 ? 0 : HORO_ADVICE_WINDOW_ENDS[index - 1];
   return { start, end: HORO_ADVICE_WINDOW_ENDS[index], elapsed: slot - start };
 }
-function chooseHoroscopeActions(noon, signIdx, scored) {
+function chooseHoroscopeActions(noon, signIdx, scored, yesterday = null) {
   const window = horoscopeActionWindow(noon);
   const earlier = [];
   for (let back = window.elapsed; back > 0; back--) {
     const date = new Date(noon);
     date.setDate(date.getDate() - back);
-    earlier.push(scoreHoroscopeDay(date, signIdx));
+    earlier.push(back === 1 && yesterday ? yesterday : scoreHoroscopeDay(date, signIdx));
   }
   const choices = {};
   for (const d of scored.domains) {
@@ -872,12 +941,16 @@ function makeHoroscope(date, signIdx) {
   const noon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
   const sky = horoscopeSky(noon);
   const scored = scoreHoroscopeSamples(signIdx, sky.samples);
+  const previousDate = new Date(noon);
+  previousDate.setDate(previousDate.getDate() - 1);
+  const yesterday = scoreHoroscopeDay(previousDate, signIdx);
   const seed = (date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()) * 16 + signIdx;
   const rng = seededRng(seed);
   const choose = list => list[Math.floor(rng() * list.length)];
   const domain = HORO_DOMAINS.find(d => d.key === scored.primary);
   const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
-  return { signIdx, ...scored, actionChoices: chooseHoroscopeActions(noon, signIdx, scored),
+  return { signIdx, ...scored, timeChange:horoscopeTimeChanges(scored,yesterday),
+    actionChoices: chooseHoroscopeActions(noon, signIdx, scored, yesterday),
     cardEvents: sky.boundaryEvents,
     get events() { return sky.events; },
     adviceIdx: Math.floor(rng() * HORO_ADVICE_VARIANTS),
@@ -1198,6 +1271,65 @@ function horoscopeCopy(h, lang) {
 }
 /* Show the additive daily audit in scoring units, not percentages or
    probabilities. Only presentation rounds; stored terms retain precision. */
+/* Each representative is an actual atom of the integrated factor ledger.
+   Group by domain, endpoint, factor and aspect angle; retain all sample epochs. */
+function horoscopeTimeDriver(h, layer) {
+  const groups = new Map();
+  for (const d of h.domains) for (const t of d.contributions)
+    for (const sample of t.samples || []) for (const f of sample.timeFactors || []) {
+      if (f.layer !== layer || f.adjusted === 0) continue;
+      const key = [f.domain,f.body,f.other,f.factor,f.angle].join("/");
+      if (!groups.has(key)) groups.set(key,{net:0,positive:null,negative:null});
+      const g=groups.get(key), side=f.adjusted>0 ? "positive" : "negative";
+      g.net+=f.adjusted;
+      if (!g[side] || Math.abs(f.adjusted)>Math.abs(g[side].adjusted)) g[side]=f;
+    }
+  let best=null;
+  for (const g of groups.values()) if (!best || Math.abs(g.net)>Math.abs(best.net)) best=g;
+  if (!best || Math.abs(best.net)<0.025) return null;
+  return {net:best.net,factor:best.net>0?best.positive:best.negative};
+}
+const HORO_TIME_LABELS = {
+  background:["长期背景","Background"], trend:["阶段性变化","Trend"], daily:["每日动态","Daily"],
+};
+const horoscopeRawUnits = value => (value>=0?"+":"-")+Math.abs(value).toFixed(2);
+function horoscopeTimeUnitsCopy(totals, lang) {
+  if (!totals) return "";
+  const zh=lang==="zh", i=zh?0:1;
+  return (zh?"时间尺度（原始评分单位）：":"Time scales (raw score units): ")+
+    HORO_TIME_LAYERS.map(k=>HORO_TIME_LABELS[k][i]+" "+horoscopeRawUnits(totals[k].adjusted)).join(zh?"；":"; ");
+}
+function horoscopeTimeSummaryCopy(h, lang) {
+  if (!h.timeLayers) return "";
+  const zh=lang==="zh", i=zh?0:1, names=I18N[lang].astro.bodies;
+  const factors=zh?["宫位关系","庙旺","相位","太阳状态","逆行","领域宫位"]:
+    ["house relation","dignity","aspect","solar condition","retrograde","domain houses"];
+  const lines=[horoscopeTimeUnitsCopy(h.timeLayers,lang)];
+  for (const layer of HORO_TIME_LAYERS) {
+    const driver=horoscopeTimeDriver(h,layer);
+    if (!driver) continue;
+    const f=driver.factor, sample=h.samples?.find(s=>s.at===f.sampleAt);
+    const domain=HORO_DOMAINS.find(d=>d.key===f.domain);
+    const evidence=body=>{
+      const p=sample?.positions?.find(q=>q.key===body);
+      return names[body]+(p?" "+SIGNS[p.signIdx][lang]+" "+(p.lon%30).toFixed(1)+"°":"");
+    };
+    const pair=evidence(f.body)+(f.other?" / "+evidence(f.other):"");
+    const kind=factors[HORO_FACTORS.indexOf(f.factor)]+(f.factor==="aspect"?" "+f.angle+"°":"");
+    lines.push(HORO_TIME_LABELS[layer][i]+(zh?"代表贡献：":" representative contributor: ")+
+      domain[lang]+" · "+pair+" · "+kind+" · "+horoscopeRawUnits(driver.net)+
+      (sample?" · "+(zh?"代表采样约 ":"Representative sample ~")+sample.label:""));
+  }
+  if (h.timeChange) {
+    const c=h.timeChange;
+    lines.push((zh?"较昨日的净评分变化：":"Compared with yesterday (net raw score change): ")+horoscopeRawUnits(c.raw)+" · "+
+      HORO_TIME_LAYERS.map(k=>HORO_TIME_LABELS[k][i]+" "+horoscopeRawUnits(c.layers[k])).join(zh?"；":"; "));
+    const main=HORO_TIME_LAYERS.reduce((a,b)=>Math.abs(c.layers[b])>Math.abs(c.layers[a])?b:a);
+    if (Math.abs(c.layers[main])>=0.02) lines.push((zh?"最大净变化来自：":"Largest net change: ")+HORO_TIME_LABELS[main][i]);
+  }
+  return lines.join("\n");
+}
+
 function horoscopeContributionCopy(d, lang) {
   if (!d.contributions?.[0]?.samples) return "";
   const zh = lang === "zh";
@@ -1211,7 +1343,7 @@ function horoscopeContributionCopy(d, lang) {
     labels[i] + " " + fmt(d.contributions.reduce((sum, term) => sum + term.components[key], 0))).join(sep);
   return (zh ? "全天贡献（约值）：" : "Daily contributions (approx.): ") + bodies + "\n" +
     (zh ? "因素分解：" : "Factor breakdown: ") + factors +
-    (zh ? "；合计 " : "; total ") + fmt(d.raw);
+    (zh ? "；合计 " : "; total ") + fmt(d.raw) + (d.timeLayers ? "\n"+horoscopeTimeUnitsCopy(d.timeLayers,lang) : "");
 }
 /* The reading dialog expands the same stored daily result into four domain
    explanations. No fresh Date, ephemeris calculation, RNG or deck draw. */
@@ -1230,6 +1362,8 @@ function horoscopeFullText(h, lang) {
       : "Read the four ratings and practical prompts first, then their referenced sky readings. Positive and negative factors are contributions to an editorial weighted score, not real-world outcomes. Shared placements and aspects are explained once.",
     ...horoscopeEventParagraphs(h, lang),
   ];
+  const timeSummary=horoscopeTimeSummaryCopy(h,lang);
+  if (timeSummary) paragraphs[1]+="\n"+timeSummary;
   for (const d of h.domains) {
     const detail = horoscopeDomainCopy(d, h, lang);
     const group = groups.get(horoscopeFocusKey(d.focus));
