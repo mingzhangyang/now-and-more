@@ -152,3 +152,7 @@ node --test tests/horoscope-v3.2.test.cjs
 
 
 Final candidate: house scale 0.2, pair scale 0.5. See [five-year ablation](docs/horoscope-v3.2.md) and [aggregate JSON summary](docs/horoscope-v3.2-backtest.json).
+
+### Horoscope V3.3 (multi-time-scale factor ledger)
+
+V3.3 partitions existing normalized, capped V3.2 factors into background, trend and daily contributions, preserving shared sky samples, the single final star conversion, signed aspect caps and seven-day advice uniqueness. The full reader shows bilingual raw-score layer contributions and net day-to-day change, not additional ratings or predictions. See [model definition and verification limits](docs/horoscope-v3.3.md), [local experimental data](docs/horoscope-v3.3-backtest.json) and `TZ=UTC node scripts/horoscope-v3.3-backtest.cjs` for the reproducible pinned-baseline/holdout experiment.

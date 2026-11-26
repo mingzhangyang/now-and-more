@@ -7,6 +7,9 @@ with a real keyboard press and checks that the focus outline is solid,
 at least 2px wide, and contrasts at least 3:1 with the page background
 (WCAG 2.2 non-text contrast)."""
 import os
+import functools
+import threading
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -65,6 +68,48 @@ def check(browser, theme, special):
         page.close()
 
 
+def check_horoscope_reader(browser):
+    """Real production scripts and actual stage/reading modal, mobile viewport."""
+    handler = functools.partial(SimpleHTTPRequestHandler, directory=str(ROOT))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    page = browser.new_page(viewport={"width": 390, "height": 844})
+    try:
+        page.goto(f"http://127.0.0.1:{server.server_port}/index.html",
+                  wait_until="domcontentloaded")
+        page.wait_for_function("typeof renderSelection === 'function' && typeof makeHoroscope === 'function'")
+        for language, layer_text, change_text in (
+            ("zh", "时间尺度（原始评分单位）", "较昨日的净评分变化"),
+            ("en", "Time scales (raw score units)", "Compared with yesterday"),
+        ):
+            page.evaluate("""language => {
+              if (activeModal) hideModal(activeModal);
+              lang = language;
+              ambientOn = false;
+              currentSelection = {cat:"astro", subtype:"horoscope",
+                horo:makeHoroscope(new Date(2026,10,25,12),7)};
+              window.__v33Selection = currentSelection;
+              renderSelection(currentSelection, stageSurface());
+            }""", language)
+            assert layer_text not in page.locator("#card-body").inner_text()
+            page.locator("#full-text-btn").click()
+            page.locator("#full-overlay").wait_for(state="visible")
+            body = page.locator("#full-body").inner_text()
+            assert layer_text in body and change_text in body, (language, body)
+            assert "undefined" not in body and "NaN" not in body
+            assert page.evaluate("currentSelection === window.__v33Selection")
+            page.locator("#full-close").click()
+            page.locator("#full-overlay").wait_for(state="hidden")
+            assert page.evaluate("document.activeElement.id === 'full-text-btn'")
+        print("horoscope V3.3 production reading modal ok")
+    finally:
+        page.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
 def main():
     exe = os.environ.get("CHROMIUM_PATH")
     with sync_playwright() as p:
@@ -74,6 +119,7 @@ def main():
                 for special in (None, "redgold", "moon", "green", "amber", "warm"):
                     c = check(browser, theme, special)
                     print(f"{theme:5} {special or '-':8} {c:.2f}:1")
+            check_horoscope_reader(browser)
         finally:
             browser.close()
     print("card focus ok")
