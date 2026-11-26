@@ -71,7 +71,7 @@ function harness(opts = {}) {
     return {
       solarTermInfo, computeAlmanac, renderSelection,
       jieMonthInfo, jieMonthGanzhi, lichunYearGanzhi, yearGanzhi, dayGanzhi,
-      jianchuOf, shaDirectionOf, ZHI, NAM_ALMANAC, tuWangYongShi, almanacRuleContext, almanacFullText,
+      jianchuOf, shaDirectionOf, ZHI, NAM_ALMANAC, tuWangYongShi, almanacRuleContext, almanacFullText, almanacFullDoc, almanacReadingHtml,
       NAM_LUNAR, LUNAR, lunarDate, deltaTSeconds, civilDeltaTSeconds, solarTermInstantsForYear,
       lunarFestivalOn, matchPersonalDay, lunarLabelOf, setMyDays: (days) => { myDays = days; },
     };

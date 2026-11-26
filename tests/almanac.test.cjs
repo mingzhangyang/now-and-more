@@ -287,12 +287,36 @@ test("card shows the first 宜/忌 in vocabulary order, 「等N事」 for the re
   api.renderSelection({ cat: "almanac", data: allJi }, s);
   assert.ok(s.body.innerHTML.includes("<b>宜</b> 诸事不宜"));
   assert.ok(s.body.innerHTML.includes("<b>忌</b> 诸事皆忌"));
-  // The 全文 reading gives every 宜/忌 with its sources.
+  // The 全文 reading groups every 宜/忌 under the sources that decided it.
+  const doc = api.almanacFullDoc(long);
+  for (const side of ["yi", "ji"]) {
+    const names = doc[side].groups.flatMap((g) => g.items.map((i) => i.name));
+    assert.deepEqual([...names].sort(), [...long[side]].sort(), side);
+    assert.equal(doc[side].count, long[side].length);
+    for (const g of doc[side].groups) {
+      for (const i of g.items) {
+        const t = long.yiJi.trace.find((r) => r.name === i.name);
+        assert.deepEqual(g.sources, side === "yi" ? t.yi : t.ji, i.name);
+        assert.equal(g.why, t.why || "", i.name);
+        assert.ok(i.gloss, i.name);
+      }
+    }
+  }
   const full = api.almanacFullText(long);
-  for (const n of long.yi) assert.ok(new RegExp(`宜 ${n}（[^）]+）← `).test(full), n);
-  for (const n of long.ji) assert.ok(full.includes(`忌 ${n} ← `), n);
   assert.ok(full.includes("等第："));
   assert.ok(!full.includes("趣味"));
+  const html = api.almanacReadingHtml(doc);
+  for (const n of [...long.yi, ...long.ji]) assert.ok(html.includes(`<span class="al-item">${n}</span>`), n);
+  assert.ok(!/undefined|NaN/.test(html));
+  // 诸事皆忌: a banner, both sides closed, the wanted 宜 folded away
+  // without repeating the verdict on every group.
+  const allDoc = api.almanacFullDoc(allJi);
+  assert.ok(allDoc.allJi && allDoc.level.strong && allDoc.level.name === "诸事皆忌");
+  assert.equal(allDoc.yi.count + allDoc.ji.count, 0);
+  assert.ok(allDoc.quiet.count > 0 && allDoc.quiet.groups.every((g) => g.why === ""));
+  const allHtml = api.almanacReadingHtml(allDoc);
+  assert.ok(allHtml.includes("al-level--strong") && allHtml.includes("诸事皆忌"));
+  assert.ok(allHtml.includes('<details class="al-quiet">'), "本有之宜 starts folded");
   assert.ok(api.almanacFullText(allJi).includes("诸事皆忌"));
 });
 

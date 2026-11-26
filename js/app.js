@@ -1041,55 +1041,138 @@ function computeAlmanac(date) {
 const ALMANAC_CARD_YIJI = 8;
 const YONGSHI_GLOSS = Object.fromEntries(NAM_ALMANAC.YONGSHI.map((y) => [y.name, y.gloss]));
 
-/* The 宜忌 part of the 全文 reading: the day's 等第, then every 宜 and 忌
-   with the sources it came from (「宜 嫁娶 ← 天德·六合」), and the 用事
-   some god called 宜 that ended up written as neither, with the reason. */
-function almanacYiJiText(yj) {
-  const lines = [];
-  const src = (list) => list.join("·");
-  if (yj.level) lines.push(`等第：${yj.level.name}（${yj.level.by.join("、")}）`);
-  else lines.push("等第：本日无大凶煞，宜忌各从本神");
-  if (yj.allJi) {
-    lines.push("诸事皆忌：宜神所宜，本日皆不用。");
-    const wanted = yj.trace.filter((t) => t.yi.length);
-    if (wanted.length) lines.push("（本有之宜：" + wanted.map((t) => `${t.name} ← ${src(t.yi)}`).join("；") + "）");
-    return lines.join("\n");
+/* The almanac's reading door (全文) as a laid-out document. The card
+   lists only names and the first 宜/忌; the reading answers 「为什么」:
+   每条宜忌按其所出之神归组（「月德·四相：祭祀 祈福 …」），so a day's
+   19 宜 read as three or four groups instead of nineteen lines, with the
+   resolution note (「小耗遇月德不忌」) on the group it explains. Then the
+   five 吉神方位, the three 纳音, every god with its gloss, and the 用事
+   some god called 宜 but the day's 等第 left unwritten. almanacFullDoc
+   is the single source; the HTML and the plain text are two renderings. */
+const ALMANAC_BASIS = "宜忌依《钦定协纪辨方书》卷十「宜忌」逐神合成，值神、建除与神煞以节气定月；纳音按六十甲子纳音表，吉神方位按通书口诀（福神取「甲己正北」一说）。";
+const ALMANAC_FOOT = "释义为本站白话概括。宜忌属传统择日民俗，不具科学预测效力。";
+
+/* Rows of the 宜忌 trace → groups that share the same sources and note,
+   in the order their first 用事 appears (the book's 用事 order). */
+function almanacGroups(rows, side, withWhy = true) {
+  const groups = [], byKey = new Map();
+  for (const t of rows) {
+    const sources = side === "ji" ? t.ji : t.yi;
+    const why = withWhy ? t.why || "" : "";
+    const key = sources.join("·") + "|" + why;
+    let g = byKey.get(key);
+    if (!g) { g = { sources, why, items: [] }; byKey.set(key, g); groups.push(g); }
+    g.items.push({ name: t.name, gloss: YONGSHI_GLOSS[t.name] || "" });
   }
-  const rows = (result) => yj.trace.filter((t) => t.result === result);
-  const yi = rows("宜"), ji = rows("忌");
-  lines.push(`宜（${yi.length}）` + (yi.length ? "" : "：诸事不宜"));
-  for (const t of yi) lines.push(`宜 ${t.name}（${YONGSHI_GLOSS[t.name]}）← ${src(t.yi)}` + (t.why ? `；${t.why}` : ""));
-  lines.push(`忌（${ji.length}）` + (ji.length ? "" : "：诸事不忌"));
-  for (const t of ji) lines.push(`忌 ${t.name} ← ${src(t.ji)}` + (t.why ? `；${t.why}` : ""));
-  const quiet = rows("不注").filter((t) => t.yi.length);
-  if (quiet.length) {
-    lines.push(`不注（${quiet.length}）`);
-    for (const t of quiet) lines.push(`不注 ${t.name}（宜 ← ${src(t.yi)}` + (t.ji.length ? `；忌 ← ${src(t.ji)}` : "") + `）：${t.why}`);
-  }
-  return lines.join("\n");
+  return groups;
 }
 
-/* The almanac's reading door (全文): the card lists only the gods' names
-   and the first 宜/忌; this text gives each god its gloss and every 宜/忌
-   with its sources, grouped as on the card. */
-function almanacFullText(a) {
-  const head = [
-    `${a.yearGanzhi}年 ${a.monthGanzhi}月 ${a.dayGanzhi}日` + (a.lunarLabel ? ` · 农历${a.lunarLabel}` : ""),
-    `纳音 年 ${a.nayin.year} · 月 ${a.nayin.month} · 日 ${a.nayin.day}`,
-    `建除 ${a.jianchu} · 值神 ${a.zhiShen.name}（${a.zhiShen.huangdao ? "黄道" : "黑道"}） · ${a.chongSha}`,
-    "吉神方位 " + a.directions.map((d) => `${d.name}${d.dir}`).join(" · "),
-  ].join("\n");
-  const list = (label, gods) => `${label}\n` + (gods.length ? gods.map((g) => `${g.name}：${g.gloss}`).join("\n") : "无");
-  return [
-    head,
-    almanacYiJiText(a.yiJi),
-    list("吉神", a.jiShen),
-    list("凶神", a.xiongShen),
-    "值神、建除与神煞按《钦定协纪辨方书》的月表规则推算，以节气定月；纳音按六十甲子纳音表，吉神方位按通书口诀（福神取「甲己正北」一说）。宜忌依同书卷十「宜忌」逐神合成：箭头后是所出之神或建除（「甲日」「寅日」为百忌日），" +
-      "吉凶相遇按书中等第与「德能解／犹忌」之例取舍；值神黄道黑道不另定宜忌。释义为本站自拟的白话概括。" +
-      "宜忌属传统择日民俗，不具科学预测效力。",
-  ].join("\n\n");
+function almanacFullDoc(a) {
+  const yj = a.yiJi;
+  const rows = (result) => yj.trace.filter((t) => t.result === result);
+  const wanted = yj.trace.filter((t) => t.yi.length);
+  const yiRows = yj.allJi ? [] : rows("宜");
+  const jiRows = yj.allJi ? [] : rows("忌");
+  const quietRows = yj.allJi ? wanted : rows("不注").filter((t) => t.yi.length);
+  return {
+    lunar: a.lunarLabel ? `农历${a.lunarLabel}` : "",
+    pillars: `${a.yearGanzhi}年 ${a.monthGanzhi}月`,
+    day: `${a.dayGanzhi}日`,
+    dayGanzhi: a.dayGanzhi,
+    nayinDay: a.nayin.day,
+    jianchu: a.jianchu,
+    zhiShen: a.zhiShen,
+    chongSha: a.chongSha,
+    level: yj.allJi
+      ? { strong: true, name: "诸事皆忌", note: "宜神所宜，本日皆不用" + (yj.level && yj.level.by.length ? `（${yj.level.by.join("、")}）` : "") }
+      : yj.level
+        ? { strong: false, name: yj.level.name, note: yj.level.by.join("、") }
+        : { strong: false, name: "宜忌各从本神", note: "本日无大凶煞" },
+    allJi: !!yj.allJi,
+    yi: { count: yiRows.length, groups: almanacGroups(yiRows, "yi") },
+    ji: { count: jiRows.length, groups: almanacGroups(jiRows, "ji") },
+    quiet: {
+      title: yj.allJi ? "本有之宜" : "未注之事",
+      note: yj.allJi ? "以下各事本有宜神，因诸事皆忌，均不注宜。" : "以下各事本有宜神，按本日等第不注宜忌。",
+      count: quietRows.length,
+      // On a 诸事皆忌 day every row's note is that same verdict, already
+      // the banner — the groups then show their sources only.
+      groups: almanacGroups(quietRows, "yi", !yj.allJi),
+    },
+    directions: a.directions,
+    nayin: [["年", a.yearGanzhi, a.nayin.year], ["月", a.monthGanzhi, a.nayin.month], ["日", a.dayGanzhi, a.nayin.day]]
+      .map(([label, gz, value]) => ({ label, gz, value })),
+    jiShen: a.jiShen,
+    xiongShen: a.xiongShen,
+    basis: ALMANAC_BASIS,
+    footnote: ALMANAC_FOOT,
+  };
 }
+
+/* Plain text of the reading (the door's presence check, copy, tests). */
+function almanacFullDocText(doc) {
+  const src = (g) => g.sources.join("·") + (g.why ? `（${g.why}）` : "");
+  const groupLines = (groups) => groups.map((g) => `${src(g)}：${g.items.map((i) => i.name).join(" ")}`);
+  const parts = [
+    [`${doc.pillars} ${doc.day} · ${doc.lunar}`.replace(/ · $/, ""),
+      `建除 ${doc.jianchu} · 值神 ${doc.zhiShen.name}（${doc.zhiShen.huangdao ? "黄道" : "黑道"}） · ${doc.chongSha}`,
+      `等第：${doc.level.name}（${doc.level.note}）`].join("\n"),
+  ];
+  if (doc.allJi) parts.push("宜：诸事不宜\n忌：诸事皆忌");
+  else {
+    parts.push([`宜（${doc.yi.count}）` + (doc.yi.count ? "" : "：诸事不宜"), ...groupLines(doc.yi.groups)].join("\n"));
+    parts.push([`忌（${doc.ji.count}）` + (doc.ji.count ? "" : "：诸事不忌"), ...groupLines(doc.ji.groups)].join("\n"));
+  }
+  parts.push("吉神方位 " + doc.directions.map((d) => `${d.name}${d.dir}`).join(" · ") + "\n" +
+    "纳音 " + doc.nayin.map((n) => `${n.label} ${n.value}`).join(" · "));
+  const gods = (label, list) => `${label}\n` + (list.length ? list.map((g) => `${g.name}：${g.gloss}`).join("\n") : "无");
+  parts.push(gods("吉神", doc.jiShen), gods("凶神", doc.xiongShen));
+  if (doc.quiet.count) parts.push([`${doc.quiet.title}（${doc.quiet.count}）`, ...groupLines(doc.quiet.groups)].join("\n"));
+  parts.push(doc.basis + doc.footnote);
+  return parts.join("\n\n");
+}
+
+function almanacReadingHtml(doc) {
+  const sec = (id, title, body, extra = "") =>
+    `<section class="hr-section${extra}" aria-labelledby="al-${id}-title"><h3 class="hr-section-title" id="al-${id}-title">${title}</h3>${body}</section>`;
+  const groupsHtml = (groups, side) => groups.map((g) =>
+    `<div class="al-group al-group--${side}">` +
+      `<p class="al-src"><span class="al-src-gods">${esc(g.sources.join(" · "))}</span>` +
+      (g.why ? `<span class="al-why">${esc(g.why)}</span>` : "") + `</p>` +
+      `<ul class="al-items">${g.items.map((i) =>
+        `<li><span class="al-item">${esc(i.name)}</span>${i.gloss ? `<span class="al-gloss">${esc(i.gloss)}</span>` : ""}</li>`).join("")}</ul>` +
+    `</div>`).join("");
+  const count = (n) => `<span class="al-count">${n}</span>`;
+  const zs = doc.zhiShen;
+  const head = `<header class="al-head">` +
+    `<div class="hr-kicker">${esc([doc.lunar, doc.pillars].filter(Boolean).join(" · "))}</div>` +
+    `<h2 class="al-day">${esc(doc.day)}<span class="al-nayin">${esc(doc.nayinDay)}</span></h2>` +
+    `<ul class="al-chips">` +
+      `<li><span class="al-chip-k">建除</span>${esc(doc.jianchu)}</li>` +
+      `<li class="${zs.huangdao ? "al-chip--huang" : "al-chip--hei"}"><span class="al-chip-k">值神</span>${esc(zs.name)} · ${zs.huangdao ? "黄道" : "黑道"}</li>` +
+      `<li>${esc(doc.chongSha)}</li>` +
+    `</ul></header>`;
+  const level = `<p class="al-level${doc.level.strong ? " al-level--strong" : ""}"><b>${esc(doc.level.name)}</b><span>${esc(doc.level.note)}</span></p>`;
+  const yiji = doc.allJi
+    ? sec("yiji", "宜忌", `<div class="al-allji"><p><span class="al-side al-side--yi">宜</span>诸事不宜</p><p><span class="al-side al-side--ji">忌</span>诸事皆忌</p></div>`)
+    : sec("yi", `宜 ${count(doc.yi.count)}`, doc.yi.count ? groupsHtml(doc.yi.groups, "yi") : `<p class="hr-note">诸事不宜</p>`, " al-sec--yi") +
+      sec("ji", `忌 ${count(doc.ji.count)}`, doc.ji.count ? groupsHtml(doc.ji.groups, "ji") : `<p class="hr-note">诸事不忌</p>`, " al-sec--ji");
+  const dl = (cls, items) => `<dl class="al-grid ${cls}">${items.map(([k, v, sub]) =>
+    `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd>${sub ? `<dd class="al-grid-sub">${esc(sub)}</dd>` : ""}</div>`).join("")}</dl>`;
+  const dirs = sec("dirs", "吉神方位", dl("al-grid--dirs", doc.directions.map((d) => [d.name, d.dir])));
+  const nayin = sec("nayin", "纳音", dl("al-grid--nayin", doc.nayin.map((n) => [n.label, n.value, n.gz])));
+  const godList = (label, side, list) => `<div class="al-gods-col"><h4 class="al-gods-title al-side--${side}">${label}</h4>` +
+    (list.length ? `<ul>${list.map((g) => `<li><b>${esc(g.name)}</b>${esc(g.gloss)}</li>`).join("")}</ul>` : `<p class="hr-note">无</p>`) + `</div>`;
+  const gods = sec("gods", "神煞", `<div class="al-gods">${godList("吉神", "yi", doc.jiShen)}${godList("凶神", "ji", doc.xiongShen)}</div>`);
+  const quiet = doc.quiet.count
+    ? `<details class="al-quiet"><summary>${esc(doc.quiet.title)} ${count(doc.quiet.count)}</summary>` +
+      `<p class="hr-note">${esc(doc.quiet.note)}</p>${groupsHtml(doc.quiet.groups, "quiet")}</details>`
+    : "";
+  const foot = `<footer class="hr-foot"><p>${esc(doc.basis)}</p><p>${esc(doc.footnote)}</p></footer>`;
+  return head + level + yiji + quiet + dirs + nayin + gods + foot;
+}
+
+function almanacFullText(a) { return almanacFullDocText(almanacFullDoc(a)); }
 
 /* ================= Astrology: see js/astro.js ================= */
 
@@ -2220,7 +2303,8 @@ function fullTextItemForSelection(sel) {
     return { full: horoscopeFullDocText(doc), horoscope: doc };
   }
   if (sel.cat === "almanac" && sel.data) {
-    return { full: almanacFullText(sel.data), source: "《钦定协纪辨方书》" };
+    const doc = almanacFullDoc(sel.data);
+    return { full: almanacFullDocText(doc), almanac: doc, source: "《钦定协纪辨方书》" };
   }
   return sel.item;
 }
@@ -2320,8 +2404,9 @@ function openFullText(item, opener, cat) {
   fullOpener = opener || null;
   $("full-cat").textContent = t().categories[cat] || t().categories.classics;
   $("full-close").setAttribute("aria-label", lang === "zh" ? "关闭" : "Close");
-  $("full-body").className = item.horoscope ? "full-body hr" : "full-body";
-  $("full-body").innerHTML = item.horoscope ? horoscopeReadingHtml(item.horoscope) : full
+  $("full-body").className = item.horoscope ? "full-body hr" : item.almanac ? "full-body hr al" : "full-body";
+  $("full-body").innerHTML = item.horoscope ? horoscopeReadingHtml(item.horoscope)
+    : item.almanac ? almanacReadingHtml(item.almanac) : full
     .split(/\n\n+/)
     .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)
     .join("");
