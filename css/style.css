@@ -476,10 +476,17 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   transition: opacity 0.35s ease, transform 0.35s ease;
   outline: none;
 }
-/* Keyboard focus on the stage card: a soft vermillion halo instead of
-   a full red frame, so pressing Space does not make the card shout. */
+/* Keyboard focus on the stage card. `.card { outline: none }` above
+   outranks the zero-specificity global ring, so the card restates it
+   here: a solid 2px accent outline (accent against --bg is well over
+   3:1 in both themes — the WCAG 2.2 non-text contrast floor), set 3px
+   off the card so it reads as a ring rather than a heavier border.
+   The soft vermillion tint stays only as a halo filling that gap; a
+   tint alone (the previous version) changed the edge by under 2:1 and
+   was easy to miss. Guarded by tests/card-focus.browser.py. */
 .card:focus-visible {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--card-border));
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent), 0 6px 24px rgba(0, 0, 0, 0.06);
 }
 .card.leaving { opacity: 0; transform: translateY(8px); }
