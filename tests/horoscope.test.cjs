@@ -10,10 +10,14 @@ const data = read("js/data.js");
 const start = app.indexOf("/* ================= Astrology (astro) ================= */");
 const end = app.indexOf("/* ================= End astrology ================= */", start);
 assert.ok(start >= 0 && end > start);
+const solarStart = app.indexOf("const TERM_VSOP_L0 =");
+const solarEnd = app.indexOf("function angDiffDeg(", solarStart);
+assert.ok(solarStart >= 0 && solarEnd > solarStart);
 const renderStart = app.indexOf('  if (sel.cat === "astro") {');
 const renderEnd = app.indexOf('  if (sel.cat === "gossip") {', renderStart);
 assert.ok(renderStart >= 0 && renderEnd > renderStart);
 const api = new Function(data + "\nconst RAD = Math.PI / 180, DAY_MS = 86400000;\n" +
+  app.slice(solarStart, solarEnd) + "\n" +
   app.slice(start, end) + "\n" +
   "function render(sel, lang) { let meta, body; const s = I18N[lang];\n" +
   app.slice(renderStart, renderEnd) + "\nreturn {meta, body}; }\n" +
@@ -105,6 +109,46 @@ test("bilingual card displays the same stored ratings, real evidence and enterta
   }
   assert.ok(!api.render({cat:"astro",subtype:"positions",positions:api.planetPositions(new Date(2026,10,25,12))},"en").body.includes("undefined"));
   assert.ok(!api.render({cat:"astro",subtype:"profile",signIdx:7},"zh").body.includes("undefined"));
+});
+test("real Mercury stations use the motion at noon and affect the daily rating", () => {
+  const positionsAt = day => api.planetPositions(new Date(day + "T12:00:00Z"));
+  // Independent Moshier/Swiss Ephemeris 2.10.03 speed signs at UTC noon.
+  for (const [day, retrograde] of [["2026-02-24", false], ["2026-02-25", false],
+    ["2026-02-26", true], ["2026-03-19", true], ["2026-03-20", true], ["2026-03-21", false]]) {
+    const positions = positionsAt(day);
+    assert.equal(positions.find(p => p.key === "mercury").retrograde, retrograde, day);
+    const actual = api.scoreHoroscope(4, positions).domains.find(d => d.key === "social");
+    const flipped = api.scoreHoroscope(4, positions.map(p => p.key === "mercury"
+      ? { ...p, retrograde: !p.retrograde } : p)).domains.find(d => d.key === "social");
+    assert.ok(retrograde ? actual.raw < flipped.raw : actual.raw > flipped.raw, day);
+    if (day === "2026-02-24") {
+      assert.equal(actual.stars, 3);
+      assert.equal(flipped.stars, 2);
+    }
+  }
+});
+test("of-date tropical positions agree with independent reference longitudes and solar ingresses", () => {
+  const at = day => api.planetPositions(new Date(day + "T12:00:00Z"));
+  // Swiss Ephemeris 2.10.03, Moshier, apparent geocentric tropical degrees.
+  // The approximate lunar/planetary model allows looser tolerances than the Sun.
+  const references = [
+    ["2026-06-21", [90.14282, 175.21724, 113.70082, 129.33059, 54.75531, 118.15348, 13.70920]],
+    ["2049-01-01", [281.50271, 244.90611, 299.31585, 328.70964, 344.43490, 83.93674, 287.55821]],
+  ];
+  const tolerances = [0.01, 0.5, 0.08, 0.08, 0.08, 0.25, 0.25];
+  for (const [day, expected] of references) {
+    for (const [i, p] of at(day).entries()) {
+      const error = Math.abs(((p.lon - expected[i] + 540) % 360) - 180);
+      assert.ok(error < tolerances[i], `${day} ${p.key}: ${p.lon} vs ${expected[i]}`);
+    }
+  }
+  for (const [day, sign] of [["2026-03-20", 11], ["2026-03-21", 0],
+    ["2026-06-20", 2], ["2026-06-21", 3]]) {
+    assert.equal(at(day).find(p => p.key === "sun").signIdx, sign, day);
+  }
+  const work = day => api.scoreHoroscope(1, at(day)).domains.find(d => d.key === "work").stars;
+  assert.equal(work("2026-06-20"), 3);
+  assert.equal(work("2026-06-21"), 4);
 });
 test("PWA shell and all four HTML pages agree on the asset version", () => {
   const sw=read("sw.js");

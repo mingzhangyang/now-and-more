@@ -874,8 +874,8 @@ function computeAlmanac(date) {
 }
 
 /* ================= Astrology (astro) ================= */
-/* Self-contained on purpose: everything below depends only on the data.js
-   pools and on Math/Date, never on the DOM, so it can be exercised in Node.
+/* The astrology calculations depend on the data.js pools, the shared
+   solar-term ephemeris and Math/Date, never on the DOM.
    Two kinds of content live here:
    - 星位 star positions: REAL astronomy, computed live from JPL Keplerian
      elements (approximate, sign-level accuracy).
@@ -943,13 +943,26 @@ function helioRect(body, date) {
 }
 
 function sunLongitude(date) {
-  const e = helioRect("earth", date);
-  return norm360(Math.atan2(-e.y, -e.x) / RAD);
+  return sunApparentLongitudeDeg(date);
+}
+/* Rotate the J2000 ecliptic vector to the mean ecliptic/equinox of date
+   (Meeus, Astronomical Algorithms, ch. 21, ecliptic precession; epoch
+   J2000). This includes the small change of the ecliptic plane as well
+   as precession in longitude. The planetary model remains approximate:
+   light time, aberration and nutation are not modeled for the planets. */
+function tropicalLongitudeOfDate(x, y, z, date) {
+  const T = julianCenturies(date);
+  const eta = (47.0029 * T - 0.03302 * T * T + 0.000060 * T ** 3) * RAD / 3600;
+  const Pi = (174.876384 + (-869.8089 * T + 0.03536 * T * T) / 3600) * RAD;
+  const p = (5029.0966 * T + 1.11113 * T * T - 0.000006 * T ** 3) / 3600;
+  const A = Math.cos(eta) * (Math.sin(Pi) * x - Math.cos(Pi) * y) - Math.sin(eta) * z;
+  const B = Math.cos(Pi) * x + Math.sin(Pi) * y;
+  return norm360(p + (Pi - Math.atan2(A, B)) / RAD);
 }
 function planetLongitude(body, date) {
   const p = helioRect(body, date);
   const e = helioRect("earth", date);
-  return norm360(Math.atan2(p.y - e.y, p.x - e.x) / RAD);
+  return tropicalLongitudeOfDate(p.x - e.x, p.y - e.y, p.z - e.z, date);
 }
 /* Simplified lunar longitude: mean longitude plus the main perturbation
    terms (evection, variation, equation of centre...). ~1° accuracy. */
@@ -973,11 +986,13 @@ function moonLongitude(date) {
 
 function signIndexFromLongitude(lon) { return Math.floor(norm360(lon) / 30) % 12; }
 
-/* Placements for the seven bodies. Retrograde (planets only) is decided by
-   comparing today's geocentric longitude with the one 5 days later:
-   decreasing longitude = apparent retrograde motion. */
+/* Placements for the seven bodies at the requested instant. Use a short
+   symmetric difference to estimate apparent geocentric longitude velocity
+   at that instant, rather than averaging across a future station. */
 function planetPositions(date) {
-  const later = new Date(date.valueOf() + 5 * DAY_MS);
+  const halfWindow = DAY_MS / 24;
+  const before = new Date(date.valueOf() - halfWindow);
+  const after = new Date(date.valueOf() + halfWindow);
   const out = [];
   const sunLon = sunLongitude(date);
   out.push({ key: "sun", lon: sunLon, signIdx: signIndexFromLongitude(sunLon), retrograde: false });
@@ -985,12 +1000,12 @@ function planetPositions(date) {
   out.push({ key: "moon", lon: moonLon, signIdx: signIndexFromLongitude(moonLon), retrograde: false });
   for (const body of ["mercury", "venus", "mars", "jupiter", "saturn"]) {
     const lon = planetLongitude(body, date);
-    const lon2 = planetLongitude(body, later);
+    const motion = norm180(planetLongitude(body, after) - planetLongitude(body, before));
     out.push({
       key: body,
       lon,
       signIdx: signIndexFromLongitude(lon),
-      retrograde: norm180(lon2 - lon) < 0,
+      retrograde: motion < 0,
     });
   }
   return out;

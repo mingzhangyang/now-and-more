@@ -106,6 +106,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const read = name => fs.readFileSync(path.join(__dirname, "..", name), "utf8");
+const cacheVersion = Number(read("sw.js").match(/nam-v(\d+)/)[1]);
+const cacheName = version => `nam-v${version}`;
 function workerFixture({ failInstall = false } = {}) {
   const handlers = {}, deleted = [], matched = [];
   let skips = 0, claims = 0, precache;
@@ -126,7 +128,8 @@ function workerFixture({ failInstall = false } = {}) {
           async match(key) { matched.push([name, key]); return hit; },
         };
       },
-      async keys() { return ["nam-v45", "nam-v46", "nam-v47", "unrelated"]; },
+      async keys() { return [cacheName(cacheVersion - 2), cacheName(cacheVersion - 1),
+        cacheName(cacheVersion), cacheName(cacheVersion + 1), "unrelated"]; },
       async delete(key) { deleted.push(key); },
     },
     fetch() { throw Error("network should not serve a newer shell"); },
@@ -146,8 +149,8 @@ test("worker waits for explicit activation, rejects failed precache, and bypasse
   await f.dispatch("install");
   assert.equal(f.skips, 0);
   assert.ok(f.precache.every(request => request.cache === "reload"));
-  assert.ok(f.precache.some(request => request.url === "/js/pwa-update.js?v=46"));
-  assert.ok(f.precache.some(request => request.url === "/css/pwa-update.css?v=46"));
+  assert.ok(f.precache.some(request => request.url === "/js/pwa-update.js?v=" + cacheVersion));
+  assert.ok(f.precache.some(request => request.url === "/css/pwa-update.css?v=" + cacheVersion));
   await f.dispatch("message", { data: { type: "OTHER" } });
   assert.equal(f.skips, 0);
   await f.dispatch("message", { data: { type: "SKIP_WAITING" } });
@@ -157,7 +160,7 @@ test("worker waits for explicit activation, rejects failed precache, and bypasse
 test("activation deletes only older app caches and claims clients", async () => {
   const f = workerFixture();
   await f.dispatch("activate");
-  assert.deepEqual(f.deleted, ["nam-v45"]);
+  assert.deepEqual(f.deleted, [cacheName(cacheVersion - 2), cacheName(cacheVersion - 1)]);
   assert.equal(f.claims, 1);
 });
 test("navigation to a known shell stays on the controlling worker's cached version", async () => {
@@ -166,7 +169,7 @@ test("navigation to a known shell stays on the controlling worker's cached versi
     request: { method: "GET", cache: "default", mode: "navigate", url: "https://test.invalid/library?note=1" },
   });
   assert.equal(result, f.hit);
-  assert.deepEqual(f.matched, [["nam-v46", "/library.html"]]);
+  assert.deepEqual(f.matched, [[cacheName(cacheVersion), "/library.html"]]);
 });
 test("all pages load one shared updater and use the current cache version", () => {
   const source = read("sw.js");
