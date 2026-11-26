@@ -70,7 +70,6 @@ const I18N = {
       },
     },
     picture: {
-      received: "你收到一张图卡",
       view: "点击查看",
     },
     history: {
@@ -238,7 +237,6 @@ const I18N = {
       },
     },
     picture: {
-      received: "You've received a picture card",
       view: "Tap to view",
     },
     history: {

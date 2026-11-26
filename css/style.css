@@ -722,36 +722,29 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 
 /* ---------- Picture-card envelope （图卡信封） ----------
    Outside ambient mode a picture card (postcard / sky) arrives as an
-   envelope: a glimpse of the picture, its name, one line about it and
-   a quiet invitation to open it. The picture itself lives in the
-   image modal. The envelope wears the ordinary card dress, but lays
-   itself out as a row — a square thumbnail on the left, the words in
-   a column beside it — so the card stays about half as tall as the
-   stacked layout it replaced, with no dead air on the right. */
-.envelope { display: flex; gap: 14px; align-items: stretch; }
+   envelope: a glimpse of the picture, its name, a line about it and a
+   quiet invitation to open it. The picture itself lives in the image
+   modal. Every envelope is stacked like the picture it stands for —
+   picture on top, words below: a wide, compact glimpse across the
+   card, then one row with the copy on the left and the call to view
+   on the right. The copy column always has the card's full width
+   minus the button, so names never break mid-word on a phone. */
+.envelope { display: flex; flex-direction: column; gap: 12px; container-type: inline-size; }
 .env-preview {
-  flex: 0 0 65%;
-  width: auto;
-  height: auto;
-  min-height: 118px;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  max-height: 180px;
   margin: 0;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--card-border);
 }
-.env-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: left;
-}
 .env-preview-art img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 38%;
+  /* The paintings put their subject at or a little below the middle. */
+  object-position: center 58%;
   display: block;
   /* The painting is a glimpse, not the picture: blurred and dimmed,
      scaled a touch so the blur never shows a pale edge. */
@@ -774,78 +767,49 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
     radial-gradient(1.3px 1.3px at 60% 84%, rgba(255, 255, 255, 0.6) 50%, transparent 51%),
     linear-gradient(165deg, #22335f 0%, #141f3d 55%, #0c1428 100%);
 }
-.env-received {
-  margin: 0 0 3px;
-  font-family: var(--sans);
-  font-size: 13px;
-  letter-spacing: 0.22em;
-  color: var(--ink-soft);
+.env-text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+.env-copy { flex: 1; min-width: 0; overflow-wrap: break-word; }
+/* Narrowest phones (envelope < 300px, i.e. a 360px screen or less):
+   the call to view goes under the words, so a one-word name such as
+   "Thanksgiving" or 布宜诺斯艾利斯 keeps the whole width and never
+   splits. From 300px up the row leaves the copy ≥ 165px. */
+@container (max-width: 299px) {
+  .env-text { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .env-copy { width: 100%; }
 }
 /* The envelope's title is a name, not a headline: smaller than the
    stage's .big, which is sized for a card of its own. */
-.envelope .env-title { display: block; font-size: 27px; line-height: 1.2; }
-.env-intro { margin-top: 3px; }
+.envelope .env-title { display: block; font-size: 22px; line-height: 1.3; }
+.env-intro { margin-top: 2px; line-height: 1.5; }
 .env-glimpse {
   margin-top: 2px;
+  line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .env-cta {
-  display: inline-block;
-  align-self: flex-start;
-  margin: 10px 0 0;
-  padding: 5px 14px;
+  flex: none;
+  margin: 0;
+  padding: 6px 12px;
   border: 1px solid var(--card-border);
   border-radius: 999px;
   font-family: var(--sans);
   font-size: 14px;
-  letter-spacing: 0.14em;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
   color: var(--accent);
   font-weight: 600;
 }
 .card.has-envelope:hover .env-cta, .card.has-envelope:focus-visible .env-cta { border-color: var(--accent); }
-
-/* Narrow phones: a slimmer thumbnail leaves a column wide enough for
-   the name and the call to action. Titles and the call wrap inside
-   that column instead of painting past the card. */
-@media (max-width: 380px) {
-  .env-preview { flex-basis: 48%; min-height: 96px; }
-  .envelope .env-title { font-size: 22px; }
-  .env-cta { letter-spacing: 0.06em; padding: 5px 10px; }
-}
-.envelope .env-title, .env-intro, .env-glimpse { overflow-wrap: anywhere; }
-.env-cta { max-width: 100%; box-sizing: border-box; white-space: normal; text-align: center; }
-
-/* The chart envelope uses a wide, compact glimpse above a single
-   text/action row. Keep the action intact even on narrow phones. */
-.envelope.env-chart { flex-direction: column; gap: 12px; }
-.env-chart .env-preview {
-  flex: none;
-  width: 100%;
-  min-height: 0;
-  aspect-ratio: 16 / 7;
-  max-height: 180px;
-}
-.env-chart .env-text {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.env-chart .env-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.env-chart .env-title { font-size: 22px; }
-.env-chart .env-intro { line-height: 1.5; }
-.env-chart .env-cta {
-  flex: none;
-  align-self: center;
-  margin: 0;
-  padding: 6px 10px;
-  white-space: nowrap;
-  letter-spacing: 0.04em;
-  line-height: 1.5;
-}
 
 /* ---------- Picture-card lightbox （图卡灯箱） ----------
    The dialog fills the padded viewport and does not scroll. The

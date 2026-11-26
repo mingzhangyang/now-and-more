@@ -2267,16 +2267,18 @@ function renderEnvelope(sel, surface) {
   const preview = info.art
     ? `<div class="env-preview env-preview-art"><img src="assets/special-dates/${esc(info.art)}.webp" alt="" loading="lazy" decoding="async"></div>`
     : `<div class="env-preview env-preview-sky" aria-hidden="true"></div>`;
-  const chart = sel.cat === "sky" && sel.form === "chart";
-  const titleAndIntro = `<span class="big env-title">${esc(info.title)}</span>` +
-    (info.intro ? `<div class="sub env-intro">${esc(info.intro)}</div>` : "");
+  // Every envelope is stacked: a wide glimpse on top, then one row
+  // with the words on the left and the call to view on the right.
+  // The category label already says what arrived, so there is no
+  // separate "received" line.
+  const copy = `<span class="big env-title">${esc(info.title)}</span>` +
+    (info.intro ? `<div class="sub env-intro">${esc(info.intro)}</div>` : "") +
+    (info.glimpse && info.glimpse !== info.intro ? `<div class="sub env-glimpse">${esc(info.glimpse)}</div>` : "");
   surface.body.innerHTML =
-    `<div class="envelope env-${info.kind}${chart ? " env-chart" : ""}">` +
+    `<div class="envelope env-${info.kind}">` +
     preview +
     `<div class="env-text">` +
-    (chart ? `<div class="env-copy">${titleAndIntro}</div>` :
-      `<p class="env-received">${esc(P.received)}</p>` + titleAndIntro +
-      (info.glimpse && info.glimpse !== info.intro ? `<div class="sub env-glimpse">${esc(info.glimpse)}</div>` : "")) +
+    `<div class="env-copy">${copy}</div>` +
     `<p class="env-cta">${esc(P.view)} <span aria-hidden="true">›</span></p>` +
     `</div></div>`;
   liveWorldTime = null;

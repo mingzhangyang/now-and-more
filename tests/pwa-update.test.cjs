@@ -126,7 +126,7 @@ function workerFixture({ failInstall = false } = {}) {
           async match(key) { matched.push([name, key]); return hit; },
         };
       },
-      async keys() { return ["nam-v44", "nam-v45", "nam-v46", "unrelated"]; },
+      async keys() { return ["nam-v45", "nam-v46", "nam-v47", "unrelated"]; },
       async delete(key) { deleted.push(key); },
     },
     fetch() { throw Error("network should not serve a newer shell"); },
@@ -146,8 +146,8 @@ test("worker waits for explicit activation, rejects failed precache, and bypasse
   await f.dispatch("install");
   assert.equal(f.skips, 0);
   assert.ok(f.precache.every(request => request.cache === "reload"));
-  assert.ok(f.precache.some(request => request.url === "/js/pwa-update.js?v=45"));
-  assert.ok(f.precache.some(request => request.url === "/css/pwa-update.css?v=45"));
+  assert.ok(f.precache.some(request => request.url === "/js/pwa-update.js?v=46"));
+  assert.ok(f.precache.some(request => request.url === "/css/pwa-update.css?v=46"));
   await f.dispatch("message", { data: { type: "OTHER" } });
   assert.equal(f.skips, 0);
   await f.dispatch("message", { data: { type: "SKIP_WAITING" } });
@@ -157,7 +157,7 @@ test("worker waits for explicit activation, rejects failed precache, and bypasse
 test("activation deletes only older app caches and claims clients", async () => {
   const f = workerFixture();
   await f.dispatch("activate");
-  assert.deepEqual(f.deleted, ["nam-v44"]);
+  assert.deepEqual(f.deleted, ["nam-v45"]);
   assert.equal(f.claims, 1);
 });
 test("navigation to a known shell stays on the controlling worker's cached version", async () => {
@@ -166,7 +166,7 @@ test("navigation to a known shell stays on the controlling worker's cached versi
     request: { method: "GET", cache: "default", mode: "navigate", url: "https://test.invalid/library?note=1" },
   });
   assert.equal(result, f.hit);
-  assert.deepEqual(f.matched, [["nam-v45", "/library.html"]]);
+  assert.deepEqual(f.matched, [["nam-v46", "/library.html"]]);
 });
 test("all pages load one shared updater and use the current cache version", () => {
   const source = read("sw.js");
