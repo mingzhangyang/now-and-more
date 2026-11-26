@@ -879,9 +879,9 @@ function computeAlmanac(date) {
    Two kinds of content live here:
    - 星位 star positions: REAL astronomy, computed live from JPL Keplerian
      elements (approximate, sign-level accuracy).
-   - 每日运势 daily horoscope: pure entertainment, but deterministic — a
-     date+sign seed, so the same sign sees the same fortune all day,
-     exactly like the almanac. */
+   - 每日运势 daily horoscope: traditional-inspired entertainment rules
+     based on a fixed local-noon ephemeris; seeded variation is confined
+     to advice wording and symbolic lucky cues. */
 
 /* Deterministic PRNG (mulberry32) for date-seeded picks. */
 function seededRng(seed) {
@@ -996,23 +996,146 @@ function planetPositions(date) {
   return out;
 }
 
-/* Daily horoscope for one sign on one (local) calendar day. Returns pool
-   indices, not text, so a language switch re-renders the same fortune in
-   the other language. Same inputs → same output, all day long. */
+/* Entertainment rules, not a scientifically validated prediction. All
+   houses below are whole-sign SOLAR houses (Sun sign = house 1), not natal
+   houses or the ascendant. Only the seven traditional bodies are used. */
+const HORO_RULERS = ["mars", "venus", "mercury", "moon", "sun", "mercury",
+  "venus", "mars", "jupiter", "saturn", "saturn", "jupiter"];
+const HORO_ASPECTS = [
+  { angle: 0, orb: 6, zh: "合相", en: "conjunction", kind: "conjunction" },
+  { angle: 60, orb: 5, zh: "六合", en: "sextile", kind: "support" },
+  { angle: 90, orb: 6, zh: "四分相", en: "square", kind: "challenge" },
+  { angle: 120, orb: 6, zh: "三分相", en: "trine", kind: "support" },
+  { angle: 180, orb: 6, zh: "对冲", en: "opposition", kind: "challenge" },
+];
+const HORO_DOMAINS = [
+  { key: "love", zh: "情感", en: "Love", bodies: ["venus", "moon"], houses: [5, 7],
+    support: [["适合主动表达感谢，给在意的人留一点时间。", "Make time for someone you care about and express your appreciation."], ["不妨安排一件两个人都喜欢的小事。", "Plan something small that you both enjoy."]],
+    neutral: [["留意对方真正想说的话，不必急着给答案。", "Listen to what the other person means before offering an answer."], ["把期待说清楚，也给彼此一点空间。", "Share your expectations and leave each other some space."]],
+    challenge: [["情绪起伏时，先听完再回应，不急于下结论。", "When feelings run high, listen first and avoid rushing to conclusions."], ["重要的谈话可以慢一点，别把一时的情绪当成事实。", "Slow down important conversations; don't mistake a passing feeling for a fact."]],
+    items: [4, 12, 19, 17] },
+  { key: "work", zh: "事业", en: "Work", bodies: ["sun", "mars", "saturn"], houses: [6, 10],
+    support: [["挑一件重要的事，踏实地推进下一步。", "Choose one important task and move it one step forward."], ["试着把想法落到纸上，做出一个小成果。", "Put an idea on paper and turn it into a small result."]],
+    neutral: [["按优先级处理任务，给计划留一点余量。", "Prioritize your tasks and leave some room in your schedule."], ["把大任务拆成几步，专注眼前的一步。", "Break a large task into steps and focus on the next one."]],
+    challenge: [["别急着同时推进太多事，先核对细节和时间。", "Avoid taking on too much at once; check the details and timing first."], ["遇到阻力时先调整方法，不必急着证明自己。", "If you hit resistance, adjust your approach before trying to prove yourself."]],
+    items: [1, 7, 8, 14] },
+  { key: "money", zh: "财务", en: "Money", bodies: ["venus", "jupiter", "saturn"], houses: [2, 8],
+    support: [["适合梳理预算，看看哪些支出真正值得。", "Review your budget and consider which expenses are worthwhile."], ["整理手头的账目，给长期计划留出位置。", "Organize your accounts and make room for longer-term plans."]],
+    neutral: [["按实际需要安排开销，不必受一时兴致左右。", "Spend according to actual needs rather than passing impulses."], ["留意日常的小额开销，保持自己的节奏。", "Notice everyday expenses and keep to your own pace."]],
+    challenge: [["重要支出先核对预算，不因运势改变财务决定。", "Check your budget before major expenses; don't let a horoscope guide financial decisions."], ["有压力时先缓一缓，依据实际信息作决定。", "Give yourself time under pressure and make decisions using real information."]],
+    items: [0, 5, 8, 14] },
+  { key: "social", zh: "人际", en: "Social", bodies: ["mercury", "moon", "jupiter"], houses: [3, 7, 11],
+    support: [["试着主动问候一位许久未联系的朋友。", "Reach out to a friend you haven't spoken to in a while."], ["分享一个有趣的发现，也听听别人的想法。", "Share an interesting discovery and invite other perspectives."]],
+    neutral: [["保持沟通简明，给彼此留出思考的时间。", "Keep communication simple and allow time for reflection."], ["今天不妨少一点猜测，多一点确认。", "Make fewer assumptions and ask a little more directly."]],
+    challenge: [["重要消息发送前多读一遍，遇到误会先确认。", "Reread important messages and clarify possible misunderstandings."], ["需要讨论分歧时，先问清楚对方的意思。", "When discussing disagreements, first clarify what the other person means."]],
+    items: [2, 13, 16, 21] },
+];
+const HORO_ELEMENT_CUES = {
+  fire: { colors: [0, 6, 14, 17], dirs: [1, 2, 3] },
+  earth: { colors: [3, 9, 14, 16], dirs: [5, 6, 7] },
+  air: { colors: [1, 2, 10, 12], dirs: [7, 0, 1] },
+  water: { colors: [4, 7, 12, 15], dirs: [3, 4, 5] },
+};
+function horoscopeAspect(a, b) {
+  const distance = Math.abs(norm180(a.lon - b.lon));
+  for (const rule of HORO_ASPECTS) {
+    const deviation = Math.abs(distance - rule.angle);
+    if (deviation <= rule.orb) {
+      return { angle: rule.angle, deviation, strength: 1 - deviation / rule.orb,
+        zh: rule.zh, en: rule.en, kind: rule.kind };
+    }
+  }
+  return null;
+}
+function horoscopeAspectValue(aspect, a, b) {
+  if (aspect.kind === "support") return 0.65 * aspect.strength;
+  if (aspect.kind === "challenge") return -0.85 * aspect.strength;
+  // A conjunction is contextual, not automatically favorable.
+  const keys = [a.key, b.key];
+  const favorable = keys.filter(k => k === "venus" || k === "jupiter").length;
+  const demanding = keys.filter(k => k === "mars" || k === "saturn").length;
+  return 0.55 * (favorable - demanding) * aspect.strength;
+}
+function horoscopeStars(raw) {
+  return Math.max(1, Math.min(5, Math.round(3 + raw * 1.8)));
+}
+/* Pure, injectable scoring. The date seed does NOT participate in scores.
+   Whole-sign aspects to the selected solar sign, relevant solar houses,
+   ruler weighting, retrograde and degree-based planet-to-planet aspects
+   are an explicitly editorial model inspired by traditional astrology. */
+function scoreHoroscope(signIdx, positions) {
+  const ruler = HORO_RULERS[signIdx];
+  const planets = positions.map(p => {
+    const house = (p.signIdx - signIdx + 12) % 12 + 1;
+    const distance = Math.min(house - 1, 13 - house);
+    const relation = [0.55, 0, 0.55, -0.8, 0.95, 0, -0.85][distance];
+    const aspects = positions.filter(q => q.key !== p.key).map(q => {
+      const aspect = horoscopeAspect(p, q);
+      return aspect && { ...aspect, other: q.key, value: horoscopeAspectValue(aspect, p, q) };
+    }).filter(Boolean).sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.deviation - b.deviation);
+    // Limit the contribution of overlapping aspects so stelliums do not
+    // overwhelm house/sign interpretation. Retrograde is a mild caution.
+    const aspectValue = Math.max(-0.9, Math.min(0.9, aspects.reduce((sum, a) => sum + a.value, 0)));
+    return { ...p, house, aspects, base: relation + aspectValue - (p.retrograde ? 0.6 : 0) };
+  });
+  const domains = HORO_DOMAINS.map(domain => {
+    // Always include the traditional ruler; weight relevant bodies more.
+    const relevant = planets.filter(p => domain.bodies.includes(p.key) || p.key === ruler);
+    const values = relevant.map(p => {
+      const weight = (domain.bodies.includes(p.key) ? 1 : 0.6) + (p.key === ruler ? 0.5 : 0);
+      const value = p.base + (domain.houses.includes(p.house) ? 0.35 : 0);
+      return { planet: p, value, weight, impact: value * weight };
+    });
+    const raw = values.reduce((s, v) => s + v.impact, 0) / values.reduce((s, v) => s + v.weight, 0);
+    const driver = values.reduce((best, v) => Math.abs(v.impact) > Math.abs(best.impact) ? v : best);
+    const p = driver.planet;
+    return { key: domain.key, raw, stars: horoscopeStars(raw),
+      focus: { key: p.key, signIdx: p.signIdx, house: p.house, retrograde: p.retrograde,
+        aspect: p.aspects[0] || null } };
+  });
+  const raw = domains.reduce((s, d) => s + d.raw, 0) / domains.length;
+  // Spotlight the strongest deviation from neutral, not a random topic.
+  const primary = domains.reduce((best, d) => Math.abs(d.raw) > Math.abs(best.raw) ? d : best);
+  return { stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
+    tone: primary.raw >= 0.28 ? "support" : primary.raw <= -0.28 ? "challenge" : "neutral" };
+}
+/* One local calendar day = one fixed local-noon ephemeris. Language,
+   refresh time, Math.random, and lucky-cue choices cannot affect scores. */
 function makeHoroscope(date, signIdx) {
+  const noon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+  const scored = scoreHoroscope(signIdx, planetPositions(noon));
   const seed = (date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()) * 16 + signIdx;
   const rng = seededRng(seed);
-  return {
-    signIdx,
-    stars: 1 + Math.floor(rng() * 5),
-    openIdx: Math.floor(rng() * HORO_OPENINGS_ZH.length),
-    adviceIdx: Math.floor(rng() * HORO_ADVICE_ZH.length),
-    luckyNumber: 1 + Math.floor(rng() * 99),
-    colorIdx: Math.floor(rng() * LUCKY_COLORS.length),
-    dirIdx: Math.floor(rng() * LUCKY_DIRECTIONS.length),
-    itemIdx: Math.floor(rng() * LUCKY_ITEMS.length),
-  };
+  const choose = list => list[Math.floor(rng() * list.length)];
+  const domain = HORO_DOMAINS.find(d => d.key === scored.primary);
+  const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
+  return { signIdx, ...scored, adviceIdx: Math.floor(rng() * domain[scored.tone].length),
+    // Symbolic entertainment cues, NOT astronomical predictions.
+    luckyNumber: scored.focus.house + 12 * Math.floor(rng() * 8),
+    colorIdx: choose(cues.colors), dirIdx: choose(cues.dirs), itemIdx: choose(domain.items) };
 }
+/* Localized presentation uses the stored calculation, never a new draw. */
+function horoscopeCopy(h, lang) {
+  const zh = lang === "zh";
+  const a = I18N[lang].astro;
+  const domain = HORO_DOMAINS.find(d => d.key === h.primary);
+  const f = h.focus;
+  const body = a.bodies[f.key];
+  const sign = SIGNS[f.signIdx][lang];
+  const topic = domain[lang];
+  const evidence = zh
+    ? body + "位于" + sign + " · 太阳星座第" + f.house + "宫" + (f.retrograde ? " · 逆行" : "")
+    : body + " in " + sign + " · Solar house " + f.house + (f.retrograde ? " · Retrograde" : "");
+  const aspect = f.aspect
+    ? (zh ? body + "与" + a.bodies[f.aspect.other] + f.aspect.zh
+      : body + " / " + a.bodies[f.aspect.other] + " · " + f.aspect.en)
+    : "";
+  return { topic, evidence, aspect, advice: domain[h.tone][h.adviceIdx][zh ? 0 : 1],
+    basis: zh ? "本地正午近似星位 · 传统占星规则（太阳星座宫位）"
+      : "Approximate local-noon positions · Traditional-inspired solar-sign rules",
+    cues: zh ? "趣味幸运提示" : "Playful lucky cues" };
+}
+
 /* ================= End astrology ================= */
 
 /* ================= Special days: dressing + micro-animation ================= */
@@ -3008,21 +3131,22 @@ function renderSelection(sel, surface) {
     if (sel.subtype === "horoscope") {
       const h = sel.horo;
       const sg = SIGNS[h.signIdx];
-      const openings = lang === "zh" ? HORO_OPENINGS_ZH : HORO_OPENINGS_EN;
-      const advices = lang === "zh" ? HORO_ADVICE_ZH : HORO_ADVICE_EN;
+      const copy = horoscopeCopy(h, lang);
       const color = LUCKY_COLORS[h.colorIdx];
       const dir = LUCKY_DIRECTIONS[h.dirIdx];
       const item = LUCKY_ITEMS[h.itemIdx];
       meta = `${A.daily} · ${sg.symbol} ${signName(sg)}`;
       body = `<span class="big">${sg.symbol} ${signName(sg)}</span>` +
         `<div class="fact-row"><span>${A.overall} <b class="astro-stars">${"★".repeat(h.stars)}${"☆".repeat(5 - h.stars)}</b></span></div>` +
-        `<span class="poem-line">${openings[h.openIdx % openings.length]}</span>` +
-        `<span class="poem-line">${advices[h.adviceIdx % advices.length]}</span>` +
+        `<div class="fact-row">${h.domains.map(d => `<span>${HORO_DOMAINS.find(x => x.key === d.key)[lang]} <b class="astro-stars" aria-label="${d.stars}/5">${"★".repeat(d.stars)}${"☆".repeat(5 - d.stars)}</b></span>`).join("")}</div>` +
+        `<span class="poem-line">${copy.topic} · ${copy.advice}</span>` +
+        `<div class="sub">${copy.evidence}${copy.aspect ? " · " + copy.aspect : ""}</div>` +
+        `<div class="sub">${copy.cues}</div>` +
         `<div class="fact-row"><span>${A.luckyNumber} <b>${h.luckyNumber}</b></span>` +
         `<span>${A.luckyColor}<span class="swatch-sm" style="background:${color.hex}"></span><b>${lang === "zh" ? color.zh : color.en}</b></span>` +
         `<span>${A.luckyDirection} <b>${lang === "zh" ? dir.zh : dir.en}</b></span>` +
         `<span>${A.luckyItem} <b>${lang === "zh" ? item.zh : item.en}</b></span></div>` +
-        `<div class="sub">${A.footnote}</div>`;
+        `<div class="sub">${copy.basis} · ${A.footnote}</div>`;
     } else if (sel.subtype === "positions") {
       meta = A.positions;
       const spans = sel.positions.map((p) => {
