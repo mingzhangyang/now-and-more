@@ -36,6 +36,10 @@
   })();
 </script>
 <link rel="stylesheet" href="css/style.css?v=46">
+<!-- The serif Latin slice carries the clock's digits: fetch it early so
+     the first frames are not drawn in a fallback face whose narrower
+     "1" leaves gaps in the fixed digit cells. -->
+<link rel="preload" href="assets/fonts/H4chBXePl9DZ0Xe7gG9cyOj7oqP0dTpxZbB9E9gjjmzKvaeKHUTtJDWv3z-us4bxD8F5og.119.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts/fonts.css?v=46">
 <link rel="stylesheet" href="css/pwa-update.css?v=46">
 </head>

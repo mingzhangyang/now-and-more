@@ -1777,11 +1777,13 @@ function giftNoticeText(sel) {
   if (sel.cat === "mine") return t().notes.giftNotice;
   const copy = POSTCARD_COPY[sel.key];
   if (!copy) return "";
-  if (lang === "zh") return `今日${copy.titleZh} · 送你一张明信片`;
+  // A no-break space keeps the "·" with the words before it when the
+  // pill wraps onto two lines on a phone.
+  if (lang === "zh") return `今日${copy.titleZh}\u00a0· 送你一张明信片`;
   // English titles for the terms read "Daxue · Heavy Snow": the name
   // alone carries the sentence ("Daxue today · a postcard for you").
   const nameEn = copy.titleEn.split(" · ")[0];
-  return `${nameEn} today · a postcard for you`;
+  return `${nameEn} today\u00a0· a postcard for you`;
 }
 
 function showGiftNotice(sel) {
@@ -3645,6 +3647,9 @@ const settingsPanel = $("settings-panel");
 function setSettingsOpen(open) {
   settingsPanel.hidden = !open;
   settingsBtn.setAttribute("aria-expanded", String(open));
+  // The gift notice shares the brand row; on a phone it would sit on
+  // the panel's top edge. Opening settings is a fine moment to let it go.
+  if (open) dismissGiftNotice();
 }
 settingsBtn.addEventListener("click", () => {
   setSettingsOpen(settingsPanel.hidden);
@@ -4058,7 +4063,10 @@ function renderKeepsakeCanvas(snap, pal) {
   // brand line
   ctx.fillStyle = pal.ink;
   ctx.font = `600 34px ${pal.serif}`;
-  setLetterSpacing(ctx, "6px");
+  // Spaced out when the line leads with Chinese; near-normal when it
+  // leads with English (wide tracking reads as a fault in Latin).
+  const cjkFirst = /^[\u3400-\u9fff]/.test(snap.brand);
+  setLetterSpacing(ctx, cjkFirst ? "6px" : "1.5px");
   ctx.fillText(snap.brand, cx, 272);
   setLetterSpacing(ctx, "0px");
 
@@ -4113,9 +4121,12 @@ function renderKeepsakeCanvas(snap, pal) {
 
   ctx.textAlign = "left";
   ctx.fillStyle = pal.accent;
-  ctx.font = `600 30px ${pal.serif}`;
-  setLetterSpacing(ctx, "8px");
-  ctx.fillText(snap.category, textX, catBaseline);
+  // A Chinese label is spaced out; an English one is set as an
+  // uppercase label with light tracking, as on the stage card.
+  const cjkLabel = /[\u3400-\u9fff]/.test(snap.category);
+  ctx.font = cjkLabel ? `600 30px ${pal.serif}` : `600 26px ${pal.serif}`;
+  setLetterSpacing(ctx, cjkLabel ? "8px" : "3px");
+  ctx.fillText(cjkLabel ? snap.category : snap.category.toUpperCase(), textX, catBaseline);
   setLetterSpacing(ctx, "0px");
   if (snap.meta) {
     ctx.fillStyle = pal.inkSoft;
@@ -4149,7 +4160,7 @@ function renderKeepsakeCanvas(snap, pal) {
   ctx.textAlign = "center";
   ctx.fillStyle = pal.inkSoft;
   ctx.font = `300 26px ${pal.sans}`;
-  setLetterSpacing(ctx, "3px");
+  setLetterSpacing(ctx, cjkFirst ? "3px" : "1px");
   ctx.fillText(snap.footer, cx, 1280);
   setLetterSpacing(ctx, "0px");
 

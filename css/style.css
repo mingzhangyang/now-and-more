@@ -11,7 +11,7 @@
   --ink-soft: #6f6656;
   --accent: #b23a2a; /* vermillion */
   --card-bg: rgba(255, 252, 244, 0.82);
-  --panel-bg: rgba(255, 252, 244, 0.97);
+  --panel-bg: #fffcf4;
   --card-border: rgba(43, 38, 32, 0.14);
   --scroll-thumb: rgba(43, 38, 32, 0.30);
   --scroll-thumb-hover: rgba(43, 38, 32, 0.52);
@@ -30,7 +30,7 @@
   --ink-soft: #a29885;
   --accent: #e0684f;
   --card-bg: rgba(34, 30, 25, 0.85);
-  --panel-bg: rgba(34, 30, 25, 0.97);
+  --panel-bg: #221e19;
   --card-border: rgba(236, 229, 213, 0.16);
   --scroll-thumb: rgba(236, 229, 213, 0.28);
   --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
@@ -46,7 +46,7 @@
     --ink-soft: #a29885;
     --accent: #e0684f;
     --card-bg: rgba(34, 30, 25, 0.85);
-    --panel-bg: rgba(34, 30, 25, 0.97);
+    --panel-bg: #221e19;
     --card-border: rgba(236, 229, 213, 0.16);
     --scroll-thumb: rgba(236, 229, 213, 0.28);
     --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
@@ -172,7 +172,9 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
 /* ---------- Top bar ---------- */
 .topbar {
   position: relative;
-  z-index: 2;
+  /* Above the gift notice (5) and the note button (6), so the open
+     settings panel is never covered by either. */
+  z-index: 7;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -949,21 +951,27 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .img-dialog .capture-action:disabled { opacity: 0.5; cursor: default; }
 
 /* ---------- Gift notice ----------
-   A slim pill that floats below the brand row for the one moment a
-   special-date postcard is gifted (the first card of its day). Fixed,
-   so it never pushes the layout around; page chrome only — it is not
-   part of the card and never enters a keepsake. Ambient mode hides it
-   like all chrome (and the gift itself then arrives silently). */
+   A slim pill for the one moment a special-date postcard is gifted
+   (the first card of its day). It lives in the brand row itself —
+   centred in the empty stretch between the brand and the gear on
+   wider screens, laid over the brand on phones — so it never covers
+   the tagline, the date, the card or the controls, and the gear stays
+   reachable. Absolute (not fixed): it scrolls away with the header,
+   never pushes the layout around, and sits above the top bar (7).
+   Page chrome only — it is not part of the card and never enters a
+   keepsake. Ambient mode hides it like all chrome (and the gift
+   itself then arrives silently). */
 .gift-notice {
-  position: fixed;
-  top: 64px;
+  position: absolute;
+  top: 15px;
   left: 50%;
   transform: translate(-50%, -6px);
-  z-index: 5;
+  z-index: 8;
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: min(92vw, 540px);
+  width: max-content;
+  max-width: min(calc(100vw - 2 * 260px), 540px);
   background: var(--panel-bg);
   border: 1px solid var(--card-border);
   border-radius: 999px;
@@ -991,6 +999,22 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   cursor: pointer;
 }
 .gift-notice-close:hover, .gift-notice-close:focus-visible { color: var(--accent); }
+/* When the stretch between brand and gear is too short for the line,
+   the pill covers the brand instead (left edge to just short of the
+   gear) and may take two lines. */
+@media (max-width: 860px) {
+  .gift-notice {
+    left: 12px;
+    right: 56px;
+    width: auto;
+    max-width: none;
+    transform: translateY(-6px);
+    border-radius: 18px;
+    font-size: 13px;
+  }
+  .gift-notice.show { transform: translateY(0); }
+  .gift-notice-text { white-space: normal; text-wrap: balance; }
+}
 
 /* ---------- Add-a-note floating button ----------
    A small pill fixed to the bottom-right corner, hidden by default:
@@ -1404,6 +1428,38 @@ html.modal-open body {
   color: var(--ink-soft);
   text-align: right;
 }
+
+/* ---------- English typography ----------
+   The tracking above is set for Chinese, whose square characters want
+   air between them. Lowercase Latin spaced that wide reads as a
+   rendering fault, so in English (<html lang="en">, set by
+   applyStaticStrings) the same elements close up to near-normal
+   tracking, and the short accent labels become uppercase labels with
+   light tracking — the Latin counterpart of a spaced-out CJK label.
+   Figures (clock readouts, the second-layer number) keep theirs. */
+:root:lang(en) .brand-text strong { letter-spacing: 0.02em; }
+:root:lang(en) .tagline,
+:root:lang(en) .date-line,
+:root:lang(en) .encounter { letter-spacing: 0.02em; }
+:root:lang(en) .hint { letter-spacing: 0.01em; }
+:root:lang(en) .card-category,
+:root:lang(en) .setting-label,
+:root:lang(en) .full-cat {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+}
+:root:lang(en) #draw-btn,
+:root:lang(en) #capture-btn,
+:root:lang(en) .panel-page-link,
+:root:lang(en) .full-text-btn,
+:root:lang(en) .capture-action,
+:root:lang(en) .ambient-hint,
+:root:lang(en) .gift-notice,
+:root:lang(en) #note-fab,
+:root:lang(en) .footer-note,
+:root:lang(en) .env-cta { letter-spacing: 0.03em; }
+:root:lang(en) .capture-title { letter-spacing: 0.06em; }
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
