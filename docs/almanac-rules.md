@@ -1,11 +1,13 @@
 # 黄历规则与口径 / Almanac rules and conventions
 
-本文记录黄历卡（`js/app.js` 的 Almanac 一节，`computeAlmanac()`）每一项内容怎样算、按什么口径、出自哪里，
-以及哪些仍是趣味随机、将在后续阶段替换。改动黄历代码时请同步修改本文。
-择日规则（值神、神煞）的数据表在 `js/almanac-rules.js`（`NAM_ALMANAC`，纯计算，在 `app.js` 之前载入）。
+本文记录黄历卡（`js/app.js` 的 Almanac 一节，`computeAlmanac()`）每一项内容怎样算、按什么口径、出自哪里。
+改动黄历代码时请同步修改本文。择日规则（值神、神煞、宜忌）的数据表在 `js/almanac-rules.js`
+（`NAM_ALMANAC`，纯计算，在 `app.js` 之前载入）。**黄历中已没有任何随机成分**：同一本地日永远得到同一张卡，
+每一项都能追溯到一条规则（M4 起宜忌也由规则推出，见 §3.3）。
 
-This page documents how each line of the almanac card is computed, which conventions it follows, where each rule
-comes from, and what is still a playful pseudo-random pick. Keep it in step with the code.
+This page documents how each line of the almanac card is computed, which conventions it follows and where each
+rule comes from. Keep it in step with the code. Nothing in the almanac is random any more: since M4 the 宜/忌 lists
+are synthesised from the day's 建除 and 神煞 by the rules of 《协纪辨方书》 (§3.3).
 
 ## 1. 三层结构 / Three layers
 
@@ -13,12 +15,14 @@ comes from, and what is still a playful pseudo-random pick. Keep it in step with
 | --- | --- | --- |
 | 天文历法 / Astronomical calendar | 节气交节时刻、干支纪日、农历日期、农历年、节月与立春年 | 精确计算（节气为分钟级求解器；农历日期用浏览器 Intl/ICU） |
 | 择日规则 / Day-selection rules | 月干支、十二建除、黄道黑道值神、吉神凶神（神煞）、冲煞、彭祖百忌 | 全部按传统规则推算（神煞依《钦定协纪辨方书》，见 §3.2） |
-| 宜忌 / Activities | 宜、忌 | 仍是按日种子的趣味随机，将由规则推导替换 |
+| 宜忌 / Activities | 宜、忌（36 项用事）及其等第与来历 | 由建除、神煞与几种特定日按《协纪辨方书》卷十「宜忌」合成（§3.3），无随机 |
 
-上一层只依赖下一层：择日规则只读干支与节月（及节月所属季节、次日节气），不读农历月份；宜忌将来只读择日规则的结果。
+上一层只依赖下一层：择日规则只读干支与节月（及节月所属季节、当日与次日节气），不读农历月份；宜忌只读择日规则的结果
+（建除、神煞名单）加上日干支与节气，同样不读农历月日。
 
 Each layer reads only the one beneath it: the selection rules read the ganzhi and the 节月, never the lunar month;
-the activities will be derived from the selection rules.
+the activities are derived from the selection rules (plus the day ganzhi and the solar term), again never from
+the lunar date.
 
 ## 2. 口径 / Conventions
 
@@ -96,14 +100,87 @@ The 黄道黑道 gods are shown once, as 值神, and never repeated in the 吉�
 god from the 黄道 天德 and may appear in both places. 不将 and 鸣吠 are left out because we could not pin their tables
 down exactly.
 
-### 3.3 卡片显示 / Card layout
+### 3.3 宜忌 / Activities (M4)
+
+**出处 / Sources.** 《钦定协纪辨方书》（乾隆六年，1741）卷十「宜忌」逐神列出每位吉神所宜、每位凶神所忌的用事，
+以及吉凶同日时怎样取舍（「與…併則不忌」「猶忌」，大凶煞逐月的等第）；卷十末「鋪註條例」是通书铺注宜忌的细则；
+卷十一「用事」是同一张表按用事排列（「以事為經，以神為緯」），用来逐条核对。原文据维基文库四库全书本
+（`欽定協紀辨方書 (四庫全書本)/卷10`、`卷11`、`卷04`）。`js/almanac-rules.js` 的 `SOURCES` / `GRADED`
+每一行旁都抄有对应原句。
+
+**用事词表 / Vocabulary（36 项）**：以卷十一「民用三十七事」为底，补入通书常见的祈福、求嗣、解除，去掉今人陌生的
+上表章、冠带、进人口、经络、酝酿、修置产室、安碓硙等。按书中用事次第排列，卡片也按这个次第显示：
+
+祭祀 祈福 求嗣 会亲友（宴會） 入学 出行（行幸遣使） 赴任（上官赴任） 纳采（納采問名） 嫁娶 移徙（般移） 安床 解除 沐浴
+剃头（整容剃頭） 求医疗病 裁衣（裁製） 修造动土（興造動土） 竖柱上梁 开市 立券交易 纳财 开仓（開倉庫出貨財） 开渠穿井
+扫舍宇 修饰垣墙 平治道涂 破屋坏垣 伐木 捕捉 畋猎 栽种 牧养 纳畜 破土 安葬 启攒
+
+书中一行即一项（「立劵交易」「興造動土」「求醫療病」在书里本是一行），每项有一句本站自拟的白话释义（卡片上悬停可见）。
+旧版的 `ALMANAC_YI` / `ALMANAC_JI` 两个随机池没有内容 ID、也不进牌袋（黄历由日期决定，见 README D3），
+不受永久 ID 规则约束，故直接删除而不是映射。
+
+**来源 / What contributes**（`SOURCES`，一神一行）：
+- 吉神：天德 月德 天德合 月德合 天赦（所宜同二德，并「忌畋獵」）、天愿、月恩 四相 时德、天恩、母仓、王日、官守相日、民日、
+  三合（另：寅申巳亥日所宜同母仓，子午卯酉日同王日）、六合、五合、五富、驿马 天马、天喜、益后 续世、解神；
+- 十二建除（卷四「建除同位異名」：建＝兵福，除＝吉期，满＝天巫·福德，成＝天医·天喜，开＝时阳·生气）：除日宜解除沐浴剃头
+  求医扫舍宇、又为吉期宜出行赴任；满日宜祭祀祈福（天巫）会亲友（福德）裁衣开市交易纳财开仓、忌赴任纳采求医；
+  开日宜祭祀……栽种牧养、忌伐木畋猎；执日宜捕捉；危日宜安床；成日宜入学移徙开市求医（天医）；平日宜修饰垣墙平治道涂；
+  破日宜求医破屋坏垣；执危收日「霜降後立春前」宜畋猎，危日与午申日「立冬後立春前」宜伐木；
+- 凶神：月破（大耗）、平日（死神）、收日、满日、闭日、月建、劫煞 灾煞 月煞 月刑（「忌同刼煞」）、月害、月厌（地火）、
+  厌对、大时 天吏、游祸、死气、小耗、天贼、四废、四忌 四穷、五虚、九空、九焦、土符、归忌、往亡、复日 重日、五离、八专、
+  四离 四绝（「止不忌祭祀解除沐浴……伐木，餘事皆忌」）；
+- 特定日：土王用事（「義同土府」）；百忌日（甲日忌开仓、乙日栽种、丁日剃头、壬日开渠、寅日祭祀、卯日穿井、巳日出行、
+  未日求医、申日安床、酉日宴会、亥日嫁娶）；亥子日宜沐浴；二分二至当日「不註」宴会出行赴任婚嫁移徙开市交易捕猎（冬至又不註伐木）；
+  天狗——**只是申月的戌日满日**（卷四按语「天狗者戌日值滿也……非謂凡為滿日皆天狗也」）——忌祭祀、不注宜祈福求嗣。
+- 用事全在词表之外的神不贡献任何项（月空「宜上表章」、阳德阴德「宜施恩惠」、要安「宜安神」、玉宇金堂「宜修祠宇」、
+  血支血忌「忌针刺」、九坎「忌乘船」、天火「忌苫盖」、四击「忌出军」）。河魁、天罡（平日收日的别名）在卷十没有单独宜忌。
+- **值神（黄道/黑道）不另定宜忌**：卷十「青龍明堂……與吉神併則從所宜，與凶神併則從所忌」，六黄道「無專宜之事」，
+  六黑道「亦無專忌之事」（黑道诸事皆忌是选时之法，不是选日）。值神照旧显示，但不改变宜忌。
+
+**冲突规则 / Resolution** —— 只有下面六条，依次判断：
+
+1. **诸事皆忌**：宜列为空、忌列为全部 36 项。适用于 (a) 卷十月厌、月建条点名的日子——阴阳大会、阴阳小会、阴位、阴阳交破、
+   阴阳击冲、阳破阴冲、阴道冲阳、三阴、阴错、绝阴、绝阳（按节月与日干支列表，`ALL_JI_DAYS`）；(b) 四废逢月破
+   （「與月破併諸事皆忌」）；(c) 下一条给出 X 的情形。
+2. **大凶煞等第**（`GRADED`）：月建 月破 平日 收日 满日 闭日 劫煞 灾煞 月煞 月刑 月害 月厌 大时 天吏（及与之同位的大耗、死神、地火）
+   各按书中逐月条文给出四种结果之一（书中「上、上次、中、中次、下、下下」六等落到具体一天，只有这四种结果）：
+   - **Y 从宜不从忌**——「止忌軍事療病，餘皆不忌」：该神只留 `keep` 所列（默认求医疗病；大时为空；月建留土功与伐木栽种；
+     月厌留出行赴任纳采嫁娶移徙求医栽种），其余之忌不注；
+   - **D 吉凶相抵**——「凡所忌者則不註宜，所宜者亦不註忌」：同一项既宜又忌则两边都不写（全文里列为「不注」）；
+   - **J 从忌不从宜**——「如常例」：忌压过宜；
+   - **X 诸事皆忌**。
+   条件多为「与某德并／不并」。例如平日：亥月（值相日时德六合）Y；申月有德 Y、否则 J；卯酉月有月德 D、否则 J；午月有月德合 D、
+   否则 J；寅巳子月「從月刑論」，辰戌丑未月「從月煞論」。当日所有大凶煞中**最重**的结果决定全日（「各從重論」）；
+   被「從X論」点名的那位神必须同日在场（测试逐日断言）。全日结果即 `level`（等第），无大凶煞时为 `null`。
+3. **德能解／犹忌**：其余凶神，书中写明「與某某併則不忌」的（厌对、小耗、死气、四忌四穷、五虚、九空、复日重日、五离、八专）
+   遇所列吉神即不忌（死气遇德「止忌療病」）；复日重日遇德赦六合「不忌亦不註宜」。书中写「猶忌」或未给解法的（游祸、天贼、
+   四废、九焦、土符、归忌、往亡、四离四绝、土王用事、百忌日、天狗，以及二德天赦自身的「忌畋獵」）一律保留，忌压过宜。
+4. **德日不注小忌**（鋪註條例）：「凡徳合赦願月恩四相時徳等日不註忌……安牀……開市立劵交易納財開倉庫出貨財，
+   如遇徳猶忌及從忌不從宜之日則仍註忌」。
+5. **不注宜**：开日「不註宜破土安葬啟攢」；寅日、天狗「不註宜求福祈嗣」；二分二至的上列各项；复日重日被解时的破土安葬启攒。
+6. 其余：有宜无忌为宜，有忌无宜为忌。同一项绝不同时出现在宜、忌两列。
+
+**有意未做 / Left out**：需要农历日或年份的规则（月忌日、十五日、朔弦望、人神所在、上朔、晦日、无禄日、反支、长星短星，
+以及岁德等年神）——本层只读干支与节气；不将、鸣吠（同 §3.2，表未能确认，所以嫁娶的「宜不將」、破土的「宜鳴吠」缺席）；
+岁薄、逐阵与「德合与赦愿所会之辰诸事不忌」等细例；「凡吉凶相抵不註忌X亦不註忌Y」一类联动条例。
+这些都只会让我们的宜略少、忌略多，方向是保守的。
+
+The engine (`NAM_ALMANAC.yiJi`) collects every 宜/忌 contribution of the day's 吉神, 凶神, 建除 and special days,
+then applies the six rules above. Each output item carries a trace of its sources and of the rule that decided it.
+
+### 3.4 卡片显示 / Card layout
 
 - 元信息行：「农历十月十六 · 丙午年 己亥月」；大字仍为日干支。
 - 「节气 · 建除 · 值神」一行，冲煞随后。
+- **宜、忌各一行**，按用事次第列前 8 项（375px 宽下不超过两行），多出的写「等N事」；每项的 `title` 为释义。
+  宜列为空写「诸事不宜」，忌列为空写「诸事不忌」；诸事皆忌之日写「宜 诸事不宜」「忌 诸事皆忌」。
 - 吉神、凶神各一行，只列名字（一天通常各 2–6 个，最多各 9 个），名字不断行；每个名字的 `title` 是释义（悬停可见）。
-- 「全文」入口打开阅读弹窗，逐条列出「名字：释义」。释义是本站自拟的一句白话概括，不是古书原文。
+- 脚注：「宜忌依《协纪辨方书》推算 · 属传统民俗，非科学预测」（英文版同义）。
+- 「全文」入口打开阅读弹窗：先是等第（如「等第：从忌不从宜（月破）」），然后**每一项宜忌及其来历**——
+  「宜 嫁娶（结婚迎娶）← 天愿·六合；平日之忌不从」「忌 修造动土 ← 月破；从忌不从宜」，被抵消或不注的宜另列「不注」
+  并写明理由；诸事皆忌之日列出原本有哪些宜被压下。其后是吉神凶神「名字：释义」。释义是本站自拟的一句白话概括，不是古书原文。
 
-### 3.4 给下一阶段的接口 / Helpers for the next stages
+### 3.5 接口 / Helpers
 
 - `jieMonthInfo(date)` → `{ branchIdx, branch, monthIdx, jieYear, termIdx, termName, instant, today }`
   — `branchIdx` 为 `ZHI` 下标（0 子 … 11 亥），`monthIdx` 0 = 寅月 … 11 = 丑月，`today` 表示本日即交节日。
@@ -112,27 +189,33 @@ down exactly.
 - `solarTermsAround(date)`、`localDayBounds(date)`
 - `NAM_ALMANAC.zhiShenOf(dayBranchIdx, monthBranchIdx)` → `{ name, huangdao }`；`NAM_ALMANAC.dayGods(ctx)` → `{ ji, xiong }`；
   `NAM_ALMANAC.ZHISHEN`、`JI_NAMES`、`XIONG_NAMES`（全部可能的名字，按显示次序）。
-- `almanacRuleContext(date, dayGanzhi, jieMonthInfo)` → 规则读取的上下文 `{ m, mb, season, s, b, gz, eve, tuWang }`；
-  `tuWangYongShi(date)`。
-- `computeAlmanac()` 另有 `zhiShen`（`{ name, huangdao }`），`jiShen` / `xiongShen` 为当日全部神煞 `[{ name, gloss }]`；
-  M4 合成宜忌所需的建除、值神与完整神煞都已在这里。
-- `almanacFullText(almanac)`：全文弹窗的纯文本。
+- `almanacRuleContext(date, dayGanzhi, jieMonthInfo)` → 规则读取的上下文 `{ m, mb, season, s, b, gz, eve, tuWang, qi, termToday }`
+  （`qi` 为当日所在节气，`termToday` 为当日交节之名）；`tuWangYongShi(date)`。
+- `NAM_ALMANAC.yiJi(ctx, gods)` → `{ yi, ji, level, allJi, trace, graded }`：`yi`/`ji` 为用事名（按词表次第）；
+  `level` 为 `{ code: "Y"|"D"|"J"|"X", name, by }` 或 `null`；`trace` 每个被触及的用事一行
+  `{ name, yi: [来源], ji: [来源], result: "宜"|"忌"|"不注", why }`；`graded` 为每位大凶煞自己的判定。
+  `NAM_ALMANAC.YONGSHI`（词表 `[{ name, gloss, book? }]`）、`YIJI_SOURCES`、`GRADED_NAMES`。
+- `computeAlmanac()` 另有 `zhiShen`（`{ name, huangdao }`），`jiShen` / `xiongShen` 为当日全部神煞 `[{ name, gloss }]`，
+  `yi` / `ji` 为宜忌名单，`yiJi` 为上面 `yiJi()` 的完整结果。
+- `almanacFullText(almanac)`：全文弹窗的纯文本（含 `almanacYiJiText()` 的宜忌来历）。
 - （M1）`computeAlmanac()` 在原有字段之外新增 `lichunYearGanzhi`、`monthGanzhi`、`jieMonth`、`chong`、`sha`；
   原有字段（`yearGanzhi`、`dayGanzhi`、`jianchu`、`chongSha`、`yi`、`ji`、`jiShen`、`xiongShen`、`pengzu`、`termInfo`、`lunarLabel`）不变。
 
-## 4. 仍是趣味随机 / Still pseudo-random
+## 4. 没有随机 / Nothing is random
 
-- **宜 / 忌**：`seededDailyPick(ALMANAC_YI / ALMANAC_JI, …)`，以儒略日数为种子，同一天总得同一组，但与择日规则无关。
-  将在 M4 由建除、值神与神煞推导；在此之前刻意保持种子与输出不变（有回归测试），卡片脚注「宜忌为趣味版 · 仅供参考」保留。
-- **吉神 / 凶神已不再随机**（M3 起按规则推算，见 §3.2）。旧的十个名字的种子抽取已删除。
+M4 删除了 `seededDailyPick` 与 `ALMANAC_YI` / `ALMANAC_JI`。宜忌、吉神凶神、值神、建除全部由规则推出，同一天永远同一结果；
+`tests/almanac.test.cjs` 断言源码中不再有种子抽取、计算时不读 `Math.random`。卡片脚注「宜忌为趣味版 · 仅供参考」
+改为「宜忌依《协纪辨方书》推算 · 属传统民俗，非科学预测」：规则是真实的传统规则，但传统择日本身没有科学的预测效力。
 
-Only 宜/忌 remain day-seeded (stage M4 replaces them); 吉神/凶神 are rule-derived since M3.
+No part of the almanac is random. The old footnote ("a playful almanac") is replaced by one that names the source
+and says plainly that this is traditional custom, not a scientific forecast.
 
 ## 5. 验证 / Verification
 
 - **金标准数据 / Golden fixture**：`tests/fixtures/almanac-golden.json`，2025–2028 年每一天（1461 天，含 2025 闰六月、
   2028 闰五月）的农历年干支、立春年干支、月干支、日干支、建除、冲、煞、当日节气、农历日期，以及黄道黑道值神
-  （cnlunar `today12DayGod`，其「金贵」写法统一为「金匮」）和 cnlunar 的全部吉神、凶神名（`goodGodName` / `badGodName`）。
+  （cnlunar `today12DayGod`，其「金贵」写法统一为「金匮」）、cnlunar 的全部吉神、凶神名（`goodGodName` / `badGodName`），
+  以及 cnlunar 的宜、忌（`goodThing` / `badThing`，按码位排序以保证文件稳定）与等第（`thingLevelName`）。
 - **生成 / Generator**：`scripts/almanac-golden.py`，独立实现为 [cnlunar](https://github.com/OPN48/cnLunar) 0.2.5
   （MIT 许可，© 2025 OPN48）。它用自带的春节表与按日节气表，方法与本站的 VSOP87D 求解器和 ICU 不同，且以北京时间计。
   cnlunar 只用于离线生成参考数据，代码和表格都未进入 `js/`。cnlunar 不计算煞方，脚本用 cnlunar 的日支查一张显式的
@@ -140,7 +223,7 @@ Only 宜/忌 remain day-seeded (stage M4 replaces them); 吉神/凶神 are rule-
 - **测试 / Tests**：`tests/almanac-golden.test.cjs` 在载入前固定 `TZ=Asia/Shanghai`，在任何机器上结果一致；逐日比对全部字段，
   并单列本文提到的例子（2026-01-01 乙巳、2026-12-07 平、2027-02-05 除、2026-11-24 冲猴煞北）。
   `tests/almanac.test.cjs` 不固定时区，只断言任何时区都成立的性质（节月恰在本地交节日前进一位、建除逐日前进且交节日重复、
-  三合煞方、Intl 缺失时的年名回退、宜忌种子不变）。建议用 `TZ=Asia/Shanghai` 与 `TZ=America/New_York` 各跑一次。
+  三合煞方、Intl 缺失时的年名回退、宜忌的结构与书中不变式）。建议用 `TZ=Asia/Shanghai`、`UTC` 与 `TZ=America/New_York` 各跑一次。
 - **重新生成 / Regenerate**：`pip install cnlunar==0.2.5 && python3 scripts/almanac-golden.py`。
   cnlunar 的代码与表格从未拷入 `js/`；神煞表按协纪原文自行编写，再拿 cnlunar 的输出逐日核对。
 
@@ -176,3 +259,43 @@ with the reason given; 阳德, which cnlunar lacks, is checked by hand on explic
 
 在 Asia/Shanghai、America/New_York、UTC 三个时区下，`tests/almanac.test.cjs` 另行检查与时区无关的性质：值神每日进一位、
 交节日退一位；四离/四绝恰在本地分至/四立的前一日；土王用事恰为四立前 18 日；破日必有月破大耗、开日必有生气、平日必有死神。
+
+### 宜忌比对 / 宜忌 agreement (1461 days, Beijing time)
+
+`scripts/almanac-yiji-agreement.cjs` 把 cnlunar 的用事词（御用、民用、通书混用）映射到我们的 36 项（`CN_TO_OURS`：
+宴会→会亲友、上官→赴任、搬移→移徙、裁制→裁衣、修造/动土→修造动土、开渠/穿井→开渠穿井、整容→剃头……；
+cnlunar 自加的入宅、开张、诉讼以及词表外的用事不计），cnlunar 的「诸事不宜」视为 36 项皆忌，然后逐日比较。
+结果存于 `docs/almanac-yiji-baseline.json`；`tests/almanac-yiji.test.cjs` 以之为底线：精确率、召回率不得下降，
+硬矛盾（我们宜而 cnlunar 忌，或反之）的总数、比率、天数以及每一项用事的矛盾数都不得上升。
+cnlunar 的宜忌是它自己对同一部书的解读，我们的规则表按书的原文自行编写，没有拷贝它的代码或表格，所以这是独立的对照。
+
+| | 精确率 precision | 召回率 recall | 逐日平均 P / R |
+| --- | --- | --- | --- |
+| 宜 | 0.840 | 0.770 | 0.818 / 0.747 |
+| 忌 | 0.755 | 0.915 | 0.677 / 0.833 |
+
+- 硬矛盾 1390 项次，占我们写出的全部宜忌项的 3.8%，分布在 453 天。诸事皆忌之日：双方都有 120 天，只有我们有 69 天，只有 cnlunar 有 3 天。
+- 逐项（`perItem`）一致度最高的是修饰垣墙、平治道涂、开渠穿井、伐木、裁衣、会亲友；最低的是求医疗病（宜 P 0.60 / R 0.47）、
+  嫁娶（宜 P 0.58，cnlunar 婚嫁另需不将）、扫舍宇与剃头（宜 R 0.36 / 0.45，cnlunar 另有我们未实现的除神等）。
+
+**矛盾从哪里来 / Where the contradictions come from。** 比对中查出并修正的规则错误有两处：满日、除日、成日原先漏了同位的
+天巫福德、吉期、天医之宜（卷四「建除同位異名」）；鋪註條例的「德日不注小忌」原先误用到「从忌不从宜」之日。
+其余矛盾逐类核对，都是对原文的不同读法，以下是归类（项次）：
+
+| 项次 | 类别 | 我们的依据 |
+| --- | --- | --- |
+| 431 | 我们忌、cnlunar 宜，忌来自「猶忌」之神（游祸、往亡、天贼、四废、土符、土王用事、四离四绝）或百忌日 | 卷十各条「與德合赦願併猶忌」；cnlunar 让德或等第压过了这些忌 |
+| 237 | 我们的诸事皆忌日（阴阳大会/小会、阴位、三阴、阴阳交破、四废逢月破、月煞逢平闭无德、月刑逢破平收无德、子午月月厌建会无天赦） | 卷十月厌、月建、四废、月煞、月刑条原文；cnlunar 只实现了其中一部分 |
+| 223 | 同日吉凶相遇，我们「从忌不从宜」 | 书中该月该神的放宽条件不满足（如丑未月大时须二德、未月月厌须德），cnlunar 的等第较宽 |
+| 149 | 「从宜不从忌」之日仍忌求医疗病（月厌另有出行赴任婚嫁移徙栽种） | 「止忌軍事療病，餘皆不忌」；月厌「止忌行幸遣使……嫁娶求醫療病般移遠迴栽種」 |
+| 99 | 我们满日宜祭祀，cnlunar 忌 | cnlunar 把每个满日都当天狗；书中天狗只是申月戌日之满（卷四按语），满日又为天巫「宜祭祀祈福」 |
+| 90 | 我们宜，cnlunar 因书外之神忌（受死、杨公忌、五鬼、天狱等） | 这些不在卷十宜忌之列 |
+| 76 | 我们忌且无任何宜神，cnlunar 宜 | cnlunar 的宜来自我们未实现的神（除神、鸣吠、不将、天贵等） |
+| 64 | 可解之忌未遇所列吉神（如小耗只认德合天愿，不认六合） | 各条「與…併則不忌」所列之神 |
+| 15 | 我们开日宜祭祀，cnlunar 忌 | cnlunar 的「天狗下食」不出自协纪 |
+| 6 | cnlunar 诸事皆忌而我们不是 | 子月甲子逢天赦：「子午月厭建㑹，與天赦併如常例」 |
+
+**再生成 / Regenerate**：`python3 scripts/almanac-golden.py`（cnlunar 0.2.5）后跑 `node scripts/almanac-yiji-agreement.cjs`
+（报告逐项指标与矛盾成因）；规则有意改动后加 `--write` 更新底线，并同步本节数字。手算核对的例子（月破日 2026-11-27、
+天赦日 2025-03-10、四离 2026-03-19、四绝 2026-02-03、黄道寻常日 2026-11-26、诸事皆忌 2026-02-16、天赦解月厌建会
+2025-12-21、亥月平日 2026-11-24）在 `tests/almanac-golden.test.cjs`，期望值由书中原句推出，注释里写明出自哪一句。

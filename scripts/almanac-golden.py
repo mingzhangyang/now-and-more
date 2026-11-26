@@ -43,6 +43,17 @@ rule never applies) it records:
              Both lists are recorded whole (including gods the site does not
              implement); tests/almanac-golden.test.cjs compares only the gods
              it implements, by presence/absence per day.
+  yi         宜 用事, space-separated                       cnlunar goodThing
+  ji         忌 用事, space-separated                       cnlunar badThing
+             cnlunar builds both from Python sets, so their order depends on
+             the interpreter's string-hash seed; they are recorded SORTED (by
+             code point) to keep the fixture byte-stable. On its 诸事皆忌 days
+             cnlunar puts the single word 诸事不宜 in both lists; recorded as is.
+             Recorded in cnlunar's own vocabulary (御用/民用/通书 mixed, e.g. 搬移,
+             上官, 修造, 修宫室). scripts/almanac-yiji-agreement.cjs maps it onto
+             the site's 用事 vocabulary before comparing.
+  level      cnlunar's 宜忌等第 verdict for the day        cnlunar thingLevelName
+             (从宜不从忌 / 从宜亦从忌 / 从忌不从宜 / 诸事皆忌)
 """
 import datetime
 import json
@@ -71,7 +82,8 @@ SHA_TABLE = {
     "亥": "西", "卯": "西", "未": "西",
 }
 FIELDS = ["date", "lunarYear", "lichunYear", "month", "day", "jianchu",
-          "chong", "sha", "term", "lunar", "zhishen", "good", "bad"]
+          "chong", "sha", "term", "lunar", "zhishen", "good", "bad",
+          "yi", "ji", "level"]
 
 
 def row(d):
@@ -90,7 +102,7 @@ def row(d):
         assert b.year8Char == ganzhi_of_year(d.year - 1), (d, b.year8Char)
     lunar = "%s%d-%02d" % ("L" if a.isLunarLeapMonth else "", a.lunarMonth, a.lunarDay)
     officer, god, _ = a.get_today12DayOfficer()
-    for name in a.goodGodName + a.badGodName:
+    for name in a.goodGodName + a.badGodName + a.goodThing + a.badThing:
         assert " " not in name, name
     return [
         d.isoformat(),
@@ -106,6 +118,9 @@ def row(d):
         "金匮" if god == "金贵" else god,
         " ".join(a.goodGodName),
         " ".join(a.badGodName),
+        " ".join(sorted(set(a.goodThing))),
+        " ".join(sorted(set(a.badThing))),
+        a.thingLevelName,
     ]
 
 
@@ -121,7 +136,8 @@ def main():
     head = {
         "source": "cnlunar 0.2.5 (MIT, OPN48) via scripts/almanac-golden.py; "
                   "sha derived from cnlunar's day branch by the 三合 table; "
-                  "zhishen/good/bad are cnlunar's today12DayGod/goodGodName/badGodName",
+                  "zhishen/good/bad are cnlunar's today12DayGod/goodGodName/badGodName; "
+                  "yi/ji/level are cnlunar's goodThing/badThing (sorted)/thingLevelName",
         "timeZone": "Asia/Shanghai",
         "years": [YEARS[0], YEARS[-1]],
         "fields": FIELDS,

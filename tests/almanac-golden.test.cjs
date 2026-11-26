@@ -207,3 +207,95 @@ test("worked example: 2026-11-24 壬寅, 亥月 — 值神 天牢（黑道）and
   api.renderSelection({ cat: "almanac", data: a }, s);
   assert.ok(s.meta.textContent.includes("丙午年 己亥月"), s.meta.textContent);
 });
+
+/* ---------- M4: 宜忌, hand-checked against 《协纪辨方书》卷十 ----------
+   Each expectation below was worked out from the book's text, not copied
+   from the engine; the comments give the deciding sentence. */
+const yj = (iso) => api.computeAlmanac(at(iso));
+const traceOf = (a, n) => a.yiJi.trace.find((t) => t.name === n);
+
+test("worked example: 月破 day 2026-11-27 乙巳 (亥月) — 德 cannot lift 月破", () => {
+  const a = yj("2026-11-27");
+  assert.equal(a.jianchu, "破");
+  assert.ok(a.jiShen.some((g) => g.name === "天德") && a.xiongShen.some((g) => g.name === "月破"));
+  // 月破: 「與天德月德天德合月德合併猶忌之，止不忌祭祀……入學解除沐浴求醫療病掃舍宇平治道塗破屋壞垣捕捉畋獵」;
+  // only those with a 宜 source (天德 祭祀 解除 求醫; 破日 求醫 破屋壞垣) are written 宜.
+  assert.deepEqual(a.yi, ["祭祀", "解除", "求医疗病", "破屋坏垣"]);
+  assert.deepEqual(a.yiJi.level, { code: "J", name: "从忌不从宜", by: ["月破"] });
+  for (const n of ["嫁娶", "修造动土", "出行", "安葬", "开市", "纳财"]) assert.ok(a.ji.includes(n), n);
+  const t = traceOf(a, "嫁娶");
+  assert.deepEqual([t.result, t.yi, t.ji], ["忌", ["天德"], ["月破"]]);
+  assert.match(t.why, /从忌不从宜/);
+  const full = api.almanacFullText(a);
+  assert.ok(full.includes("忌 修造动土 ← 月破"), "full text traces 忌 to 月破");
+  assert.ok(full.includes("宜 祭祀（祭神祀祖）← 天德"));
+});
+
+test("worked example: 天赦 day 2025-03-10 戊寅 (卯月, 闭日) — 吉凶相抵, 犹忌 stays", () => {
+  const a = yj("2025-03-10");
+  assert.equal(a.dayGanzhi, "戊寅");
+  assert.ok(a.jiShen.some((g) => g.name === "天赦"));
+  // 閉日「子午夘酉月值王日……與天德月德天德合月德合天赦天願併，凡所忌者則不註宜，所宜者亦不註忌」.
+  assert.equal(a.yiJi.level.code, "D");
+  for (const n of ["嫁娶", "出行", "修造动土"]) assert.equal(traceOf(a, n).result, "不注", n);
+  // 鋪註條例 「凡徳合赦願……等日不註忌……開市立劵交易納財開倉庫出貨財」: 开市 stays 宜 (五富).
+  assert.ok(a.yi.includes("开市") && a.yi.includes("开仓"));
+  // 遊禍「與德合天赦併猶忌」, 歸忌「與德合赦願併猶忌」, 天赦「忌畋獵」, 百忌「寅日忌祭祀」.
+  for (const n of ["祈福", "求嗣", "解除", "求医疗病", "移徙", "畋猎", "祭祀"]) assert.ok(a.ji.includes(n), n);
+  assert.deepEqual(a.yi, ["裁衣", "开市", "立券交易", "纳财", "开仓", "栽种", "牧养", "纳畜", "安葬"]);
+});
+
+test("worked examples: 四离 2026-03-19 and 四绝 2026-02-03 — 「止不忌祭祀解除沐浴……伐木，餘事皆忌」", () => {
+  const li = yj("2026-03-19");
+  assert.ok(li.xiongShen.some((g) => g.name === "四离"));
+  // 除日's 宜 survive only where 四離 does not 忌 them; 出行 赴任 求醫 (除日 宜) fall to 四離.
+  assert.deepEqual(li.yi, ["解除", "沐浴", "剃头", "扫舍宇"]);
+  assert.match(traceOf(li, "出行").why, /四离之忌德不能解/);
+  const jue = yj("2026-02-03");
+  assert.ok(jue.xiongShen.some((g) => g.name === "四绝"));
+  assert.ok(jue.jiShen.some((g) => g.name === "母仓"), "母仓 宜纳财, but 四絶 wins");
+  assert.ok(jue.ji.includes("纳财"));
+  // 危日 in 丑月 (立冬後立春前) 宜伐木 — one of the few 用事 四絶 leaves alone.
+  assert.deepEqual(jue.yi, ["伐木"]);
+});
+
+test("worked example: ordinary 黄道 day 2026-11-26 甲辰 (亥月 执, 值神 司命) — no great 凶煞", () => {
+  const a = yj("2026-11-26");
+  assert.deepEqual(a.zhiShen, { name: "司命", huangdao: true });
+  assert.equal(a.yiJi.level, null);
+  // 月德 + 四相 + 解神 + 执日; 小耗 is lifted by 月德 (「與天德月德天德合月德合天願併則不忌」);
+  // 天賊 (出行 开仓), 土符 (earth work), 甲日 (开仓) and 月德's own 「忌畋獵」 stand.
+  assert.deepEqual(a.yi, ["祭祀", "祈福", "求嗣", "会亲友", "赴任", "纳采", "嫁娶", "移徙", "解除", "沐浴", "剃头",
+    "求医疗病", "裁衣", "竖柱上梁", "纳财", "捕捉", "牧养", "纳畜", "安葬"]);
+  assert.deepEqual(a.ji, ["出行", "修造动土", "开仓", "开渠穿井", "修饰垣墙", "平治道涂", "破屋坏垣", "畋猎", "栽种", "破土"]);
+  assert.match(traceOf(a, "纳财").why, /小耗遇月德不忌/);
+  const s = surface();
+  api.renderSelection({ cat: "almanac", data: a }, s);
+  assert.ok(s.body.innerHTML.includes("等19事"));
+});
+
+test("worked examples: 诸事皆忌 days — 三阴 2026-02-16, 子月 甲子 月厌建会 lifted by 天赦 (2025-12-21)", () => {
+  const x = yj("2026-02-16");
+  assert.equal(x.dayGanzhi, "辛酉");
+  assert.equal(x.yiJi.allJi, true); // 「正月辛酉七月乙卯為三隂，諸事皆忌」
+  assert.deepEqual(x.yi, []);
+  // 月厭「子午月厭建㑹，與天赦併如常例，不與天赦併諸事皆忌」: 甲子 is the winter 天赦.
+  const tz = yj("2025-12-21");
+  assert.equal(tz.dayGanzhi, "甲子");
+  assert.ok(tz.jiShen.some((g) => g.name === "天赦") && tz.xiongShen.some((g) => g.name === "月厌"));
+  assert.equal(tz.yiJi.allJi, false);
+  assert.equal(tz.yiJi.level.code, "J");
+  // …while 2025-12-09 壬子 (子月 建, no 天赦) is 諸事皆忌 (also 陰陽大㑹).
+  assert.equal(yj("2025-12-09").yiJi.allJi, true);
+});
+
+test("worked example: 2026-11-24 壬寅 亥月 平日 — 「亥月又值時德六合，止忌……求醫療病，餘皆不忌」", () => {
+  const a = yj("2026-11-24");
+  assert.deepEqual(a.yiJi.level, { code: "Y", name: "从宜不从忌", by: ["平日"] });
+  assert.ok(a.ji.includes("求医疗病"));
+  assert.ok(a.yi.includes("嫁娶") && a.yi.includes("修造动土"));
+  // 寅日: 百忌「寅日忌祭祀」 and 鋪註「凡天狗寅日忌祭祀不註宜求福祈嗣」; 遊禍 also 忌 祈福.
+  assert.ok(a.ji.includes("祭祀") && !a.yi.includes("祈福"));
+  // 復日 遇 六合 不忌, 亦不註宜: 安葬 (天願 六合 宜) is written neither way.
+  assert.equal(traceOf(a, "安葬").result, "不注");
+});

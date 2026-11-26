@@ -756,7 +756,9 @@ function termDisplayInstant(instant) {
    · the card's 「X年」 is the lunar year (changes at 正月初一); the
      立春-based year is exposed separately for the month pillar;
    · 黄道黑道值神 and the day's 吉神/凶神 follow 《协纪辨方书》's rules
-     (js/almanac-rules.js); 宜忌 are still day-seeded picks (stage M4). */
+     (js/almanac-rules.js), and so do 宜忌, which are synthesised from the
+     建除, the 神煞 and a few fixed special days (NAM_ALMANAC.yiJi). Nothing
+     in the almanac is random. */
 const GAN = "甲乙丙丁戊己庚辛壬癸";
 const ZHI = "子丑寅卯辰巳午未申酉戌亥";
 
@@ -884,22 +886,6 @@ const SHA_BY_TRINE = ["南", "东", "北", "西"];
 function shaDirectionOf(dayBranchIdx) {
   return SHA_BY_TRINE[dayBranchIdx % 4];
 }
-/* Deterministic per-day pseudo-random pick: the same calendar day always
-   yields the same 宜/忌. Certainty hiding inside the chance pool. */
-function seededDailyPick(pool, count, seed, exclude) {
-  let s = (seed % 2147483647) + 1;
-  const rnd = () => {
-    s = (s * 1103515245 + 12345) % 2147483648;
-    return s / 2147483648;
-  };
-  const avail = pool.filter((x) => !exclude || !exclude.includes(x));
-  const copy = avail.slice();
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy.slice(0, Math.min(count, copy.length));
-}
 /* 彭祖百忌： classic lookup by day stem / day branch (traditional text). */
 const PENGZU_BY_STEM = {
   "甲": "甲不开仓，财物耗散", "乙": "乙不栽植，千株不长", "丙": "丙不修灶，必见灾殃",
@@ -934,9 +920,11 @@ function tuWangYongShi(date) {
 
 /* The day context the 择日 rules read (see js/almanac-rules.js): 节月
    index/branch and its season, the day stem/branch, the term crossing on
-   the next local day (四离/四绝) and whether 土王用事 is in force. */
+   the next local day (四离/四绝), whether 土王用事 is in force, and — for
+   宜忌 — the term in force (霜降后…) and the term crossing today (二分二至). */
 function almanacRuleContext(date, gz, jm) {
   const tomorrow = solarTermInfo(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12)).today;
+  const ti = solarTermInfo(date);
   return {
     m: jm.monthIdx,
     mb: jm.branchIdx,
@@ -946,6 +934,8 @@ function almanacRuleContext(date, gz, jm) {
     gz,
     eve: tomorrow ? tomorrow.name : "",
     tuWang: tuWangYongShi(date),
+    qi: ti.current ? ti.current.name : "",
+    termToday: ti.today ? ti.today.name : "",
   };
 }
 
@@ -954,15 +944,10 @@ function currentSolarTerm(date) {
 }
 
 function computeAlmanac(date) {
-  const jdn = julianDayNumber(date);
   let lunarLabel = "";
   try {
     lunarLabel = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(date);
   } catch (e) { lunarLabel = ""; }
-  const yiCount = 4 + (jdn % 3);        // 4–6
-  const jiCount = 3 + ((jdn >> 2) % 3); // 3–5
-  const yi = seededDailyPick(ALMANAC_YI, yiCount, jdn * 2 + 1, null);
-  const ji = seededDailyPick(ALMANAC_JI, jiCount, jdn * 2 + 2, yi);
   const gz = dayGanzhi(date);
   const stem = gz[0], branch = gz[1];
   const branchIdx = ZHI.indexOf(branch);
@@ -973,7 +958,10 @@ function computeAlmanac(date) {
   const sha = shaDirectionOf(branchIdx);
   // 黄道黑道值神 and the day's 神煞: js/almanac-rules.js (NAM_ALMANAC).
   const zhiShen = NAM_ALMANAC.zhiShenOf(branchIdx, jm.branchIdx);
-  const gods = NAM_ALMANAC.dayGods(almanacRuleContext(date, gz, jm));
+  const ctx = almanacRuleContext(date, gz, jm);
+  const gods = NAM_ALMANAC.dayGods(ctx);
+  // 宜忌 from the 建除, the gods and the special days (卷十「宜忌」): see NAM_ALMANAC.yiJi.
+  const yiji = NAM_ALMANAC.yiJi(ctx, gods);
   return {
     lunarLabel,
     yearGanzhi: yearGanzhi(date),       // lunar year, turns at 正月初一 (shown)
@@ -981,8 +969,9 @@ function computeAlmanac(date) {
     monthGanzhi: jieMonthGanzhi(date),  // 节月 pillar, 五虎遁 (shown in the meta line)
     jieMonth: { branchIdx: jm.branchIdx, branch: jm.branch, monthIdx: jm.monthIdx, jieYear: jm.jieYear, termName: jm.termName },
     dayGanzhi: gz,
-    yi,
-    ji,
+    yi: yiji.yi,                        // 用事 names, vocabulary (traditional) order
+    ji: yiji.ji,
+    yiJi: yiji,                         // + level (宜忌等第), allJi (诸事皆忌), trace
     termInfo: solarTermInfo(date),
     jianchu,
     chong,
@@ -995,8 +984,41 @@ function computeAlmanac(date) {
   };
 }
 
-/* The almanac's reading door (全文): the card lists only the gods'
-   names; this text gives each one its gloss, grouped as on the card. */
+/* How many 宜 / 忌 the card shows before 「等N事」 (two lines at 375px). */
+const ALMANAC_CARD_YIJI = 8;
+const YONGSHI_GLOSS = Object.fromEntries(NAM_ALMANAC.YONGSHI.map((y) => [y.name, y.gloss]));
+
+/* The 宜忌 part of the 全文 reading: the day's 等第, then every 宜 and 忌
+   with the sources it came from (「宜 嫁娶 ← 天德·六合」), and the 用事
+   some god called 宜 that ended up written as neither, with the reason. */
+function almanacYiJiText(yj) {
+  const lines = [];
+  const src = (list) => list.join("·");
+  if (yj.level) lines.push(`等第：${yj.level.name}（${yj.level.by.join("、")}）`);
+  else lines.push("等第：本日无大凶煞，宜忌各从本神");
+  if (yj.allJi) {
+    lines.push("诸事皆忌：宜神所宜，本日皆不用。");
+    const wanted = yj.trace.filter((t) => t.yi.length);
+    if (wanted.length) lines.push("（本有之宜：" + wanted.map((t) => `${t.name} ← ${src(t.yi)}`).join("；") + "）");
+    return lines.join("\n");
+  }
+  const rows = (result) => yj.trace.filter((t) => t.result === result);
+  const yi = rows("宜"), ji = rows("忌");
+  lines.push(`宜（${yi.length}）` + (yi.length ? "" : "：诸事不宜"));
+  for (const t of yi) lines.push(`宜 ${t.name}（${YONGSHI_GLOSS[t.name]}）← ${src(t.yi)}` + (t.why ? `；${t.why}` : ""));
+  lines.push(`忌（${ji.length}）` + (ji.length ? "" : "：诸事不忌"));
+  for (const t of ji) lines.push(`忌 ${t.name} ← ${src(t.ji)}` + (t.why ? `；${t.why}` : ""));
+  const quiet = rows("不注").filter((t) => t.yi.length);
+  if (quiet.length) {
+    lines.push(`不注（${quiet.length}）`);
+    for (const t of quiet) lines.push(`不注 ${t.name}（宜 ← ${src(t.yi)}` + (t.ji.length ? `；忌 ← ${src(t.ji)}` : "") + `）：${t.why}`);
+  }
+  return lines.join("\n");
+}
+
+/* The almanac's reading door (全文): the card lists only the gods' names
+   and the first 宜/忌; this text gives each god its gloss and every 宜/忌
+   with its sources, grouped as on the card. */
 function almanacFullText(a) {
   const head = [
     `${a.yearGanzhi}年 ${a.monthGanzhi}月 ${a.dayGanzhi}日` + (a.lunarLabel ? ` · 农历${a.lunarLabel}` : ""),
@@ -1005,9 +1027,12 @@ function almanacFullText(a) {
   const list = (label, gods) => `${label}\n` + (gods.length ? gods.map((g) => `${g.name}：${g.gloss}`).join("\n") : "无");
   return [
     head,
+    almanacYiJiText(a.yiJi),
     list("吉神", a.jiShen),
     list("凶神", a.xiongShen),
-    "值神、建除与神煞按《钦定协纪辨方书》的月表规则推算，以节气定月；释义为本站自拟的白话概括。宜忌仍为趣味版，仅供参考。",
+    "值神、建除与神煞按《钦定协纪辨方书》的月表规则推算，以节气定月。宜忌依同书卷十「宜忌」逐神合成：箭头后是所出之神或建除（「甲日」「寅日」为百忌日），" +
+      "吉凶相遇按书中等第与「德能解／犹忌」之例取舍；值神黄道黑道不另定宜忌。释义为本站自拟的白话概括。" +
+      "宜忌属传统择日民俗，不具科学预测效力。",
   ].join("\n\n");
 }
 
@@ -3112,10 +3137,21 @@ function renderSelection(sel, surface) {
     const godRow = (label, gods) => `<div class="fact-row alm-gods"><span><b>${label}</b> ` +
       (gods.length ? gods.map((g) => `<span title="${esc(g.gloss)}">${g.name}</span>`).join(" ") : "无") +
       `</span></div>`;
+    // 宜 / 忌: rule-derived (NAM_ALMANAC.yiJi), in the book's order of 用事;
+    // the first ALMANAC_CARD_YIJI fit two lines at phone width, the rest
+    // (and where each came from) are in the 全文 reading.
+    const yjRow = (label, list, empty) => {
+      const shown = list.slice(0, ALMANAC_CARD_YIJI);
+      const more = list.length > shown.length ? ` <span class="alm-more">等${list.length}事</span>` : "";
+      return `<div class="fact-row alm-gods"><span><b>${label}</b> ` +
+        (list.length ? shown.map((n) => `<span title="${esc(YONGSHI_GLOSS[n] || "")}">${n}</span>`).join(" ") + more : empty) +
+        `</span></div>`;
+    };
+    const allJi = a.yiJi && a.yiJi.allJi;
     body = `<span class="big">${a.dayGanzhi}日</span>` +
       `<div class="fact-row">${bits.map((b) => `<span>${b}</span>`).join("")}</div>` +
-      `<div class="fact-row"><span><b>${alm.yi}</b> ${a.yi.join(" · ")}</span></div>` +
-      `<div class="fact-row"><span><b>${alm.ji}</b> ${a.ji.join(" · ")}</span></div>` +
+      yjRow(alm.yi, a.yi, "诸事不宜") +
+      (allJi ? `<div class="fact-row alm-gods"><span><b>${alm.ji}</b> 诸事皆忌</span></div>` : yjRow(alm.ji, a.ji, "诸事不忌")) +
       godRow("吉神", a.jiShen) +
       godRow("凶神", a.xiongShen) +
       `<div class="fact-row"><span><b>彭祖百忌</b> ${a.pengzu[0]}；${a.pengzu[1]}</span></div>` +
