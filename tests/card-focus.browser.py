@@ -76,15 +76,18 @@ def check_horoscope_reader(browser):
     thread.start()
     page = browser.new_page(viewport={"width": 390, "height": 844})
     try:
+        page.add_init_script('window.NOW_AND_MORE_CONFIG = { gossipApi: "" };')
         page.goto(f"http://127.0.0.1:{server.server_port}/index.html",
                   wait_until="domcontentloaded")
-        page.wait_for_function("typeof renderSelection === 'function' && typeof makeHoroscope === 'function'")
+        # The startup draw is asynchronous (notes/gift loading); do not let it
+        # overwrite the injected selection after the reader button appears.
+        page.wait_for_function("typeof initialDrawDone !== 'undefined' && initialDrawDone && !drawGate.pending && encounter > 0")
         for language, layer_text, change_text in (
             ("zh", "时间尺度（原始评分单位）", "较昨日的净评分变化"),
             ("en", "Time scales (raw score units)", "Compared with yesterday"),
         ):
             page.evaluate("""language => {
-              if (activeModal) hideModal(activeModal);
+              if (activeModal) hideModal(activeModal.id);
               lang = language;
               ambientOn = false;
               currentSelection = {cat:"astro", subtype:"horoscope",
@@ -102,6 +105,7 @@ def check_horoscope_reader(browser):
             page.locator("#full-close").click()
             page.locator("#full-overlay").wait_for(state="hidden")
             assert page.evaluate("document.activeElement.id === 'full-text-btn'")
+            assert page.evaluate("currentSelection === window.__v33Selection")
         print("horoscope V3.3 production reading modal ok")
     finally:
         page.close()

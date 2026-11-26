@@ -419,7 +419,8 @@ const HORO_V32 = Object.freeze({
 /* V3.3: adjust the existing normalized factor ledger, never a second score. */
 const HORO_TIME_LAYERS = Object.freeze(["background", "trend", "daily"]);
 const HORO_TIME_NEUTRAL = Object.freeze({background:1, trend:1, daily:1});
-const HORO_V33 = Object.freeze({...HORO_V32, timeLayers:Object.freeze({background:0.95, trend:0.95, daily:1.2})});
+// Keep V3.2 numerical behavior until the pinned training/holdout release check passes.
+const HORO_V33 = Object.freeze({...HORO_V32, timeLayers:HORO_TIME_NEUTRAL});
 function horoscopeTimeLayer(body, factor, other) {
   const slow = key => key === "jupiter" || key === "saturn";
   if (factor === "aspect") {

@@ -10,6 +10,38 @@ const api=loadHoroscope(read("js/astro.js"),read("js/app.js"),read("js/data.js")
 const old=loadHoroscope(pin("js/astro.js"),pin("js/app.js"));
 const close=(a,b)=>assert.ok(Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<1e-10,a+" vs "+b);
 const layers=api.HORO_TIME_LAYERS, off={...api.HORO_V32,timeLayers:api.HORO_TIME_NEUTRAL};
+const candidate={...api.HORO_V32,timeLayers:{background:.95,trend:.95,daily:1.2}};
+test("unverified V3.3 gains remain disabled in production",()=>{
+  assert.deepEqual(api.HORO_V33.timeLayers,api.HORO_TIME_NEUTRAL);
+  const date=new Date(2026,10,25,12),sky=api.horoscopeSky(date);
+  for(let sign=0;sign<12;sign++){
+    const prior=old.scoreHoroscopeSamples(sign,old.horoscopeSky(date).samples);
+    const result=api.scoreHoroscopeSamples(sign,sky.samples);
+    for(const [i,r] of [result,...result.domains].entries()){
+      const before=[prior,...prior.domains][i];
+      close(r.raw,before.raw);assert.equal(r.stars,before.stars);
+    }
+    close(api.scoreHoroscopeDay(date,sign).raw,prior.raw);
+  }
+});
+test("release gate rejects neutral production, training mismatch, holdout failure and baseline drift",()=>{
+  const {assessRelease}=require("../scripts/horoscope-v3.3-backtest.cjs");
+  const labels=["overall","love","work","money","social"],neutral=api.HORO_TIME_NEUTRAL,gains=candidate.timeLayers;
+  const metric={n:100,stars:[3,17,50,27,3],bySign:[{lowShare:.2},{lowShare:.21}],adjacentRawChange:.15,sameDaySignSd:.2,meanStars:3.1,jumpShare:.005,absoluteShare:[.2,.45,.35]};
+  const model=(weights,overrides={})=>({weights,metrics:Object.fromEntries(labels.map(k=>[k,{...metric,...overrides}])),domainCorrelations:[.1,.2,.3,.4,.5,.6]});
+  const validation={start:"2026-01-01",end:"2031-01-01",models:[model(neutral),model(gains)]};
+  const published={start:validation.start,end:validation.end,timezone:"UTC",models:{D:{parameters:api.HORO_V32,metrics:model(neutral).metrics}}};
+  const check=(selected,production,holdout=validation,baseline=published)=>assessRelease(selected,production,gains,holdout,baseline);
+  assert.equal(check({weights:gains},gains).releaseReady,true);
+  assert.equal(check({weights:gains},neutral).releaseReady,false);
+  assert.equal(check({weights:neutral},gains).releaseReady,false);
+  const failed={...validation,models:[model(neutral),model(gains,{jumpShare:.1})]};
+  assert.equal(check({weights:gains},gains,failed).candidatePassesHoldout,false);
+  assert.equal(check({weights:gains},gains,failed).releaseReady,false);
+  const drift=structuredClone(published);drift.models.D.metrics.work.stars=[4,16,50,27,3];
+  assert.equal(check({weights:gains},gains,validation,drift).baselineHistogramMatches,false);
+  assert.equal(check({weights:gains},gains,validation,drift).releaseReady,false);
+});
 test("V3.3 stable factor and pair classification, independent of instantaneous speed",()=>{
   for(const b of api.HORO_BODIES)for(const f of api.HORO_FACTORS.filter(k=>k!=="aspect")){
     const want=f==="solar"?"trend":b==="moon"?"daily":["jupiter","saturn"].includes(b)?"background":"trend";
@@ -28,7 +60,7 @@ test("neutral gains restore the independently pinned V3.2, ledger conserves all 
     const sky=api.horoscopeSky(date), priorSky=old.horoscopeSky(date);
     assert.deepEqual(sky.samples,priorSky.samples);
     for(let sign=0;sign<12;sign++){
-      const prior=old.scoreHoroscopeSamples(sign,priorSky.samples),neutral=api.scoreHoroscopeSamples(sign,sky.samples,off),now=api.scoreHoroscopeSamples(sign,sky.samples);
+      const prior=old.scoreHoroscopeSamples(sign,priorSky.samples),neutral=api.scoreHoroscopeSamples(sign,sky.samples,off),now=api.scoreHoroscopeSamples(sign,sky.samples,candidate);
       const r=[prior,...prior.domains],z=[neutral,...neutral.domains],n=[now,...now.domains];
       for(let i=0;i<r.length;i++){
         close(r[i].raw,z[i].raw);assert.equal(r[i].stars,z[i].stars);

@@ -114,7 +114,7 @@ function run(current,prior,start,end,models){
         changeDominance:m.changeDominance[i].map(x=>div(x,(days-1)*12)),slowAbsoluteShare:div(m.slow[i],m.total[i]),meanWeightHHI:m.hhi[i]/(days*12)}];
     })),domainCorrelations:[1,2,3].flatMap(i=>Array.from({length:4-i},(_,j)=>corr(m.series.flatMap(s=>s[i]),m.series.flatMap(s=>s[i+j+1]))))}))};
 }
-function choose(report){
+function rankEligible(report){
   const base=report.models.find(m=>L.every(k=>m.weights[k]===1)),b=base.metrics.overall,target=[.20,.45,.35];
   const gap=m=>Math.max(...m.bySign.map(x=>x.lowShare))-Math.min(...m.bySign.map(x=>x.lowShare));
   return report.models.map(m=>{
@@ -124,7 +124,25 @@ function choose(report){
       Math.abs(v.meanStars-b.meanStars)<=.10&&m.domainCorrelations.every((c,i)=>Math.abs(c-base.domainCorrelations[i])<.06)&&v.jumpShare<=b.jumpShare+.025;
     const score=v.absoluteShare.reduce((s,x,i)=>s+(x-target[i])**2,0)+.02*L.reduce((s,k)=>s+(1-p[k])**2,0)+.15*Math.abs(v.meanStars-b.meanStars);
     return {weights:p,valid,score,gap:gap(v)};
-  }).filter(x=>x.valid).sort((a,b)=>a.score-b.score)[0];
+  }).filter(x=>x.valid).sort((a,b)=>a.score-b.score);
+}
+function choose(report){return rankEligible(report)[0];}
+const sameWeights=(a,b)=>!!a&&!!b&&L.every(k=>a[k]===b[k]);
+function assessRelease(selected,production,candidate,validation,publishedBaseline){
+  const neutralResult=validation.models.find(m=>sameWeights(m.weights,neutral));
+  const historic=publishedBaseline.models.D;
+  const baselineHistogramMatches=publishedBaseline.timezone==="UTC"&&publishedBaseline.start===validation.start&&
+    publishedBaseline.end===validation.end&&historic.parameters.houseRulerScale===.2&&historic.parameters.combinationScale===.5&&
+    labels.every(label=>historic.metrics[label].n===neutralResult.metrics[label].n&&
+      historic.metrics[label].stars.every((n,i)=>n===neutralResult.metrics[label].stars[i]));
+  const candidateMatchesTraining=sameWeights(selected?.weights,candidate);
+  // Apply the predeclared eligibility thresholds on holdout; never select a new winner there.
+  const candidatePassesHoldout=rankEligible(validation).some(m=>sameWeights(m.weights,candidate));
+  const selectionMatchesProduction=sameWeights(selected?.weights,production);
+  const productionMatchesCandidate=sameWeights(production,candidate);
+  return {baselineHistogramMatches,candidateMatchesTraining,candidatePassesHoldout,selectionMatchesProduction,
+    productionMatchesCandidate,releaseReady:baselineHistogramMatches&&candidateMatchesTraining&&candidatePassesHoldout&&productionMatchesCandidate,
+    baselineHistograms:Object.fromEntries(labels.map(label=>[label,{published:historic.metrics[label].stars,pinned:neutralResult.metrics[label].stars}]))};
 }
 function benchmark(api){
   const n=24,date=new Date(2026,10,25,12),times={score:0,make:0,warm:0,batch:0},heapBefore=process.memoryUsage().heapUsed;
@@ -146,11 +164,16 @@ if(require.main===module){
   for(const b of [.65,.75,.85,.95,1])for(const t of [.95,1,1.05])for(const d of [1,1.05,1.1,1.15,1.2])grid.push(w(b,t,d));
   const training=run(current,prior,"2021-01-01","2026-01-01",grid),selected=choose(training);
   if(!selected)throw Error("No eligible three-layer candidate");
-  const p=selected.weights,production=current.HORO_V33.timeLayers;
-  // Always report the frozen shipped candidate; do not tune from holdout.
-  const models=[neutral,w(production.background,1,1),w(1,1,production.daily),production,w(1,production.trend,1)];
+  const production=current.HORO_V33.timeLayers,candidate=w(.95,.95,1.2);
+  // Keep the provisional candidate frozen, independent of production and holdout.
+  const models=[neutral,w(candidate.background,1,1),w(1,1,candidate.daily),candidate,w(1,candidate.trend,1)];
   const validation=run(current,prior,"2026-01-01","2031-01-01",models);
-  console.log(JSON.stringify({baseline:BASE,timezone:"UTC",layers:L,selected,production,selectionMatchesProduction:L.every(k=>p[k]===production[k]),
+  const release=assessRelease(selected,production,candidate,validation,JSON.parse(read("docs/horoscope-v3.2-backtest.json")));
+  console.log(JSON.stringify({baseline:BASE,timezone:"UTC",layers:L,selected,candidate,production,...release,
     training,validation,performance:{v32:benchmark(prior),v33:benchmark(current)}},null,2));
+  if(process.argv.includes("--release-check")&&!release.releaseReady){
+    console.error("V3.3 release blocked: reconcile baseline histograms, verify the frozen candidate, and match production to the training winner.");
+    process.exitCode=1;
+  }
 }
-module.exports={loadModels,prepare,evaluate,run,choose,benchmark};
+module.exports={loadModels,prepare,evaluate,run,choose,benchmark,assessRelease};
