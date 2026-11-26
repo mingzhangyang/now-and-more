@@ -1171,17 +1171,25 @@ function horoscopeEventSummary(events, lang) {
   return zh ? "今日天象 · " + first + (more ? ` · 另有${more}项` : "")
     : "Sky event today · " + first + (more ? ` · ${more} more` : "");
 }
-function horoscopeEventParagraphs(h, lang) {
-  if (!h.events?.length) return [];
+/* Event readings as data: the dialog renders the fields, and the plain
+   text below joins the same fields, so both always say the same thing. */
+function horoscopeEventDoc(h, lang) {
+  if (!h.events?.length) return null;
   const zh = lang === "zh";
-  const note = zh
-    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；星位变化通过全天采样反映于评分，以下象征提示不另行加减分。"
-    : "Today's sky events | Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. The changing sky is included in the daily samples; these symbolic prompts do not add an independent score adjustment.";
-  return [note, ...h.events.map(event => {
-    const detail = horoscopeEventCopy(event, h.signIdx, lang);
-    return [detail.title, detail.evidence, detail.interpretation,
-      `${zh ? "专题建议：" : "Event reflection: "}${detail.suggestion}`].join("\n");
-  })];
+  return {
+    title: zh ? "今日特别天象" : "Today's sky events",
+    note: zh
+      ? "按本地自然日和近似星历估算，临界时刻可能跨日；星位变化通过全天采样反映于评分，以下象征提示不另行加减分。"
+      : "Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. The changing sky is included in the daily samples; these symbolic prompts do not add an independent score adjustment.",
+    suggestionLabel: zh ? "专题建议：" : "Event reflection: ",
+    items: h.events.map(event => horoscopeEventCopy(event, h.signIdx, lang)),
+  };
+}
+function horoscopeEventParagraphs(h, lang) {
+  const doc = horoscopeEventDoc(h, lang);
+  if (!doc) return [];
+  return [doc.title + (lang === "zh" ? "｜" : " | ") + doc.note, ...doc.items.map(detail =>
+    [detail.title, detail.evidence, detail.interpretation, doc.suggestionLabel + detail.suggestion].join("\n"))];
 }
 function horoscopeCopy(h, lang) {
   const zh = lang === "zh";
@@ -1215,9 +1223,21 @@ function horoscopeContributionCopy(d, lang) {
     (zh ? "因素分解：" : "Factor breakdown: ") + factors +
     (zh ? "；合计 " : "; total ") + fmt(d.raw);
 }
+/* The same daily audit as numbers, for the dialog's contribution bars. */
+function horoscopeContributionData(d) {
+  if (!d.contributions?.[0]?.samples) return null;
+  return {
+    bodies: d.contributions.map(term => ({ key: term.key, value: term.value })),
+    factors: HORO_FACTORS.map(key => ({ key,
+      value: d.contributions.reduce((sum, term) => sum + term.components[key], 0) })),
+    total: d.raw,
+  };
+}
 /* The reading dialog expands the same stored daily result into four domain
-   explanations. No fresh Date, ephemeris calculation, RNG or deck draw. */
-function horoscopeFullText(h, lang) {
+   explanations. No fresh Date, ephemeris calculation, RNG or deck draw.
+   horoscopeFullDoc() holds the reading as fields for the dialog layout;
+   horoscopeFullDocText() joins those fields into the plain full text. */
+function horoscopeFullDoc(h, lang) {
   const zh = lang === "zh";
   const A = I18N[lang].astro;
   const sg = SIGNS[h.signIdx];
@@ -1225,25 +1245,36 @@ function horoscopeFullText(h, lang) {
   const groups = horoscopeFocusGroups(h.domains);
   const title = id => zh ? `星位解读 ${id}` : `Sky reading ${id}`;
   const label = d => HORO_DOMAINS.find(x => x.key === d.key)[lang];
-  const paragraphs = [
-    `${A.daily} · ${sg.symbol} ${sg[lang]}\n${A.overall} ${h.stars}/5`,
-    zh
+  const doc = {
+    lang, sign: { symbol: sg.symbol, name: sg[lang] }, dailyLabel: A.daily, overallLabel: A.overall, stars: h.stars,
+    intro: zh
       ? "以下先看四项评分与建议，再阅读对应的星位解读。正向和负向因素来自传统规则的加权评分，不代表实际吉凶；相同星位及相位只展开一次。"
       : "Read the four ratings and practical prompts first, then their referenced sky readings. Positive and negative factors are contributions to an editorial weighted score, not real-world outcomes. Shared placements and aspects are explained once.",
-    ...horoscopeEventParagraphs(h, lang),
-  ];
+    events: horoscopeEventDoc(h, lang),
+    labels: zh
+      ? { domains: "分项运势", readings: "星位解读", basis: "主要依据", advice: "建议",
+        contributions: "全天贡献（约值）", factors: "因素分解", total: "合计", positive: "正向", negative: "负向" }
+      : { domains: "By area", readings: "Sky readings", basis: "Main basis", advice: "Suggestion",
+        contributions: "Daily contributions (approx.)", factors: "Factor breakdown", total: "Total", positive: "positive", negative: "negative" },
+    factorNames: zh ? ["宫位关系","庙旺","相位","太阳状态","逆行","领域宫位"]
+      : ["House relation","Dignity","Aspects","Solar condition","Retrograde","Domain houses"],
+    bodyNames: A.bodies,
+    domains: [], readings: [],
+    lucky: { title: copy.cues, items: [
+      { label: A.luckyNumber, value: String(h.luckyNumber) },
+      { label: A.luckyColor, value: LUCKY_COLORS[h.colorIdx][lang] },
+      { label: A.luckyDirection, value: LUCKY_DIRECTIONS[h.dirIdx][lang] },
+      { label: A.luckyItem, value: LUCKY_ITEMS[h.itemIdx][lang] },
+    ] },
+    basis: copy.basis, footnote: A.footnote,
+  };
   for (const d of h.domains) {
     const detail = horoscopeDomainCopy(d, h, lang);
     const group = groups.get(horoscopeFocusKey(d.focus));
-    paragraphs.push([
-      `${label(d)} ${d.stars}/5`,
-      zh ? `主要依据：${title(group.id)}（${A.bodies[d.focus.key]}）`
-        : `Main basis: ${title(group.id)} (${A.bodies[d.focus.key]})`,
-      horoscopeBalanceCopy(d, lang),
-      horoscopeContributionCopy(d, lang),
-      horoscopeRulerCopy(d, lang),
-      `${zh ? "建议：" : "Suggestion: "}${detail.advice}`,
-    ].filter(Boolean).join("\n"));
+    doc.domains.push({ key: d.key, label: label(d), stars: d.stars, primary: d.key === h.primary,
+      readingId: group.id, readingTitle: title(group.id), body: A.bodies[d.focus.key],
+      balance: horoscopeBalanceCopy(d, lang), contributionText: horoscopeContributionCopy(d, lang),
+      contribution: horoscopeContributionData(d), ruler: horoscopeRulerCopy(d, lang), advice: detail.advice });
   }
   const aspectOwners = new Map();
   for (const group of groups.values()) {
@@ -1260,13 +1291,35 @@ function horoscopeFullText(h, lang) {
         aspectOwners.set(aspectKey, group.id);
       }
     }
-    paragraphs.push([
-      `${title(group.id)} · ${group.domains.map(label).join(zh ? "、" : ", ")}`,
-      `${detail.evidence}${detail.aspect ? " · " + detail.aspect : ""}`,
-      detail.placement, detail.conditionInterpretation, aspectText, detail.retrogradeInterpretation,
-    ].filter(Boolean).join("\n"));
+    doc.readings.push({ id: group.id, title: title(group.id), domainLabels: group.domains.map(label),
+      evidence: detail.evidence, aspect: detail.aspect,
+      paragraphs: [detail.placement, detail.conditionInterpretation, aspectText, detail.retrogradeInterpretation].filter(Boolean) });
   }
-  paragraphs.push(`${copy.cues}\n${A.luckyNumber} ${h.luckyNumber} · ${A.luckyColor} ${LUCKY_COLORS[h.colorIdx][lang]} · ${A.luckyDirection} ${LUCKY_DIRECTIONS[h.dirIdx][lang]} · ${A.luckyItem} ${LUCKY_ITEMS[h.itemIdx][lang]}`);
-  paragraphs.push(`${copy.basis} · ${A.footnote}`);
+  return doc;
+}
+function horoscopeFullDocText(doc) {
+  const zh = doc.lang === "zh";
+  const paragraphs = [
+    `${doc.dailyLabel} · ${doc.sign.symbol} ${doc.sign.name}\n${doc.overallLabel} ${doc.stars}/5`,
+    doc.intro,
+  ];
+  if (doc.events) paragraphs.push(doc.events.title + (zh ? "｜" : " | ") + doc.events.note,
+    ...doc.events.items.map(e => [e.title, e.evidence, e.interpretation, doc.events.suggestionLabel + e.suggestion].join("\n")));
+  for (const d of doc.domains) paragraphs.push([
+    `${d.label} ${d.stars}/5`,
+    zh ? `${doc.labels.basis}：${d.readingTitle}（${d.body}）` : `${doc.labels.basis}: ${d.readingTitle} (${d.body})`,
+    d.balance, d.contributionText, d.ruler,
+    `${zh ? "建议：" : "Suggestion: "}${d.advice}`,
+  ].filter(Boolean).join("\n"));
+  for (const r of doc.readings) paragraphs.push([
+    `${r.title} · ${r.domainLabels.join(zh ? "、" : ", ")}`,
+    `${r.evidence}${r.aspect ? " · " + r.aspect : ""}`,
+    ...r.paragraphs,
+  ].filter(Boolean).join("\n"));
+  paragraphs.push(`${doc.lucky.title}\n${doc.lucky.items.map(i => `${i.label} ${i.value}`).join(" · ")}`);
+  paragraphs.push(`${doc.basis} · ${doc.footnote}`);
   return paragraphs.join("\n\n");
+}
+function horoscopeFullText(h, lang) {
+  return horoscopeFullDocText(horoscopeFullDoc(h, lang));
 }
