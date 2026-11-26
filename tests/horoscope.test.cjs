@@ -56,7 +56,7 @@ const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 1
     if (result.opened) $("full-close").listeners.click();
     return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
   }
-  return {makeHoroscope, planetPositions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
+  return {makeHoroscope, planetPositions, horoscopeBodyState, horoscopeSky, scoreHoroscopeDay, horoscopeDignity, horoscopeSolarCondition, HORO_MODEL, HORO_ADVICE_FRAMES, HORO_ADVICE_VARIANTS, HORO_CONDITION_LABELS, chooseHoroscopeActions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -67,7 +67,9 @@ test("actual date calculation is stable for all 12 signs across local-day times"
       const morning = api.makeHoroscope(new Date(y,m,d,0,1), sign);
       const evening = api.makeHoroscope(new Date(y,m,d,23,59), sign);
       assert.deepEqual(morning, evening);
-      const computed = api.scoreHoroscope(sign, api.planetPositions(new Date(y,m,d,12)));
+      const sky = api.horoscopeSky(new Date(y,m,d,7));
+      assert.deepEqual(sky.positions, api.planetPositions(new Date(y,m,d,12)));
+      const computed = api.scoreHoroscope(sign, sky.positions, sky.moonSamples);
       assert.equal(morning.stars, computed.stars);
       assert.deepEqual(morning.domains, computed.domains);
     }
@@ -481,7 +483,7 @@ test("event snapshot is sign-independent, stable through the local day and conte
   assert.deepEqual(h,api.makeHoroscope(evening,0));
   const event=h.events.find(e=>e.body==="sun"&&e.type==="ingress");
   assert.ok(event);
-  const expectedNoon=api.scoreHoroscope(0,api.planetPositions(new Date(date.getFullYear(),date.getMonth(),date.getDate(),12)));
+  const expectedNoon=api.scoreHoroscopeDay(date,0);
   assert.deepEqual(h.domains,expectedNoon.domains);
   assert.equal(h.stars,expectedNoon.stars);
   for(const lang of ["zh","en"]){
@@ -558,9 +560,138 @@ test("of-date tropical positions agree with independent reference longitudes and
     ["2026-06-20", 2], ["2026-06-21", 3]]) {
     assert.equal(at(day).find(p => p.key === "sun").signIdx, sign, day);
   }
-  const work = day => api.scoreHoroscope(1, at(day)).domains.find(d => d.key === "work").stars;
-  assert.equal(work("2026-06-20"), 3);
-  assert.equal(work("2026-06-21"), 4);
+  // The solstice ingress moves the Sun from Gemini into Cancer: for Cancer
+  // it enters solar house 1 (rating up), for Aries it enters the square
+  // house 4 (rating down).
+  const work = (sign, day) => api.scoreHoroscope(sign, at(day)).domains.find(d => d.key === "work").stars;
+  assert.equal(work(3, "2026-06-20"), 4);
+  assert.equal(work(3, "2026-06-21"), 5);
+  assert.equal(work(0, "2026-06-20"), 4);
+  assert.equal(work(0, "2026-06-21"), 3);
+});
+test("essential dignity follows traditional rulerships, exaltations and their opposites", () => {
+  const sign = name => api.SIGNS.findIndex(s => s.key === name);
+  const cases = [
+    ["sun","leo",["domicile"]], ["sun","aries",["exaltation"]], ["sun","aquarius",["detriment"]], ["sun","libra",["fall"]],
+    ["moon","cancer",["domicile"]], ["moon","taurus",["exaltation"]], ["moon","scorpio",["fall"]],
+    ["mercury","virgo",["domicile","exaltation"]], ["mercury","pisces",["detriment","fall"]],
+    ["venus","pisces",["exaltation"]], ["venus","aries",["detriment"]], ["venus","virgo",["fall"]],
+    ["mars","capricorn",["exaltation"]], ["mars","cancer",["fall"]], ["mars","libra",["detriment"]],
+    ["jupiter","cancer",["exaltation"]], ["jupiter","capricorn",["fall"]], ["jupiter","gemini",["detriment"]],
+    ["saturn","libra",["exaltation"]], ["saturn","aries",["fall"]], ["saturn","leo",["detriment"]],
+    ["saturn","aquarius",["domicile"]], ["venus","gemini",[]],
+  ];
+  for (const [body, name, expected] of cases) {
+    assert.ok(sign(name) >= 0, name);
+    assert.deepEqual(api.horoscopeDignity(body, sign(name)).conditions, expected, body + " in " + name);
+  }
+  assert.ok(api.horoscopeDignity("mercury", sign("virgo")).value > api.horoscopeDignity("mercury", sign("gemini")).value);
+  assert.ok(api.horoscopeDignity("mercury", sign("pisces")).value < 0);
+});
+test("combustion and cazimi replace the Sun-conjunction aspect without double counting", () => {
+  const sun = {key:"sun", lon:100}, at = lon => ({key:"venus", lon});
+  const positions = lon => [sun, at(lon)];
+  assert.equal(api.horoscopeSolarCondition(at(100.1), positions(100.1)).kind, "cazimi");
+  const near = api.horoscopeSolarCondition(at(102), positions(102));
+  const far = api.horoscopeSolarCondition(at(107), positions(107));
+  assert.equal(near.kind, "combust");
+  assert.ok(near.value < far.value && far.value < 0);
+  assert.equal(api.horoscopeSolarCondition(at(109), positions(109)), null);
+  assert.equal(api.horoscopeSolarCondition({key:"moon", lon:101}, [sun]), null);
+  assert.equal(api.horoscopeSolarCondition(sun, [sun]), null);
+  const conj = api.horoscopeAspect(sun, at(102));
+  assert.equal(conj.angle, 0);
+  assert.equal(api.horoscopeAspectValue(conj, sun, at(102)), 0);
+  const j = {key:"jupiter", lon:102};
+  assert.ok(api.horoscopeAspectValue(api.horoscopeAspect(at(100), j), at(100), j) > 0);
+});
+test("retrograde caution is body-specific and slow-planet placements are damped", () => {
+  const social = (positions) => api.scoreHoroscope(2, positions).domains.find(d => d.key === "social");
+  // Mercury is in the social domain; Jupiter in both social and money.
+  const mercuryDrop = social(fixture(120)).raw - social(fixture(120, ["mercury"])).raw;
+  const jupiterDrop = social(fixture(120)).raw - social(fixture(120, ["jupiter"])).raw;
+  assert.ok(mercuryDrop > jupiterDrop && jupiterDrop > 0);
+  assert.ok(api.HORO_MODEL.retrograde.saturn < api.HORO_MODEL.retrograde.mercury);
+  // Moving one body from a trine house (Leo, for Aries) to a square house
+  // (Cancer) with no aspects in play: Jupiter's placement term moves much
+  // less than Venus's for the same geometric change.
+  const at = (key, lon) => ({key, lon, signIdx: Math.floor(lon / 30), retrograde: false});
+  const shift = key => {
+    const sun = at("sun", 175);
+    return api.horoscopeBodyState(at(key, 135), [sun, at(key, 135)], 0).base -
+      api.horoscopeBodyState(at(key, 105), [sun, at(key, 105)], 0).base;
+  };
+  assert.ok(shift("venus") > 1.5);
+  assert.ok(shift("jupiter") > 0 && shift("jupiter") < 0.5 * shift("venus"));
+  assert.ok(shift("saturn") < 0.5 * shift("mars"));
+});
+test("the Moon is scored across the day while noon remains the displayed evidence", () => {
+  const base = fixture(120);
+  const moon = lon => ({key:"moon", lon, signIdx: Math.floor(lon / 30), retrograde:false});
+  const same = api.scoreHoroscope(0, base, [moon(120), moon(120), moon(120)]);
+  assert.deepEqual(same, api.scoreHoroscope(0, base));
+  // Moon leaves the trine sign for a square sign late in the day.
+  const moving = api.scoreHoroscope(0, base, [moon(120), moon(120), moon(95)]);
+  const love = h => h.domains.find(d => d.key === "love");
+  assert.ok(love(moving).raw < love(same).raw);
+  for (const d of moving.domains) if (d.focus.key === "moon") assert.equal(d.focus.signIdx, 4);
+  // Real dates: makeHoroscope uses the 06/12/18 local samples.
+  assert.deepEqual(api.HORO_MODEL.moonSampleHours, [6, 12, 18]);
+  const sky = api.horoscopeSky(new Date(2026, 10, 25, 21));
+  assert.equal(sky.moonSamples.length, 3);
+  assert.equal(sky.moonSamples[1], sky.positions.find(p => p.key === "moon"));
+  assert.ok(sky.moonSamples[0].lon !== sky.moonSamples[2].lon);
+});
+test("wording frames have one shared variant count for every tone", () => {
+  for (const frames of Object.values(api.HORO_ADVICE_FRAMES)) assert.equal(frames.length, api.HORO_ADVICE_VARIANTS);
+  for (let offset = 0; offset < 40; offset++) {
+    const h = api.makeHoroscope(new Date(2026, 0, 1 + offset), offset % 12);
+    assert.ok(h.adviceIdx >= 0 && h.adviceIdx < api.HORO_ADVICE_VARIANTS);
+  }
+});
+test("dignity and solar conditions are shown in evidence and explained in both languages", () => {
+  const counts = {dignity:0, solar:0};
+  for (let offset = 0; offset < 120; offset++) {
+    for (let sign = 0; sign < 12; sign += 3) {
+      const h = api.makeHoroscope(new Date(2026, 0, 1 + offset * 3), sign);
+      for (const d of h.domains) {
+        const f = d.focus;
+        if (f.dignity.length) counts.dignity++;
+        if (f.solar) counts.solar++;
+        for (const [li, lang] of ["zh","en"].entries()) {
+          const detail = api.horoscopeDomainCopy(d, h, lang);
+          for (const c of [...f.dignity, ...(f.solar ? [f.solar] : [])])
+            assert.ok(detail.evidence.toLowerCase().includes(api.HORO_CONDITION_LABELS[c][li]), c + " " + lang);
+          assert.equal(Boolean(detail.conditionInterpretation), Boolean(f.dignity.length || f.solar));
+          assert.ok(!detail.conditionInterpretation.includes("undefined"));
+          if (f.dignity.length || f.solar) assert.ok(api.horoscopeFullText(h, lang).includes(detail.conditionInterpretation));
+        }
+      }
+    }
+  }
+  assert.ok(counts.dignity > 0 && counts.solar > 0);
+});
+test("five-year distribution stays fair across signs and uses the full rating range", () => {
+  const days = [], low = new Array(12).fill(0), yearMeans = [];
+  const stars = {1:0,2:0,3:0,4:0,5:0};
+  for (let d = new Date(2026, 0, 1); d < new Date(2031, 0, 1); d.setDate(d.getDate() + 1)) days.push(new Date(d));
+  for (let sign = 0; sign < 12; sign++) {
+    const byYear = new Map();
+    for (const date of days) {
+      const h = api.scoreHoroscopeDay(date, sign);
+      stars[h.stars]++;
+      if (h.stars <= 2) low[sign]++;
+      const y = date.getFullYear(), acc = byYear.get(y) || [0, 0];
+      acc[0] += h.stars; acc[1]++; byYear.set(y, acc);
+    }
+    for (const [sum, n] of byYear.values()) yearMeans.push(sum / n);
+  }
+  const share = low.map(x => x / days.length);
+  // Without damping, Saturn/Jupiter placements gave 12%–25% (2.49–3.57 yearly means).
+  assert.ok(Math.max(...share) - Math.min(...share) < 0.09, share.map(x => x.toFixed(2)).join(" "));
+  assert.ok(Math.min(...yearMeans) > 2.65 && Math.max(...yearMeans) < 3.65, yearMeans.join(" "));
+  const total = days.length * 12;
+  assert.ok(stars[3] / total < 0.55 && stars[1] > 0 && stars[5] / total > 0.015, JSON.stringify(stars));
 });
 test("PWA shell and all four HTML pages agree on the asset version", () => {
   const sw=read("sw.js");

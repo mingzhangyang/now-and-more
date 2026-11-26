@@ -9,8 +9,9 @@
    - 星位 star positions: REAL astronomy, computed live from JPL Keplerian
      elements (approximate, sign-level accuracy).
    - 每日运势 daily horoscope: traditional-inspired entertainment rules
-     based on a fixed local-noon ephemeris; seeded variation is confined
-     to advice wording and symbolic lucky cues. */
+     based on a fixed local-noon ephemeris (the Moon is averaged over
+     three local-time samples); seeded variation is confined to advice
+     wording and symbolic lucky cues. Weights: HORO_MODEL. */
 
 /* Deterministic PRNG (mulberry32) for date-seeded picks. */
 function seededRng(seed) {
@@ -261,6 +262,9 @@ const HORO_HOUSE_THEMES = [
 ];
 // Domain × strongest contributing body: the actual action changes even
 // when two days have the same rounded star rating or overall tone.
+// Every tone has the same number of wording frames, so the date-seeded
+// frame index does not depend on which tone a domain ends up with.
+const HORO_ADVICE_VARIANTS = 2;
 const HORO_ADVICE_FRAMES = {
   support: [["不妨{action}。", "Consider making time to {action}."], ["可以试着{action}。", "Take the opportunity to {action}."]],
   neutral: [["今天可以{action}。", "Today, aim to {action}."], ["可把注意力放在这件事上：{action}。", "One useful focus today is to {action}."]],
@@ -301,46 +305,126 @@ function horoscopeAspect(a, b) {
   }
   return null;
 }
+const HORO_PLANETS = ["mercury", "venus", "mars", "jupiter", "saturn"];
 function horoscopeAspectValue(aspect, a, b) {
   if (aspect.kind === "support") return 0.65 * aspect.strength;
   if (aspect.kind === "challenge") return -0.85 * aspect.strength;
+  // A planet conjunct the Sun is read through combustion/cazimi instead
+  // (horoscopeSolarCondition), so the same closeness is not scored twice.
+  if ((a.key === "sun" && HORO_PLANETS.includes(b.key)) ||
+      (b.key === "sun" && HORO_PLANETS.includes(a.key))) return 0;
   // A conjunction is contextual, not automatically favorable.
   const keys = [a.key, b.key];
   const favorable = keys.filter(k => k === "venus" || k === "jupiter").length;
   const demanding = keys.filter(k => k === "mars" || k === "saturn").length;
   return 0.55 * (favorable - demanding) * aspect.strength;
 }
+/* Editorial weights of the traditional-inspired model (v2). Kept in one
+   table so the distribution simulation and tests can reason about them. */
+const HORO_MODEL = {
+  // Jupiter and Saturn stay in one sign for one to three years. Their
+  // placement terms (solar-house relation, house-topic bonus and essential
+  // dignity) are damped so a single slow placement cannot fix a sign's
+  // tone for a whole year. Their aspects still count in full.
+  placementScale: { jupiter: 0.4, saturn: 0.4 },
+  // Saturn is retrograde about 37% and Jupiter about 30% of the time, so a
+  // uniform penalty would turn a passing caution into a standing one.
+  retrograde: { mercury: 0.5, venus: 0.5, mars: 0.45, jupiter: 0.2, saturn: 0.2 },
+  // Essential dignity (tropical, traditional rulerships and exaltations).
+  dignity: { domicile: 0.25, exaltation: 0.2, detriment: -0.25, fall: -0.2 },
+  // Combustion: a planet within 8.5° of the Sun is weakened, scaled by
+  // closeness; within 17′ (cazimi) it is traditionally strengthened.
+  combustOrb: 8.5, combust: -0.35, cazimiOrb: 17 / 60, cazimi: 0.3,
+  houseBonus: 0.35,
+  // raw score → 1..5 stars around 3.
+  starScale: 2.0,
+  // A daily reading covers the day, not one instant: the fast Moon (about
+  // 13° a day) is scored as the mean of three local-time samples. The
+  // displayed evidence remains the noon placement.
+  moonSampleHours: [6, 12, 18],
+};
+const HORO_EXALTATION_SIGNS = { sun: 0, moon: 1, mercury: 5, venus: 11, mars: 9, jupiter: 3, saturn: 6 };
+const HORO_CONDITION_LABELS = {
+  domicile: ["入庙", "domicile"], exaltation: ["擢升", "exalted"],
+  detriment: ["失势", "detriment"], fall: ["落陷", "fall"],
+  combust: ["灼伤", "combust"], cazimi: ["日核", "cazimi"],
+};
+/* Domicile = the signs a body rules (HORO_RULERS); detriment is the
+   opposite sign; fall is opposite the exaltation. Mercury in Virgo is both
+   domicile and exalted; in Pisces both detriment and fall. */
+function horoscopeDignity(key, signIdx) {
+  const conditions = [];
+  if (HORO_RULERS[signIdx] === key) conditions.push("domicile");
+  if (HORO_EXALTATION_SIGNS[key] === signIdx) conditions.push("exaltation");
+  if (HORO_RULERS[(signIdx + 6) % 12] === key) conditions.push("detriment");
+  if ((HORO_EXALTATION_SIGNS[key] + 6) % 12 === signIdx) conditions.push("fall");
+  return { conditions, value: conditions.reduce((s, c) => s + HORO_MODEL.dignity[c], 0) };
+}
+function horoscopeSolarCondition(p, positions) {
+  const sun = positions.find(q => q.key === "sun");
+  if (!sun || !HORO_PLANETS.includes(p.key)) return null;
+  const distance = Math.abs(norm180(p.lon - sun.lon));
+  if (distance <= HORO_MODEL.cazimiOrb) return { kind: "cazimi", distance, value: HORO_MODEL.cazimi };
+  if (distance <= HORO_MODEL.combustOrb) return { kind: "combust", distance,
+    value: HORO_MODEL.combust * (1 - distance / HORO_MODEL.combustOrb) };
+  return null;
+}
 function horoscopeStars(raw) {
-  return Math.max(1, Math.min(5, Math.round(3 + raw * 1.8)));
+  return Math.max(1, Math.min(5, Math.round(3 + raw * HORO_MODEL.starScale)));
 }
 function horoscopeTone(raw) {
   return raw >= 0.28 ? "support" : raw <= -0.28 ? "challenge" : "neutral";
 }
+/* One body's state against the selected solar sign in one snapshot. */
+function horoscopeBodyState(p, positions, signIdx) {
+  const house = (p.signIdx - signIdx + 12) % 12 + 1;
+  const distance = Math.min(house - 1, 13 - house);
+  const relation = [0.55, 0, 0.55, -0.8, 0.95, 0, -0.85][distance];
+  const aspects = positions.filter(q => q.key !== p.key).map(q => {
+    const aspect = horoscopeAspect(p, q);
+    return aspect && { ...aspect, other: q.key, value: horoscopeAspectValue(aspect, p, q) };
+  }).filter(Boolean).sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.deviation - b.deviation);
+  // Limit the contribution of overlapping aspects so stelliums do not
+  // overwhelm house/sign interpretation.
+  const aspectValue = Math.max(-0.9, Math.min(0.9, aspects.reduce((sum, a) => sum + a.value, 0)));
+  const dignity = horoscopeDignity(p.key, p.signIdx);
+  const solar = horoscopeSolarCondition(p, positions);
+  const scale = HORO_MODEL.placementScale[p.key] ?? 1;
+  const retrograde = p.retrograde ? HORO_MODEL.retrograde[p.key] ?? 0 : 0;
+  const base = scale * (relation + dignity.value) + aspectValue + (solar ? solar.value : 0) - retrograde;
+  return { house, aspects, dignity: dignity.conditions, solar, base, placementScale: scale };
+}
 /* Pure, injectable scoring. The date seed does NOT participate in scores.
    Whole-sign aspects to the selected solar sign, relevant solar houses,
-   ruler weighting, retrograde and degree-based planet-to-planet aspects
-   are an explicitly editorial model inspired by traditional astrology. */
-function scoreHoroscope(signIdx, positions) {
+   ruler weighting, essential dignity, combustion, retrograde and
+   degree-based planet-to-planet aspects are an explicitly editorial model
+   inspired by traditional astrology. `moonSamples` (optional) are Moon
+   placements across the day; without them the Moon uses `positions`. */
+function scoreHoroscope(signIdx, positions, moonSamples) {
   const ruler = HORO_RULERS[signIdx];
   const planets = positions.map(p => {
-    const house = (p.signIdx - signIdx + 12) % 12 + 1;
-    const distance = Math.min(house - 1, 13 - house);
-    const relation = [0.55, 0, 0.55, -0.8, 0.95, 0, -0.85][distance];
-    const aspects = positions.filter(q => q.key !== p.key).map(q => {
-      const aspect = horoscopeAspect(p, q);
-      return aspect && { ...aspect, other: q.key, value: horoscopeAspectValue(aspect, p, q) };
-    }).filter(Boolean).sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.deviation - b.deviation);
-    // Limit the contribution of overlapping aspects so stelliums do not
-    // overwhelm house/sign interpretation. Retrograde is a mild caution.
-    const aspectValue = Math.max(-0.9, Math.min(0.9, aspects.reduce((sum, a) => sum + a.value, 0)));
-    return { ...p, house, aspects, base: relation + aspectValue - (p.retrograde ? 0.6 : 0) };
+    const state = horoscopeBodyState(p, positions, signIdx);
+    // Share of the day each solar house holds this body (Moon may change sign).
+    let houseShare = { [state.house]: 1 }, base = state.base;
+    if (p.key === "moon" && moonSamples?.length) {
+      houseShare = {};
+      base = 0;
+      for (const m of moonSamples) {
+        const snapshot = positions.map(q => q.key === "moon" ? m : q);
+        const s = horoscopeBodyState(m, snapshot, signIdx);
+        houseShare[s.house] = (houseShare[s.house] || 0) + 1 / moonSamples.length;
+        base += s.base / moonSamples.length;
+      }
+    }
+    return { ...p, ...state, base, houseShare };
   });
   const domains = HORO_DOMAINS.map(domain => {
     // Always include the traditional ruler; weight relevant bodies more.
     const relevant = planets.filter(p => domain.bodies.includes(p.key) || p.key === ruler);
     const values = relevant.map(p => {
       const weight = (domain.bodies.includes(p.key) ? 1 : 0.6) + (p.key === ruler ? 0.5 : 0);
-      const value = p.base + (domain.houses.includes(p.house) ? 0.35 : 0);
+      const share = domain.houses.reduce((s, h) => s + (p.houseShare[h] || 0), 0);
+      const value = p.base + p.placementScale * HORO_MODEL.houseBonus * share;
       return { planet: p, value, weight, impact: value * weight };
     });
     const totalWeight = values.reduce((s, v) => s + v.weight, 0);
@@ -349,10 +433,14 @@ function scoreHoroscope(signIdx, positions) {
     // score for explanations. This is a decomposition of the existing
     // weighted mean, not another scoring rule.
     const contributions = values.map(v => ({ key: v.planet.key, value: v.impact / totalWeight }));
-    const driver = values.reduce((best, v) => Math.abs(v.impact) > Math.abs(best.impact) ? v : best);
-    const p = driver.planet;
+    // Pick the focus from the same numbers the explanation reports, so
+    // floating-point ties cannot name a different body than the balance.
+    const driver = contributions.reduce((best, t, i) =>
+      Math.abs(t.value) > Math.abs(contributions[best].value) ? i : best, 0);
+    const p = values[driver].planet;
     return { key: domain.key, raw, stars: horoscopeStars(raw), contributions,
       focus: { key: p.key, signIdx: p.signIdx, house: p.house, retrograde: p.retrograde,
+        dignity: p.dignity, solar: p.solar ? p.solar.kind : null,
         aspect: p.aspects[0] || null } };
   });
   const raw = domains.reduce((s, d) => s + d.raw, 0) / domains.length;
@@ -360,6 +448,24 @@ function scoreHoroscope(signIdx, positions) {
   const primary = domains.reduce((best, d) => Math.abs(d.raw) > Math.abs(best.raw) ? d : best);
   return { stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
     tone: horoscopeTone(primary.raw) };
+}
+/* The day's sky for one local calendar date: the noon snapshot (shown as
+   evidence) plus Moon samples for scoring. Every caller that scores a
+   real date — including the advice-rotation replay — must use this so
+   replayed days match what was actually shown. */
+function horoscopeSky(date) {
+  const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+  const positions = planetPositions(new Date(y, m, d, 12));
+  const moonSamples = HORO_MODEL.moonSampleHours.map(h => {
+    if (h === 12) return positions.find(p => p.key === "moon");
+    const lon = moonLongitude(new Date(y, m, d, h));
+    return { key: "moon", lon, signIdx: signIndexFromLongitude(lon), retrograde: false };
+  });
+  return { positions, moonSamples };
+}
+function scoreHoroscopeDay(date, signIdx) {
+  const sky = horoscopeSky(date);
+  return scoreHoroscope(signIdx, sky.positions, sky.moonSamples);
 }
 /* Context matching is restricted to the preassigned date window to
    guarantee a seven-day no-repeat interval without local storage, network
@@ -436,7 +542,7 @@ function chooseHoroscopeActions(noon, signIdx, scored) {
   for (let back = window.elapsed; back > 0; back--) {
     const date = new Date(noon);
     date.setDate(date.getDate() - back);
-    earlier.push(scoreHoroscope(signIdx, planetPositions(date)));
+    earlier.push(scoreHoroscopeDay(date, signIdx));
   }
   const choices = {};
   for (const d of scored.domains) {
@@ -457,11 +563,11 @@ function horoscopeActionFor(d, h) {
   // keeps the pure presentation usable with injected score-only fixtures.
   return pool.find(action => action.id === h.actionChoices?.[d.key]) || bestHoroscopeAction(d, pool);
 }
-/* One local calendar day = one fixed local-noon ephemeris. Language,
+/* One local calendar day = one fixed sky (noon, plus Moon samples). Language,
    refresh time, Math.random, and lucky-cue choices cannot affect scores. */
 function makeHoroscope(date, signIdx) {
   const noon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
-  const scored = scoreHoroscope(signIdx, planetPositions(noon));
+  const scored = scoreHoroscopeDay(noon, signIdx);
   const seed = (date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()) * 16 + signIdx;
   const rng = seededRng(seed);
   const choose = list => list[Math.floor(rng() * list.length)];
@@ -469,7 +575,7 @@ function makeHoroscope(date, signIdx) {
   const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
   return { signIdx, ...scored, actionChoices: chooseHoroscopeActions(noon, signIdx, scored),
     events: horoscopeEventsForDate(noon),
-    adviceIdx: Math.floor(rng() * HORO_ADVICE_FRAMES[scored.tone].length),
+    adviceIdx: Math.floor(rng() * HORO_ADVICE_VARIANTS),
     // Symbolic entertainment cues, NOT astronomical predictions.
     luckyNumber: scored.focus.house + 12 * Math.floor(rng() * 8),
     colorIdx: choose(cues.colors), dirIdx: choose(cues.dirs), itemIdx: choose(domain.items) };
@@ -480,9 +586,13 @@ function horoscopeFocusCopy(f, lang) {
   const a = I18N[lang].astro;
   const body = a.bodies[f.key];
   const sign = SIGNS[f.signIdx][lang];
+  const li = zh ? 0 : 1;
+  const conditions = [...(f.dignity || []), ...(f.solar ? [f.solar] : [])]
+    .map(c => HORO_CONDITION_LABELS[c][li]);
+  const tags = conditions.map(c => " · " + (zh ? c : c[0].toUpperCase() + c.slice(1))).join("");
   const evidence = zh
-    ? body + "位于" + sign + " · 太阳星座第" + f.house + "宫" + (f.retrograde ? " · 逆行" : "")
-    : body + " in " + sign + " · Solar house " + f.house + (f.retrograde ? " · Retrograde" : "");
+    ? body + "位于" + sign + " · 太阳星座第" + f.house + "宫" + tags + (f.retrograde ? " · 逆行" : "")
+    : body + " in " + sign + " · Solar house " + f.house + tags + (f.retrograde ? " · Retrograde" : "");
   const aspect = f.aspect
     ? (zh ? body + "与" + a.bodies[f.aspect.other] + f.aspect.zh
       : body + " / " + a.bodies[f.aspect.other] + " · " + f.aspect.en)
@@ -525,11 +635,30 @@ function horoscopeDomainCopy(d, h, lang) {
         : `The ${a.en} links ${names[f.key]} (${bodyTheme}) and ${names[a.other]} (${otherTheme}). ${guidance[0].toUpperCase() + guidance.slice(1)}.`;
     }
   }
+  let conditionInterpretation = "";
+  if (f.dignity?.length) {
+    const labels = f.dignity.map(c => HORO_CONDITION_LABELS[c][li]).join(zh ? "、" : " and ");
+    const strong = f.dignity.includes("domicile") || f.dignity.includes("exaltation");
+    const sign = SIGNS[f.signIdx][lang];
+    conditionInterpretation = zh
+      ? `庙旺提示：按传统规则，${names[f.key]}在${sign}属于${labels}，${strong ? "其主题较易顺畅表达" : "其主题较难直接发挥"}，本规则评分中${strong ? "略为加分" : "略为减分"}。`
+      : `Dignity note: by traditional rules ${names[f.key]} is in ${labels} in ${sign}, so its themes ${strong ? "tend to find easier expression" : "may need more patience to express"}; the rule-based score ${strong ? "adds" : "subtracts"} a little.`;
+  }
+  if (f.solar === "combust") {
+    conditionInterpretation += (conditionInterpretation ? "\n" : "") + (zh
+      ? `灼伤提示：${names[f.key]}与太阳相距不足8.5°，传统上视为被日光遮蔽，适合先观察、少下定论。`
+      : `Combustion note: ${names[f.key]} is within 8.5° of the Sun, traditionally read as obscured by its light; observe first and conclude later.`);
+  } else if (f.solar === "cazimi") {
+    conditionInterpretation += (conditionInterpretation ? "\n" : "") + (zh
+      ? `日核提示：${names[f.key]}与太阳几乎精确同度，传统上视为得到加强，可把它的主题当作今天的清晰焦点。`
+      : `Cazimi note: ${names[f.key]} is almost exactly conjunct the Sun, traditionally read as empowered; treat its themes as a clear focus today.`);
+  }
   const review = f.retrograde && HORO_RETROGRADE_ACTIONS[f.key];
   const retrogradeInterpretation = review
     ? (zh ? `逆行复核提示：${review[li]}。` : `Retrograde reflection prompt: ${review[li]}.`)
     : "";
-  return { ...horoscopeFocusCopy(f, lang), advice, placement, aspectInterpretation, retrogradeInterpretation };
+  return { ...horoscopeFocusCopy(f, lang), advice, placement, aspectInterpretation,
+    conditionInterpretation, retrogradeInterpretation };
 }
 /* Report only the largest positive/negative terms of this domain's actual
    weighted mean, not an inference from planet names or from rounded stars.
@@ -559,7 +688,7 @@ function horoscopeBalanceCopy(d, lang) {
    Group by evidence, not by localized text or rounded score, and keep
    reciprocal descriptions of the same aspect from being repeated. */
 function horoscopeFocusKey(f) {
-  return JSON.stringify([f.key, f.signIdx, f.house, f.retrograde,
+  return JSON.stringify([f.key, f.signIdx, f.house, f.retrograde, f.dignity || [], f.solar || null,
     f.aspect ? [f.aspect.other, f.aspect.angle, f.aspect.strength, f.aspect.value] : null]);
 }
 function horoscopeFocusGroups(domains) {
@@ -714,7 +843,7 @@ function horoscopeFullText(h, lang) {
     paragraphs.push([
       `${title(group.id)} · ${group.domains.map(label).join(zh ? "、" : ", ")}`,
       `${detail.evidence}${detail.aspect ? " · " + detail.aspect : ""}`,
-      detail.placement, aspectText, detail.retrogradeInterpretation,
+      detail.placement, detail.conditionInterpretation, aspectText, detail.retrogradeInterpretation,
     ].filter(Boolean).join("\n"));
   }
   paragraphs.push(`${copy.cues}\n${A.luckyNumber} ${h.luckyNumber} · ${A.luckyColor} ${LUCKY_COLORS[h.colorIdx][lang]} · ${A.luckyDirection} ${LUCKY_DIRECTIONS[h.dirIdx][lang]} · ${A.luckyItem} ${LUCKY_ITEMS[h.itemIdx][lang]}`);
