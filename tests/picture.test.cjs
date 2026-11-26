@@ -151,8 +151,10 @@ test("non-ambient picture cards render as envelopes on the stage, not the pictur
   api.renderSelection(daxue());
   let body = $("card-body").innerHTML;
   assert.ok(body.includes("envelope"), "envelope markup");
-  assert.ok(body.includes('class="env-text"'), "the words ride in their own column beside the thumbnail");
-  assert.ok(body.includes("你收到一张图卡"), "received line");
+  assert.ok(body.includes('class="envelope env-postcard"'), "stacked postcard envelope");
+  assert.match(body, /class="env-preview env-preview-art"><img [^>]+><\/div><div class="env-text"><div class="env-copy"><span class="big env-title">/,
+    "the glimpse sits above one row of words");
+  assert.ok(!body.includes("env-received"), "the category label already says what arrived");
   assert.ok(body.includes("大雪"), "postcard title");
   assert.ok(body.includes("点击查看"), "call to view");
   assert.ok(body.includes("assets/special-dates/daxue.webp"), "real painting as the glimpse");
@@ -166,8 +168,8 @@ test("non-ambient picture cards render as envelopes on the stage, not the pictur
   body = $("card-body").innerHTML;
   assert.ok(body.includes("envelope"));
   assert.ok(body.includes("今夜星图"), "chart title");
-  assert.ok(body.includes('class="envelope env-sky env-chart"'), "chart-only stacked layout");
-  assert.ok(!body.includes("env-received"), "chart has no redundant received line");
+  assert.ok(body.includes('class="envelope env-sky"'), "chart envelope shares the stacked layout");
+  assert.ok(!body.includes("env-received"), "no separate received line");
   assert.match(body, /class="env-preview env-preview-sky"[^>]*><\/div><div class="env-text"><div class="env-copy">/);
   assert.match(body, /class="env-copy"><span class="big env-title">今夜星图<\/span><div class="sub env-intro">[^<]+<\/div><\/div><p class="env-cta">点击查看 /);
   assert.ok(body.includes("env-preview-sky"), "starfield motif preview");
@@ -178,8 +180,8 @@ test("non-ambient picture cards render as envelopes on the stage, not the pictur
   api.renderSelection(moon);
   body = $("card-body").innerHTML;
   assert.ok(body.includes("此刻的月亮"), "moon title");
-  assert.ok(body.includes("env-received"), "other picture envelopes are unchanged");
-  assert.ok(!body.includes("env-chart"));
+  assert.match(body, /class="env-preview env-preview-sky"[^>]*><\/div><div class="env-text"><div class="env-copy">/,
+    "every picture envelope is stacked");
   const phase = api.moonPhase(new Date(moon.observer.when)).idx;
   assert.ok(body.includes(["新月", "娥眉月", "上弦月", "盈凸月", "满月", "亏凸月", "下弦月", "残月"][phase]),
     "moon phase intro");
@@ -194,14 +196,14 @@ test("non-ambient picture cards render as envelopes on the stage, not the pictur
   api.setLang("en");
   api.renderSelection(daxue());
   body = $("card-body").innerHTML;
-  assert.ok(body.includes("You&#39;ve received a picture card")); // esc() escapes the apostrophe
+  assert.ok(!body.includes("received a picture card"));
   assert.ok(body.includes("Daxue"));
   assert.ok(body.includes("Tap to view"));
   api.renderSelection(skySel("chart"));
   body = $("card-body").innerHTML;
   assert.ok(body.includes("Tonight&#39;s star chart"));
   assert.ok(body.includes("Tap to view"));
-  assert.ok(body.includes("env-chart"));
+  assert.ok(body.includes('class="envelope env-sky"'));
   assert.ok(!body.includes("env-received"));
 });
 

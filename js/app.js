@@ -1777,11 +1777,13 @@ function giftNoticeText(sel) {
   if (sel.cat === "mine") return t().notes.giftNotice;
   const copy = POSTCARD_COPY[sel.key];
   if (!copy) return "";
-  if (lang === "zh") return `今日${copy.titleZh} · 送你一张明信片`;
+  // A no-break space keeps the "·" with the words before it when the
+  // pill wraps onto two lines on a phone.
+  if (lang === "zh") return `今日${copy.titleZh}\u00a0· 送你一张明信片`;
   // English titles for the terms read "Daxue · Heavy Snow": the name
   // alone carries the sentence ("Daxue today · a postcard for you").
   const nameEn = copy.titleEn.split(" · ")[0];
-  return `${nameEn} today · a postcard for you`;
+  return `${nameEn} today\u00a0· a postcard for you`;
 }
 
 function showGiftNotice(sel) {
@@ -2267,16 +2269,18 @@ function renderEnvelope(sel, surface) {
   const preview = info.art
     ? `<div class="env-preview env-preview-art"><img src="assets/special-dates/${esc(info.art)}.webp" alt="" loading="lazy" decoding="async"></div>`
     : `<div class="env-preview env-preview-sky" aria-hidden="true"></div>`;
-  const chart = sel.cat === "sky" && sel.form === "chart";
-  const titleAndIntro = `<span class="big env-title">${esc(info.title)}</span>` +
-    (info.intro ? `<div class="sub env-intro">${esc(info.intro)}</div>` : "");
+  // Every envelope is stacked: a wide glimpse on top, then one row
+  // with the words on the left and the call to view on the right.
+  // The category label already says what arrived, so there is no
+  // separate "received" line.
+  const copy = `<span class="big env-title">${esc(info.title)}</span>` +
+    (info.intro ? `<div class="sub env-intro">${esc(info.intro)}</div>` : "") +
+    (info.glimpse && info.glimpse !== info.intro ? `<div class="sub env-glimpse">${esc(info.glimpse)}</div>` : "");
   surface.body.innerHTML =
-    `<div class="envelope env-${info.kind}${chart ? " env-chart" : ""}">` +
+    `<div class="envelope env-${info.kind}">` +
     preview +
     `<div class="env-text">` +
-    (chart ? `<div class="env-copy">${titleAndIntro}</div>` :
-      `<p class="env-received">${esc(P.received)}</p>` + titleAndIntro +
-      (info.glimpse && info.glimpse !== info.intro ? `<div class="sub env-glimpse">${esc(info.glimpse)}</div>` : "")) +
+    `<div class="env-copy">${copy}</div>` +
     `<p class="env-cta">${esc(P.view)} <span aria-hidden="true">›</span></p>` +
     `</div></div>`;
   liveWorldTime = null;
@@ -2917,7 +2921,8 @@ function renderSelection(sel, surface) {
 
   if (sel.cat === "poem") {
     const p = lang === "zh" ? sel.poemZh : sel.poemEn;
-    meta = p.title;
+    // No meta: the title already heads the body, so repeating it in
+    // the corner only doubles it.
     body = `<span class="poem-title">${p.title}</span><span class="poem-author">${p.author}</span><br>` +
       p.lines.map((ln) => `<span class="poem-line">${ln}</span>`).join("");
   }
@@ -3643,6 +3648,9 @@ const settingsPanel = $("settings-panel");
 function setSettingsOpen(open) {
   settingsPanel.hidden = !open;
   settingsBtn.setAttribute("aria-expanded", String(open));
+  // The gift notice shares the brand row; on a phone it would sit on
+  // the panel's top edge. Opening settings is a fine moment to let it go.
+  if (open) dismissGiftNotice();
 }
 settingsBtn.addEventListener("click", () => {
   setSettingsOpen(settingsPanel.hidden);
@@ -4026,7 +4034,9 @@ function renderKeepsakeCanvas(snap, pal) {
   ctx.fillRect(0, 0, KEEP_W, KEEP_H);
   const glow = ctx.createRadialGradient(KEEP_W * 0.86, 110, 0, KEEP_W * 0.86, 110, 720);
   glow.addColorStop(0, pal.glow);
-  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  // Fade to the same colour at zero alpha: fading to transparent black
+  // would draw a grey ring around the light seasonal tints.
+  glow.addColorStop(1, String(pal.glow).replace(/rgba?\(([^,]+),([^,]+),([^,)]+)(?:,[^)]*)?\)/, "rgba($1,$2,$3, 0)"));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, KEEP_W, KEEP_H);
 
@@ -4056,7 +4066,10 @@ function renderKeepsakeCanvas(snap, pal) {
   // brand line
   ctx.fillStyle = pal.ink;
   ctx.font = `600 34px ${pal.serif}`;
-  setLetterSpacing(ctx, "6px");
+  // Spaced out when the line leads with Chinese; near-normal when it
+  // leads with English (wide tracking reads as a fault in Latin).
+  const cjkFirst = /^[\u3400-\u9fff]/.test(snap.brand);
+  setLetterSpacing(ctx, cjkFirst ? "6px" : "1.5px");
   ctx.fillText(snap.brand, cx, 272);
   setLetterSpacing(ctx, "0px");
 
@@ -4111,9 +4124,12 @@ function renderKeepsakeCanvas(snap, pal) {
 
   ctx.textAlign = "left";
   ctx.fillStyle = pal.accent;
-  ctx.font = `600 30px ${pal.serif}`;
-  setLetterSpacing(ctx, "8px");
-  ctx.fillText(snap.category, textX, catBaseline);
+  // A Chinese label is spaced out; an English one is set as an
+  // uppercase label with light tracking, as on the stage card.
+  const cjkLabel = /[\u3400-\u9fff]/.test(snap.category);
+  ctx.font = cjkLabel ? `600 30px ${pal.serif}` : `600 26px ${pal.serif}`;
+  setLetterSpacing(ctx, cjkLabel ? "8px" : "3px");
+  ctx.fillText(cjkLabel ? snap.category : snap.category.toUpperCase(), textX, catBaseline);
   setLetterSpacing(ctx, "0px");
   if (snap.meta) {
     ctx.fillStyle = pal.inkSoft;
@@ -4147,7 +4163,7 @@ function renderKeepsakeCanvas(snap, pal) {
   ctx.textAlign = "center";
   ctx.fillStyle = pal.inkSoft;
   ctx.font = `300 26px ${pal.sans}`;
-  setLetterSpacing(ctx, "3px");
+  setLetterSpacing(ctx, cjkFirst ? "3px" : "1px");
   ctx.fillText(snap.footer, cx, 1280);
   setLetterSpacing(ctx, "0px");
 
@@ -4207,7 +4223,7 @@ function renderPostcardKeepsake(sel, img, serif) {
 
   // Title row: the title at the left, the meta right-aligned on the
   // same baseline — date in soft ink, the crossing time in vermillion.
-  const rowBaseline = 1146;
+  const rowBaseline = 1148;
   ctx.fillStyle = PC_INK;
   ctx.font = `900 50px ${serif}`;
   setLetterSpacing(ctx, "1px");
@@ -4248,21 +4264,23 @@ function renderPostcardKeepsake(sel, img, serif) {
   }
   if (mp.post) ctx.fillText(mp.post, mx, rowBaseline);
 
-  // Subtitle: one quiet line under the title row (baseline 1186).
+  // Subtitle: one quiet line under the title row (baseline 1192),
+  // with ~17px of air above it and ~15px below — the slots are spread
+  // over the whole text zone instead of stacked at its top.
   if (subtitle) {
     ctx.fillStyle = PC_INK_SOFT;
     ctx.font = `400 25px ${serif}`;
     setLetterSpacing(ctx, "1.5px");
-    ctx.fillText(subtitle, tx, 1186);
+    ctx.fillText(subtitle, tx, 1192);
     setLetterSpacing(ctx, "0px");
   }
 
-  // Passage: 39px at ~1.5 line height, up to the three lines the copy
-  // was written for (baselines 1228 / 1287 / 1346).
+  // Passage: 38px at ~1.45 line height, up to the three lines the copy
+  // was written for (baselines 1244 / 1299 / 1354).
   ctx.fillStyle = PC_INK;
-  ctx.font = `400 39px ${serif}`;
+  ctx.font = `400 38px ${serif}`;
   const lines = wrapText(ctx, passage, tw).slice(0, 3);
-  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1228 + i * 59));
+  lines.forEach((ln, i) => ctx.fillText(ln, tx, 1244 + i * 55));
 
   // Footer: hairline, the 时 seal at the left, the brand at the right.
   ctx.strokeStyle = "rgba(43, 38, 32, 0.10)";

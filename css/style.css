@@ -11,7 +11,7 @@
   --ink-soft: #6f6656;
   --accent: #b23a2a; /* vermillion */
   --card-bg: rgba(255, 252, 244, 0.82);
-  --panel-bg: rgba(255, 252, 244, 0.97);
+  --panel-bg: #fffcf4;
   --card-border: rgba(43, 38, 32, 0.14);
   --scroll-thumb: rgba(43, 38, 32, 0.30);
   --scroll-thumb-hover: rgba(43, 38, 32, 0.52);
@@ -30,7 +30,7 @@
   --ink-soft: #a29885;
   --accent: #e0684f;
   --card-bg: rgba(34, 30, 25, 0.85);
-  --panel-bg: rgba(34, 30, 25, 0.97);
+  --panel-bg: #221e19;
   --card-border: rgba(236, 229, 213, 0.16);
   --scroll-thumb: rgba(236, 229, 213, 0.28);
   --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
@@ -46,7 +46,7 @@
     --ink-soft: #a29885;
     --accent: #e0684f;
     --card-bg: rgba(34, 30, 25, 0.85);
-    --panel-bg: rgba(34, 30, 25, 0.97);
+    --panel-bg: #221e19;
     --card-border: rgba(236, 229, 213, 0.16);
     --scroll-thumb: rgba(236, 229, 213, 0.28);
     --scroll-thumb-hover: rgba(236, 229, 213, 0.50);
@@ -75,10 +75,13 @@
    keepsake renderer, which reads computed styles from body, picks the
    dressed palette up automatically. Ordinary days only get the seasonal
    glow whisper below; the vermillion accent itself never moves. */
-body[data-season="spring"] { --glow-color: rgba(122, 172, 92, 0.13); }
+/* Light theme: spring and winter are cool hues, and any cool hue that
+   is darker than the cream paper reads as a grey smudge. They are set
+   as light — paler than the paper — so they brighten it instead. */
+body[data-season="spring"] { --glow-color: rgba(226, 240, 208, 0.7); }
 body[data-season="summer"] { --glow-color: rgba(232, 152, 72, 0.13); }
 body[data-season="autumn"] { --glow-color: rgba(202, 152, 62, 0.14); }
-body[data-season="winter"] { --glow-color: rgba(112, 142, 182, 0.12); }
+body[data-season="winter"] { --glow-color: rgba(232, 241, 252, 0.78); }
 
 body[data-special="redgold"] { --accent: #c22f1d; --glow-color: rgba(216, 122, 42, 0.20); }
 body[data-special="moon"]    { --accent: #b57e1e; --glow-color: rgba(233, 182, 82, 0.22); }
@@ -109,6 +112,14 @@ body[data-special="warm"]    { --accent: #ba4a44; --glow-color: rgba(221, 112, 9
 }
 
 * { box-sizing: border-box; }
+
+/* One keyboard focus ring for every control: vermillion, offset, and
+   following each control's own radius. :where() keeps it at zero
+   specificity, so dark-surface overrides (the lightbox) still win. */
+:where(button, a, select, input, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 [hidden] { display: none !important; }
 
@@ -157,6 +168,17 @@ body {
   transition: opacity 1.4s ease;
 }
 body[data-special="moon"] #moon-glow { opacity: 1; }
+/* Eased fall-off (a mid stop at half strength) so the edge does not
+   band into visible rings. Behind @supports: the value holds var(), so
+   an engine without color-mix() would otherwise drop the whole
+   background at computed-value time instead of keeping the plain
+   gradient above (Safari < 16.2). */
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  #glow {
+    background: radial-gradient(circle, var(--glow-color) 0%,
+      color-mix(in srgb, var(--glow-color) 50%, transparent) 32%, transparent 68%);
+  }
+}
 
 /* Full-screen micro-animation layer (meteors / snow / petals / leaves):
    above the glow, below the stage, never interactive. */
@@ -172,7 +194,9 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
 /* ---------- Top bar ---------- */
 .topbar {
   position: relative;
-  z-index: 2;
+  /* Above the gift notice (5) and the note button (6), so the open
+     settings panel is never covered by either. */
+  z-index: 7;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -204,18 +228,23 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
 /* ---------- Settings (one quiet button + panel) ---------- */
 .settings { position: relative; }
 
+/* A drawn sliders icon (the ⚙ character fell back to a sun-like glyph
+   in many system fonts), in the page's soft ink. */
 #settings-btn {
-  font-family: var(--sans);
-  font-size: 17px;
-  line-height: 1;
-  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: none;
+  border-radius: 10px;
   background: transparent;
   color: var(--ink-soft);
-  opacity: 0.55;
   cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
-#settings-btn:hover, #settings-btn:focus-visible { opacity: 1; color: var(--ink); }
+#settings-btn:hover, #settings-btn[aria-expanded="true"] { color: var(--ink); background: var(--bg-soft); }
 
 .settings-panel {
   position: absolute;
@@ -243,7 +272,9 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
 }
 
 .setting-row { display: flex; flex-direction: column; gap: 7px; }
-.setting-label { font-size: 12.5px; color: var(--ink-soft); letter-spacing: 0.16em; }
+/* Everything inside the panel is interface, so it is set in the sans
+   like the segments and chips beside it; the serif stays with content. */
+.setting-label { font-family: var(--sans); font-size: 12.5px; color: var(--ink-soft); letter-spacing: 0.16em; }
 
 .lang-segment {
   display: inline-flex;
@@ -262,6 +293,10 @@ body[data-special="moon"] #moon-glow { opacity: 1; }
   cursor: pointer;
 }
 .seg-btn.active { color: var(--accent); font-weight: 600; background: var(--bg-soft); }
+/* The segment clips its buttons (overflow: hidden), which would cut
+   off the shared outside focus ring: draw it inside the pill instead. */
+.seg-btn { border-radius: 999px; }
+.seg-btn:focus-visible { outline-offset: -2px; }
 
 /* ---------- Stage ---------- */
 .stage {
@@ -375,10 +410,12 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   font-size: clamp(48px, 11vw, 84px);
   line-height: 1;
   color: var(--ink);
-  background: linear-gradient(180deg, var(--card-bg) 0%, var(--card-bg) 49%, rgba(0,0,0,0.07) 50%, var(--card-bg) 100%);
+  /* Flat paper leaf: the hinge is the single hairline below, not a
+     shaded lower half. */
+  background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .flip-card::after {
   content: "";
@@ -432,9 +469,15 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 #minute-progress { height: 100%; width: 0%; background: var(--accent); }
 
 /* ---------- Random stage card ---------- */
+/* The card reserves 216px — the height of roughly three in four text
+   cards — so the controls under it stop jumping on most draws. The
+   rows are head / body / foot; a short body is centred in the spare
+   height instead of leaving a blank strip at the bottom. */
 .card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   width: min(620px, 92vw);
-  min-height: 168px;
+  min-height: 216px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 14px;
@@ -445,7 +488,19 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   transition: opacity 0.35s ease, transform 0.35s ease;
   outline: none;
 }
-.card:focus-visible { border-color: var(--accent); }
+/* Keyboard focus on the stage card. `.card { outline: none }` above
+   outranks the zero-specificity global ring, so the card restates it
+   here: a solid 2px accent outline (accent against --bg is well over
+   3:1 in both themes — the WCAG 2.2 non-text contrast floor), set 3px
+   off the card so it reads as a ring rather than a heavier border.
+   The soft vermillion tint stays only as a halo filling that gap; a
+   tint alone (the previous version) changed the edge by under 2:1 and
+   was easy to miss. Guarded by tests/card-focus.browser.py. */
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent), 0 6px 24px rgba(0, 0, 0, 0.06);
+}
 .card.leaving { opacity: 0; transform: translateY(8px); }
 
 .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
@@ -458,7 +513,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 }
 .card-meta { font-size: 13px; color: var(--ink-soft); text-align: right; }
 
-.card-body { font-size: 19px; line-height: 1.75; }
+.card-body { font-size: 19px; line-height: 1.75; align-self: center; min-width: 0; }
+/* Picture cards are sized by their own composition. */
+.card.has-postcard, .card.has-skyart { min-height: 0; }
 .card-body .big { font-size: 30px; font-weight: 900; line-height: 1.4; }
 .card-body .poem-title { font-size: 21px; font-weight: 900; }
 .card-body .poem-author { color: var(--ink-soft); font-size: 15px; margin-left: 10px; }
@@ -592,7 +649,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
    off the card. */
 .postcard .pc-title-gloss { font-size: 0.66em; }
 .postcard .pc-sub {
-  margin: 0.35cqw 0 0;
+  margin: 0.9cqw 0 0;
   font-size: 2.35cqw;
   line-height: 1.35;
   color: #6f6656;
@@ -602,9 +659,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   text-overflow: ellipsis;
 }
 .postcard .pc-passage {
-  margin: 0.6cqw 0 0;
-  font-size: 3.65cqw;
-  line-height: 1.49;
+  margin: 1.1cqw 0 0;
+  font-size: 3.52cqw;
+  line-height: 1.45;
   /* Safeguard only: the copy is written to fit these three lines. */
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -722,36 +779,29 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 
 /* ---------- Picture-card envelope （图卡信封） ----------
    Outside ambient mode a picture card (postcard / sky) arrives as an
-   envelope: a glimpse of the picture, its name, one line about it and
-   a quiet invitation to open it. The picture itself lives in the
-   image modal. The envelope wears the ordinary card dress, but lays
-   itself out as a row — a square thumbnail on the left, the words in
-   a column beside it — so the card stays about half as tall as the
-   stacked layout it replaced, with no dead air on the right. */
-.envelope { display: flex; gap: 14px; align-items: stretch; }
+   envelope: a glimpse of the picture, its name, a line about it and a
+   quiet invitation to open it. The picture itself lives in the image
+   modal. Every envelope is stacked like the picture it stands for —
+   picture on top, words below: a wide, compact glimpse across the
+   card, then one row with the copy on the left and the call to view
+   on the right. The copy column always has the card's full width
+   minus the button, so names never break mid-word on a phone. */
+.envelope { display: flex; flex-direction: column; gap: 12px; container-type: inline-size; }
 .env-preview {
-  flex: 0 0 65%;
-  width: auto;
-  height: auto;
-  min-height: 118px;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  max-height: 180px;
   margin: 0;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--card-border);
 }
-.env-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: left;
-}
 .env-preview-art img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 38%;
+  /* The paintings put their subject at or a little below the middle. */
+  object-position: center 58%;
   display: block;
   /* The painting is a glimpse, not the picture: blurred and dimmed,
      scaled a touch so the blur never shows a pale edge. */
@@ -774,78 +824,49 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
     radial-gradient(1.3px 1.3px at 60% 84%, rgba(255, 255, 255, 0.6) 50%, transparent 51%),
     linear-gradient(165deg, #22335f 0%, #141f3d 55%, #0c1428 100%);
 }
-.env-received {
-  margin: 0 0 3px;
-  font-family: var(--sans);
-  font-size: 13px;
-  letter-spacing: 0.22em;
-  color: var(--ink-soft);
+.env-text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+.env-copy { flex: 1; min-width: 0; overflow-wrap: break-word; }
+/* Narrowest phones (envelope < 300px, i.e. a 360px screen or less):
+   the call to view goes under the words, so a one-word name such as
+   "Thanksgiving" or 布宜诺斯艾利斯 keeps the whole width and never
+   splits. From 300px up the row leaves the copy ≥ 165px. */
+@container (max-width: 299px) {
+  .env-text { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .env-copy { width: 100%; }
 }
 /* The envelope's title is a name, not a headline: smaller than the
    stage's .big, which is sized for a card of its own. */
-.envelope .env-title { display: block; font-size: 27px; line-height: 1.2; }
-.env-intro { margin-top: 3px; }
+.envelope .env-title { display: block; font-size: 22px; line-height: 1.3; }
+.env-intro { margin-top: 2px; line-height: 1.5; }
 .env-glimpse {
   margin-top: 2px;
+  line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .env-cta {
-  display: inline-block;
-  align-self: flex-start;
-  margin: 10px 0 0;
-  padding: 5px 14px;
+  flex: none;
+  margin: 0;
+  padding: 6px 12px;
   border: 1px solid var(--card-border);
   border-radius: 999px;
   font-family: var(--sans);
   font-size: 14px;
-  letter-spacing: 0.14em;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
   color: var(--accent);
   font-weight: 600;
 }
 .card.has-envelope:hover .env-cta, .card.has-envelope:focus-visible .env-cta { border-color: var(--accent); }
-
-/* Narrow phones: a slimmer thumbnail leaves a column wide enough for
-   the name and the call to action. Titles and the call wrap inside
-   that column instead of painting past the card. */
-@media (max-width: 380px) {
-  .env-preview { flex-basis: 48%; min-height: 96px; }
-  .envelope .env-title { font-size: 22px; }
-  .env-cta { letter-spacing: 0.06em; padding: 5px 10px; }
-}
-.envelope .env-title, .env-intro, .env-glimpse { overflow-wrap: anywhere; }
-.env-cta { max-width: 100%; box-sizing: border-box; white-space: normal; text-align: center; }
-
-/* The chart envelope uses a wide, compact glimpse above a single
-   text/action row. Keep the action intact even on narrow phones. */
-.envelope.env-chart { flex-direction: column; gap: 12px; }
-.env-chart .env-preview {
-  flex: none;
-  width: 100%;
-  min-height: 0;
-  aspect-ratio: 16 / 7;
-  max-height: 180px;
-}
-.env-chart .env-text {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.env-chart .env-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.env-chart .env-title { font-size: 22px; }
-.env-chart .env-intro { line-height: 1.5; }
-.env-chart .env-cta {
-  flex: none;
-  align-self: center;
-  margin: 0;
-  padding: 6px 10px;
-  white-space: nowrap;
-  letter-spacing: 0.04em;
-  line-height: 1.5;
-}
 
 /* ---------- Picture-card lightbox （图卡灯箱） ----------
    The dialog fills the padded viewport and does not scroll. The
@@ -985,21 +1006,27 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .img-dialog .capture-action:disabled { opacity: 0.5; cursor: default; }
 
 /* ---------- Gift notice ----------
-   A slim pill that floats below the brand row for the one moment a
-   special-date postcard is gifted (the first card of its day). Fixed,
-   so it never pushes the layout around; page chrome only — it is not
-   part of the card and never enters a keepsake. Ambient mode hides it
-   like all chrome (and the gift itself then arrives silently). */
+   A slim pill for the one moment a special-date postcard is gifted
+   (the first card of its day). It lives in the brand row itself —
+   centred in the empty stretch between the brand and the gear on
+   wider screens, laid over the brand on phones — so it never covers
+   the tagline, the date, the card or the controls, and the gear stays
+   reachable. Absolute (not fixed): it scrolls away with the header,
+   never pushes the layout around, and sits above the top bar (7).
+   Page chrome only — it is not part of the card and never enters a
+   keepsake. Ambient mode hides it like all chrome (and the gift
+   itself then arrives silently). */
 .gift-notice {
-  position: fixed;
-  top: 64px;
+  position: absolute;
+  top: 15px;
   left: 50%;
   transform: translate(-50%, -6px);
-  z-index: 5;
+  z-index: 8;
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: min(92vw, 540px);
+  width: max-content;
+  max-width: min(calc(100vw - 2 * 260px), 540px);
   background: var(--panel-bg);
   border: 1px solid var(--card-border);
   border-radius: 999px;
@@ -1027,6 +1054,30 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
   cursor: pointer;
 }
 .gift-notice-close:hover, .gift-notice-close:focus-visible { color: var(--accent); }
+/* When the stretch between brand and gear is too short for the longest
+   line ("Chinese New Year's Eve today · a postcard for you" needs about
+   412px, i.e. a 932px+ window), the pill covers the brand instead: from
+   the left edge, as wide as its words, never past the gear, taking two
+   balanced lines when it must. */
+@media (max-width: 959px) {
+  .gift-notice {
+    left: 12px;
+    right: auto;
+    width: max-content;
+    max-width: calc(100vw - 82px); /* gear: 22px gutter + 36px button + 12px air */
+    transform: translateY(-6px);
+    border-radius: 18px;
+    font-size: 13px;
+  }
+  .gift-notice.show { transform: translateY(0); }
+  .gift-notice-text { white-space: normal; text-wrap: balance; }
+}
+/* The narrowest phones: a touch smaller and tighter, so even the
+   longest English line stays within two lines above the tagline. */
+@media (max-width: 360px) {
+  .gift-notice { font-size: 12px; padding: 6px 4px 6px 14px; gap: 4px; }
+  .gift-notice-close { padding: 3px 6px; }
+}
 
 /* ---------- Add-a-note floating button ----------
    A small pill fixed to the bottom-right corner, hidden by default:
@@ -1058,21 +1109,40 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 #note-fab:hover, #note-fab:focus-visible { color: var(--accent); }
 
 /* ---------- Controls ---------- */
-.controls { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
+/* Two actions, then a quiet counter: the actions are in ink, the
+   counter is a smaller status line set off by a hairline. */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 18px;
+  margin-top: 22px;
+}
 #draw-btn, #capture-btn {
   font-family: var(--serif);
   font-size: 15px;
   letter-spacing: 0.14em;
   padding: 6px 4px;
   border: none;
+  border-radius: 6px;
   background: transparent;
-  color: var(--ink-soft);
+  color: var(--ink);
   cursor: pointer;
 }
 #draw-btn:hover, #draw-btn:focus-visible,
 #capture-btn:hover, #capture-btn:focus-visible { color: var(--accent); }
 #capture-btn:disabled { opacity: 0.5; cursor: default; }
-.encounter { color: var(--ink-soft); font-size: 14px; letter-spacing: 0.1em; }
+.encounter {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  padding-left: 18px;
+  border-left: 1px solid var(--card-border);
+  line-height: 1.2;
+}
 .hint { color: var(--ink-soft); font-size: 12.5px; margin: 10px 0 0; letter-spacing: 0.08em; }
 
 /* ---------- Clock style chips (inside the settings panel) ---------- */
@@ -1154,6 +1224,7 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 
 /* ---------- A settings row that is a door （我的库 lives on its own page) ---------- */
 .panel-page-link {
+  font-family: var(--sans);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1171,7 +1242,6 @@ button.panel-page-link {
   width: 100%;
   background: none;
   border: none;
-  font-family: inherit;
   cursor: pointer;
   text-align: left;
 }
@@ -1440,6 +1510,38 @@ html.modal-open body {
   color: var(--ink-soft);
   text-align: right;
 }
+
+/* ---------- English typography ----------
+   The tracking above is set for Chinese, whose square characters want
+   air between them. Lowercase Latin spaced that wide reads as a
+   rendering fault, so in English (<html lang="en">, set by
+   applyStaticStrings) the same elements close up to near-normal
+   tracking, and the short accent labels become uppercase labels with
+   light tracking — the Latin counterpart of a spaced-out CJK label.
+   Figures (clock readouts, the second-layer number) keep theirs. */
+:root:lang(en) .brand-text strong { letter-spacing: 0.02em; }
+:root:lang(en) .tagline,
+:root:lang(en) .date-line,
+:root:lang(en) .encounter { letter-spacing: 0.02em; }
+:root:lang(en) .hint { letter-spacing: 0.01em; }
+:root:lang(en) .card-category,
+:root:lang(en) .setting-label,
+:root:lang(en) .full-cat {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+}
+:root:lang(en) #draw-btn,
+:root:lang(en) #capture-btn,
+:root:lang(en) .panel-page-link,
+:root:lang(en) .full-text-btn,
+:root:lang(en) .capture-action,
+:root:lang(en) .ambient-hint,
+:root:lang(en) .gift-notice,
+:root:lang(en) #note-fab,
+:root:lang(en) .footer-note,
+:root:lang(en) .env-cta { letter-spacing: 0.03em; }
+:root:lang(en) .capture-title { letter-spacing: 0.06em; }
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {

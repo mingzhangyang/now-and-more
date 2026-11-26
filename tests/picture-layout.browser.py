@@ -48,8 +48,8 @@ SCRIPT = """
 let liveWorldTime = null;
 let currentLang = "zh";
 const copy = {
-  zh: {categories: {sky: "星空"}, sky: {chartMeta: "今夜星图", approx: "按时区粗算 · 星位为近似位置"}, picture: {view: "点击查看", received: "你收到一张图卡"}},
-  en: {categories: {sky: "Sky"}, sky: {chartMeta: "Tonight's star chart", approx: "Estimated from your time zone · positions approximate"}, picture: {view: "Tap to view", received: "You've received a picture card"}}
+  zh: {categories: {sky: "星空"}, sky: {chartMeta: "今夜星图", approx: "按时区粗算 · 星位为近似位置"}, picture: {view: "点击查看"}},
+  en: {categories: {sky: "Sky"}, sky: {chartMeta: "Tonight's star chart", approx: "Estimated from your time zone · positions approximate"}, picture: {view: "Tap to view"}}
 };
 const t = () => copy[currentLang];
 const esc = s => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("'", "&#39;").replaceAll('"', "&quot;");
@@ -95,7 +95,7 @@ def check(browser, width, lang):
               t.left>=body.left-0.5 && t.right<=body.right+0.5,
             vertical: t.top >= p.bottom,
             fullWidth: Math.abs(p.width-t.width) < 1,
-            copyLeft: c.right <= b.left+0.5,
+            actionPlaced: c.right <= b.left+0.5 || b.top >= c.bottom-0.5,
             actionInside: b.right <= t.right+0.5,
             actionOneLine: cta.scrollWidth <= cta.clientWidth+1 &&
               getComputedStyle(cta).whiteSpace === "nowrap"
@@ -187,55 +187,69 @@ $("img-capture-btn").addEventListener("click", saveModalPicture);
         page.close()
 
 
-def check_row_envelopes(browser, width, lang):
-    """Horizontal postcard / sky envelopes keep their words inside the card."""
+def check_stacked_envelopes(browser, width, lang):
+    """Postcard, moon and illustration envelopes share the chart's stacked
+    layout: glimpse on top, then copy and a one-line call to view."""
     samples = {
         "zh": [
-            ("明信片", "你收到一张图卡", "中秋 · 一轮圆月挂在城上", "宜窗边", "长街灯火与远处的潮声都停在这一夜里", "点击查看"),
-            ("星空", "你收到一张图卡", "布宜诺斯艾利斯", "今夜的星空插画", "", "点击查看"),
-            ("星空", "你收到一张图卡", "AntananarivoObservatoryNight", "满月 · 照亮约 100%", "", "点击查看"),
+            ("明信片", "art", "中秋 · 一轮圆月挂在城上", "宜窗边", "长街灯火与远处的潮声都停在这一夜里"),
+            ("明信片", "art", "感恩节", "世界的节日", "感恩节，北美的团圆日。火鸡、南瓜派……"),
+            ("星空", "sky", "布宜诺斯艾利斯", "今夜的星空插画", ""),
+            ("星空", "sky", "AntananarivoObservatoryNight", "满月 · 照亮约 100%", ""),
         ],
         "en": [
-            ("Postcard", "You've received a picture card", "Mid-Autumn Festival", "A round moon over the city", "The tide and the street lamps pause for this one night", "Tap to view"),
-            ("Sky", "You've received a picture card", "Buenos Aires", "Tonight's illustrated sky", "", "Tap to view"),
-            ("Sky", "You've received a picture card", "AntananarivoObservatoryNight", "Full moon · about 100% lit", "", "Tap to view"),
+            ("Postcard", "art", "Mid-Autumn Festival", "A round moon over the city", "The tide and the street lamps pause for this one night"),
+            ("Postcard", "art", "Thanksgiving", "A Day the World Keeps", "Thanksgiving. North America's reunion day."),
+            ("Sky", "sky", "Buenos Aires", "Tonight's illustrated sky", ""),
+            ("Sky", "sky", "AntananarivoObservatoryNight", "Full moon · about 100% lit", ""),
         ],
     }[lang]
+    view = "点击查看" if lang == "zh" else "Tap to view"
     page = browser.new_page(viewport={"width": width, "height": 844})
     try:
         page.set_content(HTML)
         page.add_style_tag(content=CSS)
         for sample in samples:
-            page.evaluate("""(sample) => {
-              const [cat, received, title, intro, glimpse, view] = sample;
+            page.evaluate("""([sample, view]) => {
+              const [cat, kind, title, intro, glimpse] = sample;
               document.querySelector("#card").className = "card has-envelope";
               document.querySelector("#card-category").textContent = cat;
+              const preview = kind === "art"
+                ? '<div class="env-preview env-preview-art"><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div>'
+                : '<div class="env-preview env-preview-sky"></div>';
               document.querySelector("#card-body").innerHTML =
-                '<div class="envelope env-postcard">' +
-                '<div class="env-preview env-preview-sky"></div>' +
-                '<div class="env-text">' +
-                '<p class="env-received">' + received + '</p>' +
+                '<div class="envelope env-' + (kind === "art" ? "postcard" : "sky") + '">' + preview +
+                '<div class="env-text"><div class="env-copy">' +
                 '<span class="big env-title">' + title + '</span>' +
                 '<div class="sub env-intro">' + intro + '</div>' +
                 (glimpse ? '<div class="sub env-glimpse">' + glimpse + '</div>' : '') +
-                '<p class="env-cta">' + view + ' <span aria-hidden="true">›</span></p>' +
+                '</div><p class="env-cta">' + view + ' <span aria-hidden="true">›</span></p>' +
                 '</div></div>';
-            }""", list(sample))
+            }""", [list(sample), view])
             fit = page.evaluate("""() => {
               const r = s => document.querySelector(s).getBoundingClientRect();
               const body = r("#card-body");
               const card = document.querySelector("#card");
-              const title = r(".env-title"), intro = r(".env-intro"), cta = r(".env-cta"), preview = r(".env-preview");
-              const inside = b => b.left >= body.left - 0.5 && b.right <= body.right + 0.5 &&
-                b.top >= body.top - 0.5 && b.bottom <= body.bottom + 0.5;
+              const p = r(".env-preview"), t = r(".env-text"), c = r(".env-copy"), b = r(".env-cta");
+              const cta = document.querySelector(".env-cta");
+              const title = document.querySelector(".env-title");
+              const inside = x => x.left >= body.left - 0.5 && x.right <= body.right + 0.5;
               return {
                 noCardOverflow: card.scrollWidth <= card.clientWidth + 1,
-                previewInside: inside(preview),
-                titleInside: inside(title),
-                introInside: inside(intro),
-                ctaInside: inside(cta),
-                row: preview.right <= title.left + 1,
-                titleVisible: title.width > 8 && title.height > 8
+                previewInside: inside(p),
+                textInside: inside(t),
+                vertical: t.top >= p.bottom,
+                fullWidth: Math.abs(p.width - t.width) < 1,
+                // The call sits beside the copy, or under it on the
+                // narrowest phones — never on top of it.
+                actionPlaced: c.right <= b.left + 0.5 || b.top >= c.bottom - 0.5,
+                actionInside: inside(b),
+                actionOneLine: cta.scrollWidth <= cta.clientWidth + 1 &&
+                  getComputedStyle(cta).whiteSpace === "nowrap",
+                // A one-word name of ordinary length is never split
+                // mid-word (the old row layout broke "Thanksgiving").
+                titleWhole: /\s/.test(title.textContent) || title.textContent.length > 20 ||
+                  title.offsetHeight < 1.5 * parseFloat(getComputedStyle(title).lineHeight)
               };
             }""")
             assert all(fit.values()), (width, lang, sample[2], fit)
@@ -285,12 +299,12 @@ if __name__ == "__main__":
         for width in (320, 375, 390, 430, 768, 1199, 1200, 1440):
             for lang in ("zh", "en"):
                 check(browser, width, lang)
-        for width in (320, 375, 390):
+        for width in (320, 340, 360, 375, 390, 768, 1440):
             for lang in ("zh", "en"):
-                check_row_envelopes(browser, width, lang)
+                check_stacked_envelopes(browser, width, lang)
         check_stage_illustration_retry(browser)
         for width, height in ((390, 844), (320, 844), (844, 390), (667, 320), (1440, 900)):
             for lang in ("zh", "en"):
                 check_lightbox(browser, width, height, lang)
         browser.close()
-    print("envelope rows, stage retry, PNG layout, direct download byte equality and controls passed")
+    print("stacked envelopes, stage retry, PNG layout, direct download byte equality and controls passed")
