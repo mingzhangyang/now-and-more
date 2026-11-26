@@ -145,9 +145,10 @@ V3.2 adds traditional solar whole-sign domain rulers and bounded, symmetric body
 Run the pinned-baseline, five-year ablation with a full git history:
 
 ```sh
-TZ=UTC node scripts/horoscope-v3.2-backtest.cjs 2026-01-01 2031-01-01 > horoscope-v3.2-backtest.json
+mkdir -p backtest-output
+TZ=UTC node scripts/horoscope-v3.2-backtest.cjs 2026-01-01 2031-01-01 > backtest-output/horoscope-v3.2-backtest.json
 node --test tests/horoscope-v3.2.test.cjs
 ```
 
 
-Final candidate: house scale 0.2, pair scale 0.5. See [five-year ablation](docs/horoscope-v3.2.md) and [raw report](docs/horoscope-v3.2-backtest.json).
+Final candidate: house scale 0.2, pair scale 0.5. See [five-year ablation](docs/horoscope-v3.2.md) and [aggregate JSON summary](docs/horoscope-v3.2-backtest.json).
