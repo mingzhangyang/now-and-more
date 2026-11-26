@@ -11,7 +11,7 @@
    (寅卯辰 spring … 亥子丑 winter), and the day's stem and branch — plus,
    for 四离/四绝 and 母仓's 土王用事 clause, which term falls on the next
    day. Since M5 a few read the lunar day (月忌 晦日 十五日 人神, from
-   js/lunar.js), the Moon's phase on the local day (朔 弦 望) or the
+   js/lunar.js), the Moon's phase on the day (朔 弦 望) or the
    立春-year stem (上朔); never the lunar month. app.js builds that context
    (almanacRuleContext) and asks dayGods(ctx); nothing here touches the DOM.
 
@@ -46,7 +46,7 @@ const NAM_ALMANAC = (() => {
              b: day branch index, gz: day ganzhi, eve: name of the term
              crossing on the NEXT local day or "", tuWang: true while 土王用事,
              ld: lunar day (1…30), monthDays: 29 | 30, phase: "朔" | "上弦" |
-             "望" | "下弦" | "" (a phase instant on this local day),
+             "望" | "下弦" | "" (a phase instant on the day's Beijing civil date),
              ys: stem index of the 立春 year } */
   const stem = (c) => GAN[c.s];
   const branch = (c) => ZHI[c.b];
@@ -232,7 +232,8 @@ const NAM_ALMANAC = (() => {
     { name: "月忌", gloss: "初五、十四、廿三，诸事少注宜", hit: (c) => c.ld === 5 || c.ld === 14 || c.ld === 23 },
     // 晦日: the last day of the lunar month (「晦為月盡之日」).
     { name: "晦日", gloss: "月尽之日，止宜祭祀扫除", hit: (c) => c.ld === c.monthDays },
-    // 朔 弦 望 (卷十「朔弦朢」): the local day on which the new moon, a quarter or the full moon falls.
+    // 朔 弦 望 (卷十「朔弦朢」): the day on which the new moon, a quarter or the full moon falls, by the
+    // same Beijing civil date as the lunar calendar — so 朔日 is always 初一.
     { name: "朔日", gloss: "日月同度，忌求医", hit: (c) => c.phase === "朔" },
     { name: "弦日", gloss: "上弦、下弦，忌求医", hit: (c) => c.phase === "上弦" || c.phase === "下弦" },
     { name: "望日", gloss: "日月相望，忌求医", hit: (c) => c.phase === "望" },
@@ -709,8 +710,56 @@ const NAM_ALMANAC = (() => {
     return { yi, ji, level, allJi: code === "X", trace, graded: verdictOf };
   }
 
+  /* ---------- 纳音五行 (六十甲子纳音) ----------
+     One name per pair of the sixty 甲子, 甲子乙丑 海中金 … 壬戌癸亥 大海水, in the
+     common 通书 spelling. 《协纪辨方书》卷一「納音」 quotes 陶宗儀 with a few
+     variant names (鑪中火 路傍土 白鑞金 井泉水 松栢木 砂石金); the elements are
+     the same. nayinOf("甲辰") → "覆灯火". */
+  const NAYIN = ("海中金 炉中火 大林木 路旁土 剑锋金 山头火 涧下水 城头土 白蜡金 杨柳木 " +
+    "泉中水 屋上土 霹雳火 松柏木 长流水 沙中金 山下火 平地木 壁上土 金箔金 " +
+    "覆灯火 天河水 大驿土 钗钏金 桑柘木 大溪水 沙中土 天上火 石榴木 大海水").split(" ");
+  function nayinOf(gz) {
+    const s = GAN.indexOf(gz[0]), b = ZHI.indexOf(gz[1]);
+    // The cycle position i satisfies i ≡ s (mod 10) and i ≡ b (mod 12).
+    let i = s;
+    while (i % 12 !== b) i += 10;
+    return NAYIN[Math.floor(i / 2)];
+  }
+
+  /* ---------- 吉神方位 (by day stem) ----------
+     The directions printed in 通书 under each day; conventions, with their
+     口诀 (docs/almanac-rules.md §3.6):
+       喜神 「甲己在艮乙庚乾，丙辛坤位喜神安，丁壬只在离宫坐，戊癸原在巽上眠」;
+       财神 「甲乙东北是财神，丙丁向在西南寻，戊己正北坐方位，庚辛正东去安身，壬癸原来正南坐」;
+       福神 「甲己正北是福神，丙辛西北乾宫存，乙庚坤位戊癸艮，丁壬巽上好追寻」 — one of
+            several traditions (another reads 「甲乙东南是福神，丙丁正东是堪宜…」); this
+            one shares the 五合 grouping of 喜神;
+       阳贵神 / 阴贵神 — 天乙贵人 「甲戊庚牛羊，乙己鼠猴乡，丙丁猪鸡位，壬癸兔蛇藏，六辛逢马虎」,
+            split day / night as 阳贵 甲未 乙申 丙酉 丁亥 戊丑 己子 庚丑 辛寅 壬卯 癸巳,
+            阴贵 甲丑 乙子 丙亥 丁酉 戊未 己申 庚未 辛午 壬巳 癸卯, and pointed to the
+            direction of that branch.
+     Directions are the eight 八卦 sectors: 坎 正北, 艮 东北, 震 正东, 巽 东南,
+     离 正南, 坤 西南, 兑 正西, 乾 西北. */
+  const GUA_DIR = { 坎: "正北", 艮: "东北", 震: "正东", 巽: "东南", 离: "正南", 坤: "西南", 兑: "正西", 乾: "西北" };
+  const BRANCH_GUA = "坎艮艮震巽巽离坤坤兑乾乾"; // 子 丑寅 卯 辰巳 午 未申 酉 戌亥
+  const XI_SHEN = "艮乾坤离巽艮乾坤离巽";     // 甲 … 癸
+  const CAI_SHEN = "艮艮坤坤坎坎震震离离";
+  const FU_SHEN = "坎坤乾巽艮坎坤乾巽艮";
+  const YANG_GUI = "未申酉亥丑子丑寅卯巳";
+  const YIN_GUI = "丑子亥酉未申未午巳卯";
+  const viaBranch = (z) => BRANCH_GUA[ZHI.indexOf(z)];
+  function godDirections(stemIdx) {
+    return [
+      { name: "喜神", dir: GUA_DIR[XI_SHEN[stemIdx]] },
+      { name: "财神", dir: GUA_DIR[CAI_SHEN[stemIdx]] },
+      { name: "福神", dir: GUA_DIR[FU_SHEN[stemIdx]] },
+      { name: "阳贵神", dir: GUA_DIR[viaBranch(YANG_GUI[stemIdx])] },
+      { name: "阴贵神", dir: GUA_DIR[viaBranch(YIN_GUI[stemIdx])] },
+    ];
+  }
+
   return {
-    ZHISHEN, zhiShenOf, dayGods, yiJi, YONGSHI,
+    ZHISHEN, zhiShenOf, dayGods, yiJi, YONGSHI, nayinOf, godDirections, NAYIN,
     JI_NAMES: JI.map((g) => g.name), XIONG_NAMES: XIONG.map((g) => g.name),
     YIJI_SOURCES: Object.keys(SOURCES), GRADED_NAMES: Object.keys(GRADED),
   };

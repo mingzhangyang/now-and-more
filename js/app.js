@@ -952,11 +952,13 @@ function tuWangYongShi(date) {
   return dayStart >= new Date(liDay.getFullYear(), liDay.getMonth(), liDay.getDate() - 18) && dayStart < liDay;
 }
 
-/* The Moon's phase (朔 上弦 望 下弦) whose instant falls on the LOCAL day
-   of `date`, or "" — the same local-day rule as the solar terms. */
+/* The Moon's phase (朔 上弦 望 下弦) of the day, or "": the phase whose
+   instant falls on the Beijing civil date that the lunar calendar maps
+   to this local date (see lunarDate), so 朔日 is always 初一 and the
+   phases never disagree with the lunar date shown beside them. */
 function moonPhaseOn(date) {
-  const { dayStart, dayEnd } = localDayBounds(date);
-  const p = LUNAR.phasesBetween(dayStart.getTime(), dayEnd.getTime());
+  const dn = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const p = LUNAR.phasesBetween(dn - 8 * 3600000, dn + 16 * 3600000);
   return p.length ? p[0].name : "";
 }
 
@@ -965,7 +967,8 @@ function moonPhaseOn(date) {
    the next local day (四离/四绝), whether 土王用事 is in force, and — for
    宜忌 — the term in force (霜降后…) and the term crossing today (二分二至);
    since M5 also the lunar day and month length (月忌 晦日 十五日 人神), the
-   Moon's phase on the local day (朔弦望) and the 立春-year stem (上朔). */
+   Moon's phase of the day (朔弦望, on the lunar calendar's Beijing date) and
+   the 立春-year stem (上朔). */
 function almanacRuleContext(date, gz, jm) {
   const tomorrow = solarTermInfo(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12)).today;
   const ti = solarTermInfo(date);
@@ -1026,6 +1029,9 @@ function computeAlmanac(date) {
     chongSha: `冲${chong}煞${sha}`,
     pengzu: [PENGZU_BY_STEM[stem], PENGZU_BY_BRANCH[branch]],
     zhiShen,                            // { name, huangdao } — 黄道黑道十二值神
+    // 纳音 of the three pillars shown (lunar year, 节月, day) and the day's 吉神方位.
+    nayin: { year: NAM_ALMANAC.nayinOf(lunar.yearGanzhi), month: NAM_ALMANAC.nayinOf(jieMonthGanzhi(date)), day: NAM_ALMANAC.nayinOf(gz) },
+    directions: NAM_ALMANAC.godDirections(GAN.indexOf(stem)),
     jiShen: gods.ji,                    // [{ name, gloss }], fixed rule order
     xiongShen: gods.xiong,
   };
@@ -1069,7 +1075,9 @@ function almanacYiJiText(yj) {
 function almanacFullText(a) {
   const head = [
     `${a.yearGanzhi}年 ${a.monthGanzhi}月 ${a.dayGanzhi}日` + (a.lunarLabel ? ` · 农历${a.lunarLabel}` : ""),
+    `纳音 年 ${a.nayin.year} · 月 ${a.nayin.month} · 日 ${a.nayin.day}`,
     `建除 ${a.jianchu} · 值神 ${a.zhiShen.name}（${a.zhiShen.huangdao ? "黄道" : "黑道"}） · ${a.chongSha}`,
+    "吉神方位 " + a.directions.map((d) => `${d.name}${d.dir}`).join(" · "),
   ].join("\n");
   const list = (label, gods) => `${label}\n` + (gods.length ? gods.map((g) => `${g.name}：${g.gloss}`).join("\n") : "无");
   return [
@@ -1077,7 +1085,7 @@ function almanacFullText(a) {
     almanacYiJiText(a.yiJi),
     list("吉神", a.jiShen),
     list("凶神", a.xiongShen),
-    "值神、建除与神煞按《钦定协纪辨方书》的月表规则推算，以节气定月。宜忌依同书卷十「宜忌」逐神合成：箭头后是所出之神或建除（「甲日」「寅日」为百忌日），" +
+    "值神、建除与神煞按《钦定协纪辨方书》的月表规则推算，以节气定月；纳音按六十甲子纳音表，吉神方位按通书口诀（福神取「甲己正北」一说）。宜忌依同书卷十「宜忌」逐神合成：箭头后是所出之神或建除（「甲日」「寅日」为百忌日），" +
       "吉凶相遇按书中等第与「德能解／犹忌」之例取舍；值神黄道黑道不另定宜忌。释义为本站自拟的白话概括。" +
       "宜忌属传统择日民俗，不具科学预测效力。",
   ].join("\n\n");
@@ -3184,8 +3192,11 @@ function renderSelection(sel, surface) {
         `</span></div>`;
     };
     const allJi = a.yiJi && a.yiJi.allJi;
-    body = `<span class="big">${a.dayGanzhi}日</span>` +
+    // 喜神 财神 福神 fit one short line at phone width; the 贵神 are in 全文.
+    const dirs = a.directions.slice(0, 3).map((d) => `${d.name}<b>${d.dir}</b>`).join(" ");
+    body = `<span class="big">${a.dayGanzhi}日<span class="alm-nayin" title="日纳音">${a.nayin.day}</span></span>` +
       `<div class="fact-row">${bits.map((b) => `<span>${b}</span>`).join("")}</div>` +
+      `<div class="fact-row"><span>${dirs}</span></div>` +
       yjRow(alm.yi, a.yi, "诸事不宜") +
       (allJi ? `<div class="fact-row alm-gods"><span><b>${alm.ji}</b> 诸事皆忌</span></div>` : yjRow(alm.ji, a.ji, "诸事不忌")) +
       godRow("吉神", a.jiShen) +

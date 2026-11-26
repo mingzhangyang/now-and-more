@@ -54,6 +54,10 @@ rule never applies) it records:
              the site's 用事 vocabulary before comparing.
   level      cnlunar's 宜忌等第 verdict for the day        cnlunar thingLevelName
              (从宜不从忌 / 从宜亦从忌 / 从忌不从宜 / 诸事皆忌)
+  nayin      纳音 of the day ganzhi                         cnlunar get_nayin() (its spellings,
+             e.g. 井泉水 砂中金; the test normalises them)
+  fangwei    吉神方位 by day stem, space-separated           cnlunar get_luckyGodsDirection()
+             (喜神X 财神X 福神X 阳贵X 阴贵X, X = 正北 东北 … 西北)
 """
 import datetime
 import json
@@ -83,7 +87,7 @@ SHA_TABLE = {
 }
 FIELDS = ["date", "lunarYear", "lichunYear", "month", "day", "jianchu",
           "chong", "sha", "term", "lunar", "zhishen", "good", "bad",
-          "yi", "ji", "level"]
+          "yi", "ji", "level", "nayin", "fangwei"]
 
 
 def row(d):
@@ -121,6 +125,8 @@ def row(d):
         " ".join(sorted(set(a.goodThing))),
         " ".join(sorted(set(a.badThing))),
         a.thingLevelName,
+        a.get_nayin(),
+        " ".join(a.get_luckyGodsDirection()),
     ]
 
 
@@ -137,7 +143,8 @@ def main():
         "source": "cnlunar 0.2.5 (MIT, OPN48) via scripts/almanac-golden.py; "
                   "sha derived from cnlunar's day branch by the 三合 table; "
                   "zhishen/good/bad are cnlunar's today12DayGod/goodGodName/badGodName; "
-                  "yi/ji/level are cnlunar's goodThing/badThing (sorted)/thingLevelName",
+                  "yi/ji/level are cnlunar's goodThing/badThing (sorted)/thingLevelName; "
+                  "nayin/fangwei are cnlunar's get_nayin/get_luckyGodsDirection",
         "timeZone": "Asia/Shanghai",
         "years": [YEARS[0], YEARS[-1]],
         "fields": FIELDS,

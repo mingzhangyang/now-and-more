@@ -262,6 +262,48 @@ test("月忌 and 晦日 only stop 宜 (「餘事不註」), they add no 忌", ()
   for (const n of a.yi) assert.ok(["祭祀", "会亲友", "沐浴", "剃头", "求医疗病", "扫舍宇", "修饰垣墙", "平治道涂"].includes(n), n);
 });
 
+/* ---------- M5: 纳音 and 吉神方位 ---------- */
+
+test("day 纳音 matches the reference on every day (cnlunar's spellings normalised)", () => {
+  const SPELLING = { 井泉水: "泉中水", 砂中金: "沙中金", 砂中土: "沙中土" };
+  const misses = [];
+  for (const r of rows) {
+    const a = api.computeAlmanac(at(r.date));
+    const ref = SPELLING[r.nayin] || r.nayin;
+    if (a.nayin.day !== ref) misses.push(`${r.date} ${r.day}: ours ${a.nayin.day}, reference ${r.nayin}`);
+    // The year and month pillars use the same table.
+    assert.equal(a.nayin.year, api.NAM_ALMANAC.nayinOf(a.yearGanzhi));
+    assert.equal(a.nayin.month, api.NAM_ALMANAC.nayinOf(a.monthGanzhi));
+  }
+  assert.deepEqual(misses, []);
+  assert.equal(api.NAM_ALMANAC.NAYIN.length, 30);
+  assert.deepEqual(["甲子", "乙丑", "甲辰", "丙午", "癸亥"].map(api.NAM_ALMANAC.nayinOf), ["海中金", "海中金", "覆灯火", "天河水", "大海水"]);
+});
+
+test("吉神方位 match the reference by day stem, except the 庚日 贵神 (documented variant)", () => {
+  const misses = [];
+  let geng = 0;
+  for (const r of rows) {
+    const a = api.computeAlmanac(at(r.date));
+    const ours = a.directions.map((d) => d.name.replace("贵神", "贵") + d.dir).join(" ");
+    if (ours === r.fangwei) continue;
+    // cnlunar puts 庚's 阳贵 on 午 (正南) and 阴贵 on 丑 (东北); the 口诀 「甲戊庚牛羊」 gives 庚 丑 (阳) and 未 (阴).
+    if (r.day[0] === "庚" && ours === "喜神西北 财神正东 福神西南 阳贵东北 阴贵西南" &&
+      r.fangwei === "喜神西北 财神正东 福神西南 阳贵正南 阴贵东北") { geng++; continue; }
+    misses.push(`${r.date} ${r.day}: ours ${ours}, reference ${r.fangwei}`);
+  }
+  assert.deepEqual(misses, []);
+  assert.ok(geng > 140, "every 庚 day shows the variant");
+  const s = surface();
+  const a = api.computeAlmanac(at("2026-11-26")); // 甲辰
+  api.renderSelection({ cat: "almanac", data: a }, s);
+  assert.ok(s.body.innerHTML.includes("覆灯火"), "day 纳音 on the card");
+  assert.ok(s.body.innerHTML.includes("喜神<b>东北</b> 财神<b>东北</b> 福神<b>正北</b>"));
+  const full = api.almanacFullText(a);
+  assert.ok(full.includes("纳音 年 天河水 · 月 平地木 · 日 覆灯火"), full.split("\n")[1]);
+  assert.ok(full.includes("吉神方位 喜神东北 · 财神东北 · 福神正北 · 阳贵神西南 · 阴贵神东北"));
+});
+
 /* ---------- M4: 宜忌, hand-checked against 《协纪辨方书》卷十 ----------
    Each expectation below was worked out from the book's text, not copied
    from the engine; the comments give the deciding sentence. */
