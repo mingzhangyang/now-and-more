@@ -146,9 +146,18 @@ const KNOWN_REFERENCE_DEVIATIONS = {
   // 复日 of 六月 / 十二月 is 己日 (月建 未 丑 本气 己); cnlunar's table has 巳 there (a 巳/己 slip), so it
   // marks 巳 days instead.
   复日: (r, side) => "未丑".includes(MB(r)) && (side === "ref" ? r.day[1] === "巳" : r.day[0] === "己"),
+  // 不将: the 《歷例》 table (卷四) follows 「春冬己不將，秋夏戊不將」; cnlunar's table has 戊 days where the
+  // book has 己 in the spring and winter months, and keeps 六月戊午, which 卷四 strikes (「惟六月戊午為逐陣不可用」).
+  不将: (r, side) => (side === "ours"
+    ? "寅卯辰亥子丑".includes(MB(r)) && r.day[0] === "己"
+    : ("寅卯辰亥子丑".includes(MB(r)) && r.day[0] === "戊") || (MB(r) === "未" && r.day === "戊午")),
+  // 鸣吠 / 鸣吠对: 卷五 corrects the 通书 lists (「通書誤以庚寅壬寅為鳴吠甲午為鳴吠對…今圖依起例改正」);
+  // cnlunar keeps the 通书 lists, so the three days 甲午 庚寅 壬寅 change sides.
+  鸣吠: (r, side) => (side === "ours" ? r.day === "甲午" : r.day === "庚寅" || r.day === "壬寅"),
+  鸣吠对: (r, side) => (side === "ours" ? r.day === "庚寅" || r.day === "壬寅" : r.day === "甲午"),
 };
 // Implemented gods the reference does not compute: checked by hand below.
-const NOT_IN_REFERENCE = new Set(["阳德"]);
+const NOT_IN_REFERENCE = new Set(["阳德", "上朔", "晦日", "朔日", "弦日", "望日"]);
 
 test("every implemented 吉神/凶神 agrees with the reference day by day (known deviations aside)", () => {
   const names = [...api.NAM_ALMANAC.JI_NAMES, ...api.NAM_ALMANAC.XIONG_NAMES];
@@ -194,17 +203,70 @@ test("worked example: 2026-11-24 壬寅, 亥月 — 值神 天牢（黑道）and
   const a = api.computeAlmanac(at("2026-11-24"));
   assert.equal(a.monthGanzhi, "己亥");
   assert.deepEqual(a.zhiShen, { name: "天牢", huangdao: false });
-  assert.deepEqual(a.jiShen.map((g) => g.name), ["时德", "相日", "天愿", "六合", "五合", "五富", "金堂"]);
-  assert.deepEqual(a.xiongShen.map((g) => g.name), ["河魁", "复日", "游祸", "五虚", "死神"]);
+  assert.deepEqual(a.jiShen.map((g) => g.name), ["时德", "相日", "天愿", "六合", "五合", "五富", "金堂", "不将", "鸣吠对"]);
+  // 十月十六: the full moon (2026-11-24 22:53 Beijing time) falls on this day.
+  assert.deepEqual(a.xiongShen.map((g) => g.name), ["河魁", "复日", "游祸", "五虚", "死神", "望日"]);
   const s = surface();
   api.renderSelection({ cat: "almanac", data: a }, s);
   assert.ok(s.meta.textContent.includes("丙午年 己亥月"), s.meta.textContent);
+});
+
+/* ---------- M5: gods fixed by the lunar day, the Moon and the year stem ---------- */
+
+test("月忌 (初五 十四 廿三) agrees with the reference on every day; 晦日 is the last lunar day", () => {
+  for (const r of rows) {
+    const a = api.computeAlmanac(at(r.date));
+    const has = (n) => a.xiongShen.some((g) => g.name === n);
+    assert.equal(has("月忌"), [5, 14, 23].includes(a.lunar.day), r.date);
+    assert.equal(has("晦日"), a.lunar.day === a.lunar.monthDays, r.date);
+  }
+  // 2026-02-16 腊月廿九 closes a 29-day 腊月 (除夕 of 乙巳): 晦日.
+  assert.ok(yjName("2026-02-16", "晦日"));
+  assert.ok(!yjName("2026-02-15", "晦日"));
+});
+
+test("朔日 is 初一 on every day in Beijing time; 望日 falls on 十四–十七; two 弦日 a month", () => {
+  let xian = 0;
+  for (const r of rows) {
+    const a = api.computeAlmanac(at(r.date));
+    const has = (n) => a.xiongShen.some((g) => g.name === n);
+    assert.equal(has("朔日"), a.lunar.day === 1, r.date);
+    if (has("望日")) assert.ok(a.lunar.day >= 14 && a.lunar.day <= 17, r.date + " " + a.lunarLabel);
+    if (has("弦日")) { xian++; assert.ok((a.lunar.day >= 6 && a.lunar.day <= 10) || (a.lunar.day >= 21 && a.lunar.day <= 25), r.date); }
+  }
+  assert.ok(xian >= 2 * 49 - 2 && xian <= 2 * 50 + 1, String(xian));
+  // 「朔弦朢 忌求醫療病」 and 「十五日 忌求醫療病，義同朢日」.
+  const w = api.computeAlmanac(at("2026-11-24"));
+  assert.ok(w.ji.includes("求医疗病"));
+  assert.ok(traceOf(w, "求医疗病").ji.includes("望日"));
+});
+
+test("上朔 by hand: 阳年 年干加寅数至亥, 阴年 年干加丑数至巳 (立春 year)", () => {
+  // 乙巳 (2025): 乙加丑 → 己巳; 丙午 (2026): 丙加寅 → 乙亥.
+  assert.equal(api.computeAlmanac(at("2025-03-01")).dayGanzhi, "己巳");
+  assert.ok(yjName("2025-03-01", "上朔"));
+  assert.equal(api.computeAlmanac(at("2026-03-02")).dayGanzhi, "乙亥");
+  assert.ok(yjName("2026-03-02", "上朔"));
+  for (const iso of ["2025-02-28", "2025-03-02", "2026-03-01", "2026-03-03", "2026-01-24"]) assert.ok(!yjName(iso, "上朔"), iso);
+  // 「上朔…止不忌祭祀解除沐浴…伐木，餘事皆忌；與徳合赦願併猶忌」.
+  const a = api.computeAlmanac(at("2026-03-02"));
+  for (const n of ["嫁娶", "出行", "开市", "安葬"]) assert.ok(a.ji.includes(n), n);
+});
+
+test("月忌 and 晦日 only stop 宜 (「餘事不註」), they add no 忌", () => {
+  // 2026-11-26 is 十月十八, not 月忌; 2026-12-01 is 十月廿三.
+  const a = api.computeAlmanac(at("2026-12-01"));
+  assert.equal(a.lunarLabel, "十月廿三");
+  assert.ok(a.xiongShen.some((g) => g.name === "月忌"));
+  for (const t of a.yiJi.trace) if (t.ji.includes("月忌")) assert.fail("月忌 must not 忌 " + t.name);
+  for (const n of a.yi) assert.ok(["祭祀", "会亲友", "沐浴", "剃头", "求医疗病", "扫舍宇", "修饰垣墙", "平治道涂"].includes(n), n);
 });
 
 /* ---------- M4: 宜忌, hand-checked against 《协纪辨方书》卷十 ----------
    Each expectation below was worked out from the book's text, not copied
    from the engine; the comments give the deciding sentence. */
 const yj = (iso) => api.computeAlmanac(at(iso));
+function yjName(iso, n) { return api.computeAlmanac(at(iso)).xiongShen.some((g) => g.name === n); }
 const traceOf = (a, n) => a.yiJi.trace.find((t) => t.name === n);
 
 test("worked example: 月破 day 2026-11-27 乙巳 (亥月) — 德 cannot lift 月破", () => {

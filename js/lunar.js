@@ -18,9 +18,9 @@
    so a visitor in New York sees the same 「十月十八」 on 26 Nov as one in
    Shanghai. The almanac's other layers are reckoned in local days.
 
-   New moons: Meeus, Astronomical Algorithms (2nd ed., 1998), ch. 49 —
-   mean phase plus the full periodic series for the new moon and the 14
-   planetary-argument terms (A1…A14); Meeus gives its error against
+   New moons (and the other phases, for 朔弦望): Meeus, Astronomical
+   Algorithms (2nd ed., 1998), ch. 49 — mean phase plus the full periodic
+   series of each phase and the 14 planetary-argument terms (A1…A14); Meeus gives its error against
    ELP-2000/82 as a few seconds (max ≈ 17 s). The result is in TT; the
    injected ΔT model turns it into UT. 中气 come from the site's own
    solar-term solver, injected the same way, so the almanac's 「今日交节」
@@ -36,9 +36,10 @@ const NAM_LUNAR = (() => {
   const ZHI = "子丑寅卯辰巳午未申酉戌亥";
   const MONTH_NAMES = ["正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "腊月"];
   const DAY_DIGITS = "一二三四五六七八九十";
+  const PHASE_NAMES = ["朔", "上弦", "望", "下弦"];
 
-  /* ---------- New moon (Meeus ch. 49) ---------- */
-  // Periodic terms for the new moon: [coefficient (days), power of E, M, M', F, Ω].
+  /* ---------- Phases of the Moon (Meeus ch. 49) ---------- */
+  // Periodic terms: [coefficient (days), power of E, M, M', F, Ω] — new moon, full moon, quarters.
   const NEW_MOON_TERMS = [
     [-0.40720, 0, 0, 1, 0, 0], [0.17241, 1, 1, 0, 0, 0], [0.01608, 0, 0, 2, 0, 0],
     [0.01039, 0, 0, 0, 2, 0], [0.00739, 1, -1, 1, 0, 0], [-0.00514, 1, 1, 1, 0, 0],
@@ -50,6 +51,28 @@ const NAM_LUNAR = (() => {
     [0.00003, 0, -1, 1, 2, 0], [-0.00002, 0, -1, 1, -2, 0], [-0.00002, 0, 1, 3, 0, 0],
     [0.00002, 0, 0, 4, 0, 0],
   ];
+  const FULL_MOON_TERMS = [
+    [-0.40614, 0, 0, 1, 0, 0], [0.17302, 1, 1, 0, 0, 0], [0.01614, 0, 0, 2, 0, 0],
+    [0.01043, 0, 0, 0, 2, 0], [0.00734, 1, -1, 1, 0, 0], [-0.00515, 1, 1, 1, 0, 0],
+    [0.00209, 2, 2, 0, 0, 0], [-0.00111, 0, 0, 1, -2, 0], [-0.00057, 0, 0, 1, 2, 0],
+    [0.00056, 1, 1, 2, 0, 0], [-0.00042, 0, 0, 3, 0, 0], [0.00042, 1, 1, 0, 2, 0],
+    [0.00038, 1, 1, 0, -2, 0], [-0.00024, 1, -1, 2, 0, 0], [-0.00017, 0, 0, 0, 0, 1],
+    [-0.00007, 0, 2, 1, 0, 0], [0.00004, 0, 0, 2, -2, 0], [0.00004, 0, 3, 0, 0, 0],
+    [0.00003, 0, 1, 1, -2, 0], [0.00003, 0, 0, 2, 2, 0], [-0.00003, 0, 1, 1, 2, 0],
+    [0.00003, 0, -1, 1, 2, 0], [-0.00002, 0, -1, 1, -2, 0], [-0.00002, 0, 1, 3, 0, 0],
+    [0.00002, 0, 0, 4, 0, 0],
+  ];
+  const QUARTER_TERMS = [
+    [-0.62801, 0, 0, 1, 0, 0], [0.17172, 1, 1, 0, 0, 0], [-0.01183, 1, 1, 1, 0, 0],
+    [0.00862, 0, 0, 2, 0, 0], [0.00804, 0, 0, 0, 2, 0], [0.00454, 1, -1, 1, 0, 0],
+    [0.00204, 2, 2, 0, 0, 0], [-0.00180, 0, 0, 1, -2, 0], [-0.00070, 0, 0, 1, 2, 0],
+    [-0.00040, 0, 0, 3, 0, 0], [-0.00034, 1, -1, 2, 0, 0], [0.00032, 1, 1, 0, 2, 0],
+    [0.00032, 1, 1, 0, -2, 0], [-0.00028, 2, 2, 1, 0, 0], [0.00027, 1, 1, 2, 0, 0],
+    [-0.00017, 0, 0, 0, 0, 1], [-0.00005, 0, -1, 1, -2, 0], [0.00004, 0, 0, 2, 2, 0],
+    [-0.00004, 0, 1, 1, 2, 0], [0.00004, 0, -2, 1, 0, 0], [0.00003, 0, 1, 1, -2, 0],
+    [0.00003, 0, 3, 0, 0, 0], [0.00002, 0, 0, 2, -2, 0], [0.00002, 0, -1, 1, 2, 0],
+    [-0.00002, 0, 1, 3, 0, 0],
+  ];
   // Additional corrections: [coefficient (1e-6 days), A0 (deg), rate per lunation (deg)].
   const PLANETARY_TERMS = [
     [325, 299.77, 0.107408], [165, 251.88, 0.016321], [164, 251.83, 26.651886],
@@ -58,26 +81,35 @@ const NAM_LUNAR = (() => {
     [42, 207.19, 0.121824], [40, 291.34, 1.844379], [37, 161.72, 24.198154],
     [35, 239.56, 25.513099], [23, 331.55, 3.592518],
   ];
-  /* Julian Ephemeris Day (TT) of the true new moon of lunation k
-     (k = 0 is the new moon of 2000-01-06). */
-  function newMoonJDE(k) {
-    const T = k / 1236.85, T2 = T * T, T3 = T2 * T, T4 = T3 * T;
-    let jde = 2451550.09766 + 29.530588861 * k + 0.00015437 * T2 - 0.000000150 * T3 + 0.00000000073 * T4;
+  /* Julian Ephemeris Day (TT) of phase q of lunation k: q = 0 new moon,
+     1 first quarter, 2 full moon, 3 last quarter (k = 0 is the new moon
+     of 2000-01-06). */
+  function phaseJDE(k, q) {
+    const kk = k + q / 4;
+    const T = kk / 1236.85, T2 = T * T, T3 = T2 * T, T4 = T3 * T;
+    let jde = 2451550.09766 + 29.530588861 * kk + 0.00015437 * T2 - 0.000000150 * T3 + 0.00000000073 * T4;
     const E = 1 - 0.002516 * T - 0.0000074 * T2;
-    const M = (2.5534 + 29.10535670 * k - 0.0000014 * T2 - 0.00000011 * T3) * D2R;
-    const Mp = (201.5643 + 385.81693528 * k + 0.0107582 * T2 + 0.00001238 * T3 - 0.000000058 * T4) * D2R;
-    const F = (160.7108 + 390.67050284 * k - 0.0016118 * T2 - 0.00000227 * T3 + 0.000000011 * T4) * D2R;
-    const Om = (124.7746 - 1.56375588 * k + 0.0020672 * T2 + 0.00000215 * T3) * D2R;
-    for (const [c, e, m, mp, f, om] of NEW_MOON_TERMS) {
+    const M = (2.5534 + 29.10535670 * kk - 0.0000014 * T2 - 0.00000011 * T3) * D2R;
+    const Mp = (201.5643 + 385.81693528 * kk + 0.0107582 * T2 + 0.00001238 * T3 - 0.000000058 * T4) * D2R;
+    const F = (160.7108 + 390.67050284 * kk - 0.0016118 * T2 - 0.00000227 * T3 + 0.000000011 * T4) * D2R;
+    const Om = (124.7746 - 1.56375588 * kk + 0.0020672 * T2 + 0.00000215 * T3) * D2R;
+    const terms = q === 0 ? NEW_MOON_TERMS : q === 2 ? FULL_MOON_TERMS : QUARTER_TERMS;
+    for (const [c, e, m, mp, f, om] of terms) {
       jde += c * (e === 0 ? 1 : e === 1 ? E : E * E) * Math.sin(m * M + mp * Mp + f * F + om * Om);
+    }
+    if (q === 1 || q === 3) {
+      const W = 0.00306 - 0.00038 * E * Math.cos(M) + 0.00026 * Math.cos(Mp) - 0.00002 * Math.cos(Mp - M)
+        + 0.00002 * Math.cos(Mp + M) + 0.00002 * Math.cos(2 * F);
+      jde += q === 1 ? W : -W;
     }
     for (let i = 0; i < PLANETARY_TERMS.length; i++) {
       const [c, a0, rate] = PLANETARY_TERMS[i];
-      const A = a0 + rate * k - (i === 0 ? 0.009173 * T2 : 0);
+      const A = a0 + rate * kk - (i === 0 ? 0.009173 * T2 : 0);
       jde += c * 1e-6 * Math.sin(A * D2R);
     }
     return jde;
   }
+  const newMoonJDE = (k) => phaseJDE(k, 0);
 
   /* ---------- Calendar ---------- */
   const ganzhiOfYear = (y) => {
@@ -104,16 +136,31 @@ const NAM_LUNAR = (() => {
                                   crossings of that UTC year (cached by
                                   the caller). 中气 are angle ≡ 0 (mod 30). */
   function create({ deltaTSeconds, termsOfYear }) {
-    const newMoonCache = new Map();
-    /* UTC milliseconds of new moon k. */
-    function newMoonMs(k) {
-      let ms = newMoonCache.get(k);
+    const phaseCache = new Map();
+    /* UTC milliseconds of phase q (0 朔, 1 上弦, 2 望, 3 下弦) of lunation k. */
+    function phaseMs(k, q) {
+      const key = k * 4 + q;
+      let ms = phaseCache.get(key);
       if (ms !== undefined) return ms;
-      const jde = newMoonJDE(k);
+      const jde = phaseJDE(k, q);
       const yearFloat = 2000 + (jde - 2451545) / 365.25;
       ms = (jde - 2440587.5) * DAY_MS - deltaTSeconds(yearFloat) * 1000;
-      newMoonCache.set(k, ms);
+      phaseCache.set(key, ms);
       return ms;
+    }
+    const newMoonMs = (k) => phaseMs(k, 0);
+    /* The phases whose instant lies in [startMs, endMs) — at most one for
+       any span under a week: [{ q, name: 朔|上弦|望|下弦, ms }]. */
+    function phasesBetween(startMs, endMs) {
+      const k0 = Math.floor(((startMs / DAY_MS + 2440587.5) - 2451550.09766) / 29.530588861) - 1;
+      const out = [];
+      for (let k = k0; k <= k0 + 2; k++) {
+        for (let q = 0; q < 4; q++) {
+          const ms = phaseMs(k, q);
+          if (ms >= startMs && ms < endMs) out.push({ q, name: PHASE_NAMES[q], ms });
+        }
+      }
+      return out.sort((a, b) => a.ms - b.ms);
     }
     const newMoonDay = (k) => beijingDay(newMoonMs(k));
     /* The lunation k whose month (Beijing civil days) contains day dn. */
@@ -206,8 +253,8 @@ const NAM_LUNAR = (() => {
       }));
     }
 
-    return { fromDate, fromDayNumber, monthsOfYear, newMoonMs, lunationContaining };
+    return { fromDate, fromDayNumber, monthsOfYear, newMoonMs, phaseMs, phasesBetween, lunationContaining };
   }
 
-  return { create, newMoonJDE, label, monthName, dayName, ganzhiOfYear, beijingDay, MONTH_NAMES };
+  return { create, newMoonJDE, phaseJDE, PHASE_NAMES, label, monthName, dayName, ganzhiOfYear, beijingDay, MONTH_NAMES };
 })();

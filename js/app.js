@@ -952,14 +952,29 @@ function tuWangYongShi(date) {
   return dayStart >= new Date(liDay.getFullYear(), liDay.getMonth(), liDay.getDate() - 18) && dayStart < liDay;
 }
 
+/* The Moon's phase (朔 上弦 望 下弦) whose instant falls on the LOCAL day
+   of `date`, or "" — the same local-day rule as the solar terms. */
+function moonPhaseOn(date) {
+  const { dayStart, dayEnd } = localDayBounds(date);
+  const p = LUNAR.phasesBetween(dayStart.getTime(), dayEnd.getTime());
+  return p.length ? p[0].name : "";
+}
+
 /* The day context the 择日 rules read (see js/almanac-rules.js): 节月
    index/branch and its season, the day stem/branch, the term crossing on
    the next local day (四离/四绝), whether 土王用事 is in force, and — for
-   宜忌 — the term in force (霜降后…) and the term crossing today (二分二至). */
+   宜忌 — the term in force (霜降后…) and the term crossing today (二分二至);
+   since M5 also the lunar day and month length (月忌 晦日 十五日 人神), the
+   Moon's phase on the local day (朔弦望) and the 立春-year stem (上朔). */
 function almanacRuleContext(date, gz, jm) {
   const tomorrow = solarTermInfo(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12)).today;
   const ti = solarTermInfo(date);
+  const lunar = lunarDate(date);
   return {
+    ld: lunar.day,
+    monthDays: lunar.monthDays,
+    phase: moonPhaseOn(date),
+    ys: ((jm.jieYear - 4) % 10 + 10) % 10,
     m: jm.monthIdx,
     mb: jm.branchIdx,
     season: Math.floor(jm.monthIdx / 3),

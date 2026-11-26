@@ -87,6 +87,25 @@ test("a local date D gets the lunar date of civil date D in Beijing time, in any
   assert.equal(api.computeAlmanac(new Date(2027, 1, 5, 12)).yearGanzhi, "丙午");
 });
 
+test("朔日 弦日 望日 sit on the local day that contains the phase instant, in any zone", () => {
+  const { api } = harness();
+  const counts = { 朔日: 0, 弦日: 0, 望日: 0 };
+  for (let i = 0; i < 365; i++) {
+    const day = new Date(2026, 0, 1 + i, 12);
+    const a = api.computeAlmanac(day);
+    const start = new Date(2026, 0, 1 + i).getTime(), end = new Date(2026, 0, 2 + i).getTime();
+    const inDay = api.LUNAR.phasesBetween(start, end).map((p) => ({ 朔: "朔日", 上弦: "弦日", 望: "望日", 下弦: "弦日" })[p.name]);
+    for (const n of Object.keys(counts)) {
+      const has = a.xiongShen.some((g) => g.name === n);
+      assert.equal(has, inDay.includes(n), `${day.toDateString()} ${n}`);
+      if (has) counts[n]++;
+    }
+  }
+  assert.ok(counts.朔日 >= 12 && counts.朔日 <= 13);
+  assert.ok(counts.望日 >= 12 && counts.望日 <= 13);
+  assert.ok(counts.弦日 >= 24 && counts.弦日 <= 26);
+});
+
 test("节月 turns exactly on the local 交节 day of each 节 (and agrees with 今日交节)", () => {
   const { api } = harness();
   const JIE = ["立春", "惊蛰", "清明", "立夏", "芒种", "小暑", "立秋", "白露", "寒露", "立冬", "大雪", "小寒"];

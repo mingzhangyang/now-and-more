@@ -40,6 +40,18 @@ test("every new moon 1950–2100 is within 18 s (TT) of JPL Horizons; mean |erro
   assert.ok(mean < 4, `mean |error| ${mean.toFixed(2)} s`);
 });
 
+test("first quarters, full moons and last quarters (every 6th lunation) are within 18 s of JPL Horizons", () => {
+  const fx = require("./fixtures/new-moons-horizons.json");
+  assert.equal(fx.phases.length, 3 * 312);
+  for (const q of [1, 2, 3]) {
+    const err = fx.phases.filter((r) => r[1] === q).map(([k, , jde]) => Math.abs(NAM_LUNAR.phaseJDE(k, q) - jde) * 86400);
+    assert.ok(Math.max(...err) < 18, `${NAM_LUNAR.PHASE_NAMES[q]} max ${Math.max(...err).toFixed(1)} s`);
+    assert.ok(err.reduce((s, e) => s + e, 0) / err.length < 5, NAM_LUNAR.PHASE_NAMES[q]);
+  }
+  // Meeus example 49.b: the last quarter of 2044 January is JDE 2467636.49186.
+  assert.ok(Math.abs(NAM_LUNAR.phaseJDE(544, 3) - 2467636.49186) < 1e-5);
+});
+
 test("TT − UTC model: observed ΔT before 1972, the leap-second table after, 69.184 s from 2017 on", () => {
   const dt = api.civilDeltaTSeconds;
   assert.equal(dt(1950), 29.07);

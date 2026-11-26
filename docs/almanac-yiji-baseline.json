@@ -2,24 +2,24 @@
   "days": 1461,
   "vocabulary": 36,
   "yi": {
-    "precision": 0.8399,
-    "recall": 0.7703,
-    "dayPrecision": 0.818,
-    "dayRecall": 0.7467,
-    "ours": 10924,
+    "precision": 0.8201,
+    "recall": 0.6826,
+    "dayPrecision": 0.8035,
+    "dayRecall": 0.6759,
+    "ours": 9914,
     "ref": 11911
   },
   "ji": {
-    "precision": 0.7547,
-    "recall": 0.9146,
-    "dayPrecision": 0.6767,
-    "dayRecall": 0.8325,
-    "ours": 26077,
+    "precision": 0.7422,
+    "recall": 0.9184,
+    "dayPrecision": 0.6685,
+    "dayRecall": 0.8407,
+    "ours": 26626,
     "ref": 21518
   },
-  "contradictions": 1390,
-  "contradictionRate": 0.0376,
-  "contradictionDays": 453,
+  "contradictions": 1534,
+  "contradictionRate": 0.042,
+  "contradictionDays": 463,
   "allJiDays": {
     "both": 120,
     "oursOnly": 69,
@@ -34,79 +34,79 @@
       "contradictions": 156
     },
     "祈福": {
-      "yiPrecision": 0.8629,
-      "yiRecall": 0.6632,
-      "jiPrecision": 0.6898,
-      "jiRecall": 0.9653,
-      "contradictions": 57
+      "yiPrecision": 0.8638,
+      "yiRecall": 0.5764,
+      "jiPrecision": 0.6793,
+      "jiRecall": 0.967,
+      "contradictions": 60
     },
     "求嗣": {
-      "yiPrecision": 0.9176,
-      "yiRecall": 0.7273,
-      "jiPrecision": 0.7581,
-      "jiRecall": 0.9414,
-      "contradictions": 44
+      "yiPrecision": 0.9161,
+      "yiRecall": 0.6364,
+      "jiPrecision": 0.7463,
+      "jiRecall": 0.943,
+      "contradictions": 47
     },
     "会亲友": {
-      "yiPrecision": 0.9595,
-      "yiRecall": 0.8937,
-      "jiPrecision": 0.7563,
+      "yiPrecision": 0.9572,
+      "yiRecall": 0.8439,
+      "jiPrecision": 0.7406,
       "jiRecall": 0.9913,
-      "contradictions": 34
+      "contradictions": 42
     },
     "入学": {
       "yiPrecision": 1,
-      "yiRecall": 0.951,
-      "jiPrecision": 0.553,
+      "yiRecall": 0.8286,
+      "jiPrecision": 0.4979,
       "jiRecall": 0.9756,
       "contradictions": 12
     },
     "出行": {
-      "yiPrecision": 0.7286,
-      "yiRecall": 0.7866,
-      "jiPrecision": 0.7325,
+      "yiPrecision": 0.7626,
+      "yiRecall": 0.7018,
+      "jiPrecision": 0.7174,
       "jiRecall": 0.9429,
       "contradictions": 56
     },
     "赴任": {
-      "yiPrecision": 0.9227,
-      "yiRecall": 0.7276,
-      "jiPrecision": 0.6718,
-      "jiRecall": 0.9559,
-      "contradictions": 120
+      "yiPrecision": 0.9146,
+      "yiRecall": 0.6159,
+      "jiPrecision": 0.648,
+      "jiRecall": 0.9577,
+      "contradictions": 125
     },
     "纳采": {
-      "yiPrecision": 0.7919,
-      "yiRecall": 0.8643,
-      "jiPrecision": 0.7327,
-      "jiRecall": 0.9468,
-      "contradictions": 37
+      "yiPrecision": 0.7887,
+      "yiRecall": 0.7341,
+      "jiPrecision": 0.7179,
+      "jiRecall": 0.9482,
+      "contradictions": 44
     },
     "嫁娶": {
-      "yiPrecision": 0.578,
-      "yiRecall": 0.7079,
-      "jiPrecision": 0.7424,
-      "jiRecall": 0.9502,
-      "contradictions": 47
+      "yiPrecision": 0.5541,
+      "yiRecall": 0.633,
+      "jiPrecision": 0.7357,
+      "jiRecall": 0.9515,
+      "contradictions": 51
     },
     "移徙": {
-      "yiPrecision": 0.832,
-      "yiRecall": 0.7925,
-      "jiPrecision": 0.6622,
-      "jiRecall": 0.9269,
-      "contradictions": 45
+      "yiPrecision": 0.8349,
+      "yiRecall": 0.6825,
+      "jiPrecision": 0.6462,
+      "jiRecall": 0.9286,
+      "contradictions": 52
     },
     "安床": {
-      "yiPrecision": 0.92,
-      "yiRecall": 0.8214,
-      "jiPrecision": 0.7629,
-      "jiRecall": 0.8986,
-      "contradictions": 9
+      "yiPrecision": 0.9231,
+      "yiRecall": 0.6429,
+      "jiPrecision": 0.7513,
+      "jiRecall": 0.9002,
+      "contradictions": 13
     },
     "解除": {
-      "yiPrecision": 0.8481,
-      "yiRecall": 0.8139,
-      "jiPrecision": 0.7163,
+      "yiPrecision": 0.8468,
+      "yiRecall": 0.7309,
+      "jiPrecision": 0.7073,
       "jiRecall": 0.9611,
       "contradictions": 46
     },
@@ -118,73 +118,73 @@
       "contradictions": 27
     },
     "剃头": {
-      "yiPrecision": 0.9412,
-      "yiRecall": 0.4534,
-      "jiPrecision": 0.858,
-      "jiRecall": 0.8336,
-      "contradictions": 9
+      "yiPrecision": 1,
+      "yiRecall": 0.4413,
+      "jiPrecision": 0.8502,
+      "jiRecall": 0.8936,
+      "contradictions": 14
     },
     "求医疗病": {
-      "yiPrecision": 0.5984,
-      "yiRecall": 0.465,
-      "jiPrecision": 0.5347,
-      "jiRecall": 0.9785,
-      "contradictions": 154
+      "yiPrecision": 0.66,
+      "yiRecall": 0.4204,
+      "jiPrecision": 0.5115,
+      "jiRecall": 0.9868,
+      "contradictions": 159
     },
     "裁衣": {
-      "yiPrecision": 0.989,
-      "yiRecall": 0.9127,
-      "jiPrecision": 0.761,
-      "jiRecall": 0.9846,
-      "contradictions": 34
+      "yiPrecision": 0.9871,
+      "yiRecall": 0.7773,
+      "jiPrecision": 0.7341,
+      "jiRecall": 0.9868,
+      "contradictions": 45
     },
     "修造动土": {
-      "yiPrecision": 0.6676,
-      "yiRecall": 0.7357,
-      "jiPrecision": 0.5861,
-      "jiRecall": 0.888,
-      "contradictions": 67
+      "yiPrecision": 0.6583,
+      "yiRecall": 0.6306,
+      "jiPrecision": 0.5758,
+      "jiRecall": 0.8896,
+      "contradictions": 72
     },
     "竖柱上梁": {
-      "yiPrecision": 0.8657,
-      "yiRecall": 0.871,
-      "jiPrecision": 0.772,
-      "jiRecall": 0.8934,
-      "contradictions": 20
+      "yiPrecision": 0.8654,
+      "yiRecall": 0.752,
+      "jiPrecision": 0.7486,
+      "jiRecall": 0.8984,
+      "contradictions": 27
     },
     "开市": {
-      "yiPrecision": 0.8022,
-      "yiRecall": 0.9143,
-      "jiPrecision": 0.7497,
+      "yiPrecision": 0.7935,
+      "yiRecall": 0.781,
+      "jiPrecision": 0.7309,
       "jiRecall": 0.8921,
-      "contradictions": 21
+      "contradictions": 25
     },
     "立券交易": {
-      "yiPrecision": 0.7366,
-      "yiRecall": 0.7933,
-      "jiPrecision": 0.7173,
-      "jiRecall": 0.8967,
-      "contradictions": 66
+      "yiPrecision": 0.7263,
+      "yiRecall": 0.6635,
+      "jiPrecision": 0.7,
+      "jiRecall": 0.8983,
+      "contradictions": 64
     },
     "纳财": {
-      "yiPrecision": 0.7973,
-      "yiRecall": 0.8254,
-      "jiPrecision": 0.6844,
+      "yiPrecision": 0.79,
+      "yiRecall": 0.6966,
+      "jiPrecision": 0.6643,
       "jiRecall": 0.9295,
-      "contradictions": 50
+      "contradictions": 57
     },
     "开仓": {
-      "yiPrecision": 0.6809,
-      "yiRecall": 0.8663,
-      "jiPrecision": 0.7895,
-      "jiRecall": 0.8408,
-      "contradictions": 32
+      "yiPrecision": 0.6606,
+      "yiRecall": 0.7129,
+      "jiPrecision": 0.7871,
+      "jiRecall": 0.8453,
+      "contradictions": 36
     },
     "开渠穿井": {
-      "yiPrecision": 0.8085,
-      "yiRecall": 0.8261,
-      "jiPrecision": 0.9711,
-      "jiRecall": 0.9368,
+      "yiPrecision": 0.8205,
+      "yiRecall": 0.6957,
+      "jiPrecision": 0.9694,
+      "jiRecall": 0.9414,
       "contradictions": 5
     },
     "扫舍宇": {
@@ -209,74 +209,74 @@
       "contradictions": 2
     },
     "破屋坏垣": {
-      "yiPrecision": 0.8889,
-      "yiRecall": 0.8421,
+      "yiPrecision": 0.871,
+      "yiRecall": 0.7105,
       "jiPrecision": 0.922,
       "jiRecall": 0.8842,
       "contradictions": 6
     },
     "伐木": {
       "yiPrecision": 0.5,
-      "yiRecall": 1,
+      "yiRecall": 0.9,
       "jiPrecision": 0.9564,
       "jiRecall": 0.9797,
       "contradictions": 0
     },
     "捕捉": {
       "yiPrecision": 1,
-      "yiRecall": 0.9563,
-      "jiPrecision": 0.7134,
+      "yiRecall": 0.7773,
+      "jiPrecision": 0.6657,
       "jiRecall": 0.9876,
-      "contradictions": 10
+      "contradictions": 18
     },
     "畋猎": {
-      "yiPrecision": 0.9189,
-      "yiRecall": 0.9315,
-      "jiPrecision": 0.8932,
-      "jiRecall": 0.8955,
-      "contradictions": 11
-    },
-    "栽种": {
-      "yiPrecision": 0.9044,
-      "yiRecall": 0.7749,
-      "jiPrecision": 0.5657,
-      "jiRecall": 0.9765,
-      "contradictions": 72
-    },
-    "牧养": {
-      "yiPrecision": 0.9599,
-      "yiRecall": 0.89,
-      "jiPrecision": 0.7881,
-      "jiRecall": 0.9352,
-      "contradictions": 32
-    },
-    "纳畜": {
-      "yiPrecision": 0.8423,
-      "yiRecall": 0.8285,
-      "jiPrecision": 0.7464,
-      "jiRecall": 0.882,
-      "contradictions": 50
-    },
-    "破土": {
-      "yiPrecision": null,
-      "yiRecall": 0,
-      "jiPrecision": 0.6752,
+      "yiPrecision": 0.9,
+      "yiRecall": 0.7397,
+      "jiPrecision": 0.8801,
       "jiRecall": 0.8967,
       "contradictions": 12
     },
+    "栽种": {
+      "yiPrecision": 0.9016,
+      "yiRecall": 0.6433,
+      "jiPrecision": 0.5576,
+      "jiRecall": 0.9765,
+      "contradictions": 80
+    },
+    "牧养": {
+      "yiPrecision": 0.9591,
+      "yiRecall": 0.7547,
+      "jiPrecision": 0.7485,
+      "jiRecall": 0.9352,
+      "contradictions": 45
+    },
+    "纳畜": {
+      "yiPrecision": 0.8374,
+      "yiRecall": 0.6953,
+      "jiPrecision": 0.713,
+      "jiRecall": 0.8839,
+      "contradictions": 58
+    },
+    "破土": {
+      "yiPrecision": 0,
+      "yiRecall": 0,
+      "jiPrecision": 0.6951,
+      "jiRecall": 0.9059,
+      "contradictions": 12
+    },
     "安葬": {
-      "yiPrecision": 0.814,
-      "yiRecall": 0.4958,
-      "jiPrecision": 0.7613,
-      "jiRecall": 0.9294,
-      "contradictions": 35
+      "yiPrecision": 0.8082,
+      "yiRecall": 0.5609,
+      "jiPrecision": 0.7512,
+      "jiRecall": 0.931,
+      "contradictions": 48
     },
     "启攒": {
-      "yiPrecision": null,
+      "yiPrecision": 0,
       "yiRecall": null,
-      "jiPrecision": 0.8816,
-      "jiRecall": 0.8575,
-      "contradictions": 0
+      "jiPrecision": 0.8926,
+      "jiRecall": 0.862,
+      "contradictions": 6
     }
   }
 }

@@ -6,11 +6,13 @@
    below gives the rule as the book states it. Rules, sources and the verification
    against an independent reference: docs/almanac-rules.md.
 
-   Every rule reads only the 干支 calendar of the day, never the lunar
-   month: the 节月 (monthIdx 0 = 寅月 from 立春 … 11 = 丑月, its branch),
-   the season of that 节月 (寅卯辰 spring … 亥子丑 winter), and the day's
-   stem and branch — plus, for 四离/四绝 and 母仓's 土王用事 clause, which
-   term falls on the next day. app.js builds that context
+   Most rules read only the 干支 calendar of the day: the 节月 (monthIdx
+   0 = 寅月 from 立春 … 11 = 丑月, its branch), the season of that 节月
+   (寅卯辰 spring … 亥子丑 winter), and the day's stem and branch — plus,
+   for 四离/四绝 and 母仓's 土王用事 clause, which term falls on the next
+   day. Since M5 a few read the lunar day (月忌 晦日 十五日 人神, from
+   js/lunar.js), the Moon's phase on the local day (朔 弦 望) or the
+   立春-year stem (上朔); never the lunar month. app.js builds that context
    (almanacRuleContext) and asks dayGods(ctx); nothing here touches the DOM.
 
    Tables are written in month order 正月 (寅) … 十二月 (丑), or season
@@ -42,7 +44,10 @@ const NAM_ALMANAC = (() => {
      ctx = { m: 节月 index (0 = 寅月), mb: month branch index,
              season: 0 春 1 夏 2 秋 3 冬, s: day stem index,
              b: day branch index, gz: day ganzhi, eve: name of the term
-             crossing on the NEXT local day or "", tuWang: true while 土王用事 } */
+             crossing on the NEXT local day or "", tuWang: true while 土王用事,
+             ld: lunar day (1…30), monthDays: 29 | 30, phase: "朔" | "上弦" |
+             "望" | "下弦" | "" (a phase instant on this local day),
+             ys: stem index of the 立春 year } */
   const stem = (c) => GAN[c.s];
   const branch = (c) => ZHI[c.b];
   // The month's entry is the day's stem or branch (stems and branches never share a character).
@@ -120,7 +125,31 @@ const NAM_ALMANAC = (() => {
     { name: "金堂", gloss: "主宅舍兴旺", hit: byMonth("辰戌巳亥午子未丑申寅酉卯") },
     // 解神: 正二月申 三四月戌 五六月子 七八月寅 九十月辰 十一十二月午.
     { name: "解神", gloss: "主解除灾厄", hit: byMonth("申申戌戌子子寅寅辰辰午午") },
+    // 不将 (陰陽不將, 卷四): the 《歷例》 table, month by month as the book prints it; 卷四按
+    // 「惟六月戊午為逐陣不可用」, so 六月戊午 is left out.
+    { name: "不将", gloss: "阴阳不将，宜嫁娶", hit: (c) => BUJIANG[c.m].has(c.gz) && !(c.m === 5 && c.gz === "戊午") },
+    // 鸣吠 / 鸣吠对 (卷五, as corrected there after 《神煞起例》 — 「通書誤以庚寅壬寅為鳴吠甲午為鳴吠對…今圖依起例改正」):
+    // 鸣吠 = 甲丙庚壬 配 午申 + 乙丁己辛癸 配 酉 (13 days); 鸣吠对 = 丙庚壬 配 子 + 甲丙庚壬 配 寅 + 乙丁辛癸 配 卯 (11 days).
+    { name: "鸣吠", gloss: "金鸡鸣玉犬吠，宜安葬", hit: (c) => MINGFEI.has(c.gz) },
+    { name: "鸣吠对", gloss: "鸣吠之对，宜破土、启攒", hit: (c) => MINGFEI_DUI.has(c.gz) },
   ];
+  // 《歷例》「隂陽不將者正月辛亥辛丑辛夘庚子庚寅己亥己丑己夘丁亥丁丑丁夘丙子丙寅二月……」 (卷四), 正月 … 十二月.
+  const BUJIANG = [
+    "辛亥 辛丑 辛卯 庚子 庚寅 己亥 己丑 己卯 丁亥 丁丑 丁卯 丙子 丙寅",
+    "庚戌 庚子 庚寅 己亥 己丑 丁亥 丁丑 丙戌 丙子 丙寅 乙亥 乙丑",
+    "己酉 己亥 己丑 丁酉 丁亥 丁丑 丙戌 丙子 乙酉 乙亥 乙丑 甲戌 甲子",
+    "丁酉 丁亥 丙申 丙戌 丙子 乙酉 乙亥 甲申 甲戌 甲子 戊申 戊戌 戊子",
+    "丙申 丙戌 乙未 乙酉 乙亥 甲申 甲戌 戊申 戊戌 癸未 癸酉 癸亥",
+    "乙未 乙酉 甲午 甲申 甲戌 戊午 戊申 戊戌 癸未 癸酉 壬午 壬申 壬戌",
+    "乙巳 乙未 乙酉 甲午 甲申 戊午 戊申 癸巳 癸未 癸酉 壬午 壬申",
+    "甲辰 甲午 甲申 戊辰 戊午 戊申 癸巳 癸未 壬辰 壬午 壬申 辛巳 辛未",
+    "戊辰 戊午 癸卯 癸巳 癸未 壬辰 壬午 辛卯 辛巳 辛未 庚辰 庚午",
+    "癸卯 癸巳 壬寅 壬辰 壬午 辛卯 辛巳 庚寅 庚辰 庚午 己卯 己巳",
+    "壬寅 壬辰 辛丑 辛卯 辛巳 庚寅 庚辰 己丑 己卯 己巳 丁丑 丁卯 丁巳",
+    "辛丑 辛卯 庚子 庚寅 庚辰 己丑 己卯 丁丑 丁卯 丙子 丙寅 丙辰",
+  ].map((row) => new Set(row.split(" ")));
+  const MINGFEI = new Set(["甲午", "丙午", "庚午", "壬午", "甲申", "丙申", "庚申", "壬申", "乙酉", "丁酉", "己酉", "辛酉", "癸酉"]);
+  const MINGFEI_DUI = new Set(["丙子", "庚子", "壬子", "甲寅", "丙寅", "庚寅", "壬寅", "乙卯", "丁卯", "辛卯", "癸卯"]);
   const TIANEN = new Set(["甲子", "乙丑", "丙寅", "丁卯", "戊辰", "己卯", "庚辰", "辛巳", "壬午", "癸未", "己酉", "庚戌", "辛亥", "壬子", "癸丑"]);
 
   /* ---------- 凶神 ---------- */
@@ -195,6 +224,18 @@ const NAM_ALMANAC = (() => {
     { name: "死气", gloss: "主衰杀，忌种植", hit: fromJian(4) },
     // 天火: 正子 二卯 三午 四酉，周而复始.
     { name: "天火", gloss: "忌苫盖、修造", hit: byTrine("子卯午酉") },
+    // ---- days fixed by the year stem, the lunar day or the Moon (M5) ----
+    // 上朔 (卷六): 「陽年以年干加寅順數至亥，隂年以年干加丑順數至巳」 — 甲年癸亥 丙年乙亥 戊年丁亥 庚年己亥 壬年辛亥,
+    // 乙年己巳 丁年辛巳 己年癸巳 辛年乙巳 癸年丁巳. The year is the 立春 year, as for every 年神.
+    { name: "上朔", gloss: "阴阳与岁德俱尽之日，大事勿用", hit: (c) => (c.ys % 2 === 0 ? c.s === (c.ys + 9) % 10 && c.b === 11 : c.s === (c.ys + 4) % 10 && c.b === 5) },
+    // 月忌 (卷六): 「每月初五十四二十三日為月忌」 (lunar days).
+    { name: "月忌", gloss: "初五、十四、廿三，诸事少注宜", hit: (c) => c.ld === 5 || c.ld === 14 || c.ld === 23 },
+    // 晦日: the last day of the lunar month (「晦為月盡之日」).
+    { name: "晦日", gloss: "月尽之日，止宜祭祀扫除", hit: (c) => c.ld === c.monthDays },
+    // 朔 弦 望 (卷十「朔弦朢」): the local day on which the new moon, a quarter or the full moon falls.
+    { name: "朔日", gloss: "日月同度，忌求医", hit: (c) => c.phase === "朔" },
+    { name: "弦日", gloss: "上弦、下弦，忌求医", hit: (c) => c.phase === "上弦" || c.phase === "下弦" },
+    { name: "望日", gloss: "日月相望，忌求医", hit: (c) => c.phase === "望" },
   ];
   const BAZHUAN = new Set(["丁未", "己未", "庚申", "甲寅", "癸丑"]);
 
@@ -354,6 +395,9 @@ const NAM_ALMANAC = (() => {
     益后: { yi: "祭祀 祈福 求嗣" },      // 益後 續世: 「宜祭祀祈福求嗣」
     续世: { yi: "祭祀 祈福 求嗣" },
     解神: { yi: "解除 沐浴 剃头 求医疗病" }, // 「宜上表章陳詞訟解除沐浴整容剃頭整手足甲求醫療病」
+    不将: { yi: "嫁娶" },                // 「不將 宜嫁娶」
+    鸣吠: { yi: "破土 安葬" },           // 「鳴吠 宜破土安葬」
+    鸣吠对: { yi: "破土 启攒" },         // 「鳴吠對 宜破土啟攢」
 
     // ---- 建除十二神 (卷十; 宜 and 忌 of the day itself) ----
     建日: { yi: "出行 赴任", // 「宜施恩封拜……行幸遣使上官赴任臨政親民」; as 月建 (小時 土府) it 忌 (graded below):
@@ -420,6 +464,15 @@ const NAM_ALMANAC = (() => {
     八专: { ji: "纳采 嫁娶", unless: "天愿" },
     四离: { ji: LIJUE_JI },                        // 上朔 四離 四絶 晦日: 「……餘事皆忌；與徳合赦願併猶忌」
     四绝: { ji: LIJUE_JI },
+    上朔: { ji: LIJUE_JI },
+    // 晦日: 按「晦日雖不與上朔同凶，然亦止宜祭祀等事，餘事雖不忌亦不註宜也」.
+    晦日: { noYi: allBut("祭祀 解除 沐浴 剃头 扫舍宇 修饰垣墙 平治道涂 破屋坏垣 伐木") },
+    // 月忌日: 「止註祭祀宴㑹沐浴整容剃頭整手足甲求醫療病補垣掃舍宇修飾垣牆平治道塗，餘事不註」.
+    月忌: { noYi: allBut("祭祀 会亲友 沐浴 剃头 求医疗病 扫舍宇 修饰垣墙 平治道涂") },
+    // 朔弦朢: 「忌求醫療病」（按：朔為日月同度，弦為近一逺三，朢為日月相對，猶建破平收之義也）.
+    朔日: { ji: "求医疗病" },
+    弦日: { ji: "求医疗病" },
+    望日: { ji: "求医疗病" },
 
     // ---- fixed special days ----
     土王用事: { ji: EARTH_JI },                    // 「忌營建宫室……栽種破土；義同土府」
@@ -429,6 +482,9 @@ const NAM_ALMANAC = (() => {
     寅日: { ji: "祭祀", noYi: "祈福 求嗣" }, 卯日: { ji: "开渠穿井" }, 巳日: { ji: "出行" },
     未日: { ji: "求医疗病" }, 申日: { ji: "安床" }, 酉日: { ji: "会亲友" }, 亥日: { ji: "嫁娶" },
     亥子日: { yi: "沐浴" },                        // 「亥子日 宜沐浴」（取水旺也）
+    十五日: { ji: "求医疗病" },                    // 「十五日 忌求醫療病，義同朢日」 (lunar day 15)
+    // 人神所在日: 「十二日在髮際，十五日在徧身，忌剃頭」 (its 整手足甲 days fall outside the vocabulary).
+    人神: { ji: "剃头" },
     午申日: { yiIf: [[WINTER, "伐木"]] },          // 「午申日 立冬後立春前宜伐木」
     // 冬至 夏至 春分 秋分: 「不註上册進表章慶賜賞賀宴㑹行幸遣使……上官赴任……結婚姻納采問名嫁娶進人口般移開市立劵交易捕捉畋獵取魚；冬至日又不註伐木」
     二分二至: { noYi: "会亲友 出行 赴任 纳采 嫁娶 移徙 开市 立券交易 捕捉 畋猎" },
@@ -548,6 +604,8 @@ const NAM_ALMANAC = (() => {
     if (ctx.tuWang) active.push("土王用事");
     for (const k of [GAN[ctx.s] + "日", ZHI[ctx.b] + "日"]) if (SOURCES[k]) active.push(k);
     if (ctx.b === 11 || ctx.b === 0) active.push("亥子日");
+    if (ctx.ld === 15) active.push("十五日");
+    if (ctx.ld === 12 || ctx.ld === 15) active.push("人神");
     if (ctx.b === 6 || ctx.b === 8) active.push("午申日");
     if (ctx.termToday === "冬至") active.push("冬至");
     else if (["春分", "夏至", "秋分"].includes(ctx.termToday)) active.push("二分二至");
@@ -592,6 +650,9 @@ const NAM_ALMANAC = (() => {
       for (const it of s.ji) add(jiBy, it, name);
       for (const it of s.noYi) add(noYi, it, name);
     }
+    // 鋪註條例: 「凡四忌四窮止忌安葬，如遇鳴吠鳴吠對亦不註宜破土啟攢」.
+    const qiong = ["四忌", "四穷"].find((n) => present.has(n));
+    if (qiong && (present.has("鸣吠") || present.has("鸣吠对"))) for (const it of ["破土", "启攒"]) add(noYi, it, qiong);
     // Which sources' 忌 still stand, and why the others fell.
     const lifted = new Map(); // source → the god that lifted it
     for (const name of active) {
