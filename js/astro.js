@@ -209,7 +209,14 @@ function detectExactHoroscopeAspects(start, end, position) {
   const events = new Map();
   for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
     const body = bodies[i], other = bodies[j], pair = body + "/" + other;
-    const longitude = at => norm360(position(body, at)?.lon - position(other, at)?.lon);
+    const relative = at => position(body, at)?.lon - position(other, at)?.lon;
+    const longitude = at => norm360(relative(at));
+    // Evaluate the signed residual directly: adding an unwrapped delta to
+    // its origin can leave a tiny nonzero value at an exact midnight root.
+    const residual = (at, target) => {
+      const delta = relative(at) - target;
+      return delta - 360 * Math.round(delta / 360);
+    };
     const speed = at => position(body, at)?.velocity - position(other, at)?.velocity;
     if (!Number.isFinite(longitude(start)) || !Number.isFinite(speed(start))) continue;
     for (let k = 1; k < ticks.length; k++) {
@@ -232,16 +239,17 @@ function detectExactHoroscopeAspects(start, end, position) {
         if (extremum > lo && extremum < hi) cuts.splice(1, 0, extremum);
       }
       for (let n = 1; n < cuts.length; n++) {
-        const a = cuts[n - 1], b = cuts[n], from = phase(a), to = phase(b);
+        const a = cuts[n - 1], b = cuts[n];
         for (const target of targets) {
-          const goal = target + 360 * Math.round((from - target) / 360);
-          const rising = from < goal && to >= goal;
-          const falling = from > goal && to <= goal;
+          const from = residual(a, target), to = residual(b, target);
+          if (Math.abs(to - from) >= 180) continue; // opposite-side wrap, not a root
+          const rising = from < 0 && to >= 0;
+          const falling = from > 0 && to <= 0;
           if (!rising && !falling) continue;
           let left = a, right = b;
           while (right - left > 1) {
             const mid = left + Math.floor((right - left) / 2);
-            if (rising ? phase(mid) < goal : phase(mid) > goal) left = mid;
+            if (rising ? residual(mid, target) < 0 : residual(mid, target) > 0) left = mid;
             else right = mid;
           }
           if (right < start || right >= end) continue;

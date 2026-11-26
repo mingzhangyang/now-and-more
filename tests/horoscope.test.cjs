@@ -828,6 +828,9 @@ test("exact aspects own the half-open day and canonical pair across longitude wr
   const events=api.detectExactHoroscopeAspects(start,end,position);
   assert.deepEqual(events.map(e=>[e.pair,e.angle,e.at]),[["jupiter/mars",0,start]]);
   assert.equal(api.detectExactHoroscopeAspects(start-day,start,position).length,0);
+  const reverse=(body,at)=>body==="mars"?{lon:((-(at-start)/day+360)%360),velocity:-1}:position(body,at);
+  assert.deepEqual(api.detectExactHoroscopeAspects(start,end,reverse).map(e=>[e.pair,e.angle,e.at]),[["jupiter/mars",0,start]]);
+  assert.equal(api.detectExactHoroscopeAspects(start-day,start,reverse).length,0);
   const h=api.makeHoroscope(new Date(2026,2,22,12),0);
   assert.ok(h.events.some(e=>e.pair==="jupiter/mars"&&e.angle===120));
   assert.ok(!h.cardEvents.some(e=>e.type==="aspect"));
