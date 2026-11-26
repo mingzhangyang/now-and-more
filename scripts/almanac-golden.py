@@ -35,6 +35,14 @@ rule never applies) it records:
              the JS mod-4 arithmetic, not the rule itself.
   term       name of the solar term falling on that day, else ""
   lunar      lunar month/day, "L" prefix for a leap month (e.g. "L6-01")
+  zhishen    黄道黑道十二值神 of the day                    cnlunar today12DayGod (godType
+             '8char', i.e. by the 节月 branch); cnlunar spells 金匮 as 金贵,
+             normalised here to 金匮.
+  good       吉神 names, space-separated, cnlunar's order    cnlunar goodGodName
+  bad        凶神 names, space-separated, cnlunar's order    cnlunar badGodName
+             Both lists are recorded whole (including gods the site does not
+             implement); tests/almanac-golden.test.cjs compares only the gods
+             it implements, by presence/absence per day.
 """
 import datetime
 import json
@@ -63,7 +71,7 @@ SHA_TABLE = {
     "亥": "西", "卯": "西", "未": "西",
 }
 FIELDS = ["date", "lunarYear", "lichunYear", "month", "day", "jianchu",
-          "chong", "sha", "term", "lunar"]
+          "chong", "sha", "term", "lunar", "zhishen", "good", "bad"]
 
 
 def row(d):
@@ -81,6 +89,9 @@ def row(d):
         assert d.month == 12 and (d.month, d.day) >= dongzhi, (d, b.year8Char, lichun_gz)
         assert b.year8Char == ganzhi_of_year(d.year - 1), (d, b.year8Char)
     lunar = "%s%d-%02d" % ("L" if a.isLunarLeapMonth else "", a.lunarMonth, a.lunarDay)
+    officer, god, _ = a.get_today12DayOfficer()
+    for name in a.goodGodName + a.badGodName:
+        assert " " not in name, name
     return [
         d.isoformat(),
         a.year8Char,
@@ -92,6 +103,9 @@ def row(d):
         SHA_TABLE[a.day8Char[1]],
         "" if a.todaySolarTerms == "无" else a.todaySolarTerms,
         lunar,
+        "金匮" if god == "金贵" else god,
+        " ".join(a.goodGodName),
+        " ".join(a.badGodName),
     ]
 
 
@@ -106,7 +120,8 @@ def main():
                        "tests", "fixtures", "almanac-golden.json")
     head = {
         "source": "cnlunar 0.2.5 (MIT, OPN48) via scripts/almanac-golden.py; "
-                  "sha derived from cnlunar's day branch by the 三合 table",
+                  "sha derived from cnlunar's day branch by the 三合 table; "
+                  "zhishen/good/bad are cnlunar's today12DayGod/goodGodName/badGodName",
         "timeZone": "Asia/Shanghai",
         "years": [YEARS[0], YEARS[-1]],
         "fields": FIELDS,

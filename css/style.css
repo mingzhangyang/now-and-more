@@ -537,6 +537,9 @@ body[data-clock-style="minimal"] .clock-digital .colon { opacity: 0.35; }
 .card-body .sub { color: var(--ink-soft); font-size: 15px; }
 .card-body .fact-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 6px; font-size: 15px; color: var(--ink-soft); }
 .card-body .fact-row b { color: var(--ink); font-weight: 600; }
+/* Almanac 吉神 / 凶神: names only, never split inside a name. */
+.card-body .alm-gods { line-height: 1.55; }
+.card-body .alm-gods > span > span { white-space: nowrap; }
 .card-body .swatch {
   display: inline-block;
   width: 54px; height: 54px;

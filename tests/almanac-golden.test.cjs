@@ -115,3 +115,95 @@ test("worked example: 2026-11-24 壬寅 → 冲猴煞北", () => {
   api.renderSelection({ cat: "almanac", data: a }, s);
   assert.ok(s.body.innerHTML.includes("冲猴煞北"));
 });
+
+/* ---------- M2/M3: 值神 and the day 神煞 ---------- */
+
+test("月干支 and 黄道黑道值神 match the reference on every day", () => {
+  const misses = [];
+  for (const r of rows) {
+    const a = api.computeAlmanac(at(r.date));
+    if (a.monthGanzhi !== r.month) misses.push(`${r.date} month: ours ${a.monthGanzhi}, reference ${r.month}`);
+    if (a.zhiShen.name !== r.zhishen) misses.push(`${r.date} 值神: ours ${a.zhiShen.name}, reference ${r.zhishen}`);
+  }
+  assert.deepEqual(misses, []);
+});
+
+test("土王用事 window (四立前十八日) matches the reference's 土王用事 days", () => {
+  const misses = [];
+  for (const r of rows) {
+    const ref = r.bad.split(" ").includes("土王用事");
+    if (api.tuWangYongShi(at(r.date)) !== ref) misses.push(r.date);
+  }
+  assert.deepEqual(misses, []);
+});
+
+/* Where cnlunar 0.2.5 and our rules are KNOWN to differ, and why (see
+   docs/almanac-rules.md §5). Each entry explains a mismatch only when
+   the day fits the stated pattern exactly; every other mismatch fails.
+   `ref`/`ours` say which side lists the god. */
+const MB = (r) => r.month[1];
+const KNOWN_REFERENCE_DEVIATIONS = {
+  // 天德 in 二 五 八 十一月 is the 卦 坤 乾 艮 巽. The 口诀 「正丁二申宫…五亥…八寅…子巽」 reads it as
+  // the single branch 申 亥 寅 巳; cnlunar also marks the other branch of each 卦 (未 戌 丑 辰).
+  天德: (r, side) => side === "ref" && ({ 卯: "未", 午: "戌", 酉: "丑", 子: "辰" })[MB(r)] === r.day[1],
+  // 三合 is the two OTHER branches of the month's 三合 group (正月 午戌); cnlunar also counts the 建日.
+  三合: (r, side) => side === "ref" && r.day[1] === MB(r),
+  // 母仓 「又土王用事后巳午日」: cnlunar omits this clause.
+  母仓: (r, side) => side === "ours" && api.tuWangYongShi(at(r.date)) && "巳午".includes(r.day[1]),
+  // 复日 of 六月 / 十二月 is 己日 (月建 未 丑 本气 己); cnlunar's table has 巳 there (a 巳/己 slip), so it
+  // marks 巳 days instead.
+  复日: (r, side) => "未丑".includes(MB(r)) && (side === "ref" ? r.day[1] === "巳" : r.day[0] === "己"),
+};
+// Implemented gods the reference does not compute: checked by hand below.
+const NOT_IN_REFERENCE = new Set(["阳德"]);
+
+test("every implemented 吉神/凶神 agrees with the reference day by day (known deviations aside)", () => {
+  const names = [...api.NAM_ALMANAC.JI_NAMES, ...api.NAM_ALMANAC.XIONG_NAMES];
+  const misses = [];
+  const explained = {};
+  for (const r of rows) {
+    const a = api.computeAlmanac(at(r.date));
+    const ref = new Set([...r.good.split(" "), ...r.bad.split(" ")]);
+    const ours = new Set([...a.jiShen, ...a.xiongShen].map((g) => g.name));
+    for (const n of names) {
+      if (NOT_IN_REFERENCE.has(n) || ours.has(n) === ref.has(n)) continue;
+      const side = ours.has(n) ? "ours" : "ref";
+      const known = KNOWN_REFERENCE_DEVIATIONS[n];
+      if (known && known(r, side)) { explained[n] = (explained[n] || 0) + 1; continue; }
+      misses.push(`${r.date} ${r.month}月 ${r.day} ${n}: only in ${side}`);
+    }
+  }
+  assert.deepEqual(misses, []);
+  // Every listed deviation still occurs (a stale entry would hide nothing but mislead).
+  assert.deepEqual(Object.keys(explained).sort(), Object.keys(KNOWN_REFERENCE_DEVIATIONS).sort());
+  // The reference does compute every other god we list.
+  const seen = new Set(rows.flatMap((r) => [...r.good.split(" "), ...r.bad.split(" ")]));
+  for (const n of names) assert.equal(seen.has(n), !NOT_IN_REFERENCE.has(n), n);
+});
+
+test("阳德 (not in the reference) by hand: 正戌 二子 三寅 四辰 五午 六申, then again", () => {
+  const has = (iso) => api.computeAlmanac(at(iso)).jiShen.some((g) => g.name === "阳德");
+  // 2025-02-10 庚戌 in 寅月 (正月 → 戌) · 2025-03-08 丙子 in 卯月 (二月 → 子)
+  // 2025-01-01 庚午 in 子月 (十一月 → 午)
+  assert.equal(api.computeAlmanac(at("2025-02-10")).dayGanzhi, "庚戌");
+  assert.ok(has("2025-02-10"));
+  assert.equal(api.computeAlmanac(at("2025-03-08")).dayGanzhi, "丙子");
+  assert.ok(has("2025-03-08"));
+  assert.equal(api.computeAlmanac(at("2025-01-01")).dayGanzhi, "庚午");
+  assert.ok(has("2025-01-01"));
+  // Neighbouring days in the same months do not carry it.
+  for (const iso of ["2025-02-09", "2025-02-11", "2025-03-07", "2025-03-09", "2024-12-31", "2025-01-02"]) {
+    assert.ok(!has(iso), iso);
+  }
+});
+
+test("worked example: 2026-11-24 壬寅, 亥月 — 值神 天牢（黑道）and its gods", () => {
+  const a = api.computeAlmanac(at("2026-11-24"));
+  assert.equal(a.monthGanzhi, "己亥");
+  assert.deepEqual(a.zhiShen, { name: "天牢", huangdao: false });
+  assert.deepEqual(a.jiShen.map((g) => g.name), ["时德", "相日", "天愿", "六合", "五合", "五富", "金堂"]);
+  assert.deepEqual(a.xiongShen.map((g) => g.name), ["河魁", "复日", "游祸", "五虚", "死神"]);
+  const s = surface();
+  api.renderSelection({ cat: "almanac", data: a }, s);
+  assert.ok(s.meta.textContent.includes("丙午年 己亥月"), s.meta.textContent);
+});

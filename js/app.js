@@ -755,7 +755,8 @@ function termDisplayInstant(instant) {
      same local-day interval as the card's 「今日交节」;
    · the card's 「X年」 is the lunar year (changes at 正月初一); the
      立春-based year is exposed separately for the month pillar;
-   · 宜忌 and 吉神/凶神 are still day-seeded picks (replaced later). */
+   · 黄道黑道值神 and the day's 吉神/凶神 follow 《协纪辨方书》's rules
+     (js/almanac-rules.js); 宜忌 are still day-seeded picks (stage M4). */
 const GAN = "甲乙丙丁戊己庚辛壬癸";
 const ZHI = "子丑寅卯辰巳午未申酉戌亥";
 
@@ -826,8 +827,8 @@ function lichunYearGanzhi(date) {
 
 /* Month ganzhi by 五虎遁 (甲己之年丙作首, 乙庚之岁戊为头, 丙辛必定寻庚起,
    丁壬壬位顺行流, 戊癸何方发, 甲寅之上好追求): the 寅月 stem is fixed
-   by the 立春-year stem, and stems then advance one per 节月. Computed
-   and verified against the golden fixture but NOT displayed yet. */
+   by the 立春-year stem, and stems then advance one per 节月. Shown on
+   the card's meta line (「丙午年 己亥月」). */
 function jieMonthGanzhi(date) {
   const jm = jieMonthInfo(date);
   const yearStem = ((jm.jieYear - 4) % 10 + 10) % 10;
@@ -917,22 +918,36 @@ const ZHI_ANIMAL = "鼠牛虎兔龙蛇马羊猴鸡狗猪";
 const JIANCHU = ["建", "除", "满", "平", "定", "执", "破", "危", "成", "收", "开", "闭"];
 /* Solar terms by 15° step of the Sun's apparent ecliptic longitude, index 0 = 0° (春分). */
 const SOLAR_TERMS = ["春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至", "小寒", "大寒", "立春", "雨水", "惊蛰"];
-/* 吉神/凶神： simplified day-seeded picks in the same spirit as traditional
-   almanacs; glosses are our own one-liners. Not the full traditional algorithm. */
-const JISHEN = [
-  { name: "天德", gloss: "主福德庇佑" }, { name: "月德", gloss: "主和顺吉祥" },
-  { name: "天恩", gloss: "主恩泽施予" }, { name: "三合", gloss: "主和合顺遂" },
-  { name: "天喜", gloss: "主喜庆临门" }, { name: "母仓", gloss: "主积蓄丰盈" },
-  { name: "时德", gloss: "主当日得时" }, { name: "青龙", gloss: "主吉庆祥瑞" },
-  { name: "益后", gloss: "主利在长远" }, { name: "民日", gloss: "主安民宜事" },
-];
-const XIONGSHEN = [
-  { name: "天刑", gloss: "主刑伤是非" }, { name: "朱雀", gloss: "主口舌争端" },
-  { name: "白虎", gloss: "主损伤血光" }, { name: "天牢", gloss: "主束缚困顿" },
-  { name: "玄武", gloss: "主盗失暗昧" }, { name: "勾陈", gloss: "主牵连迟滞" },
-  { name: "大煞", gloss: "主诸事不利" }, { name: "往亡", gloss: "主出行不利" },
-  { name: "天火", gloss: "主火患之忧" }, { name: "四击", gloss: "主冲犯不利" },
-];
+/* 土王用事: the eighteen local days before each 四立 (立春 立夏 立秋 立冬),
+   i.e. from the 四立 day minus 18 up to the day before it — the 季月's
+   earth period of 《协纪辨方书》 (四立前十八日). Read on the same term
+   instants and local days as 节月. */
+const SI_LI_ANGLES = [315, 45, 135, 225];
+function tuWangYongShi(date) {
+  const { dayStart } = localDayBounds(date);
+  const next = solarTermsAround(date).find((t) => t.instant >= dayStart && SI_LI_ANGLES.includes(t.angle));
+  if (!next) return false;
+  const i = next.instant;
+  const liDay = new Date(i.getFullYear(), i.getMonth(), i.getDate());
+  return dayStart >= new Date(liDay.getFullYear(), liDay.getMonth(), liDay.getDate() - 18) && dayStart < liDay;
+}
+
+/* The day context the 择日 rules read (see js/almanac-rules.js): 节月
+   index/branch and its season, the day stem/branch, the term crossing on
+   the next local day (四离/四绝) and whether 土王用事 is in force. */
+function almanacRuleContext(date, gz, jm) {
+  const tomorrow = solarTermInfo(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12)).today;
+  return {
+    m: jm.monthIdx,
+    mb: jm.branchIdx,
+    season: Math.floor(jm.monthIdx / 3),
+    s: GAN.indexOf(gz[0]),
+    b: ZHI.indexOf(gz[1]),
+    gz,
+    eve: tomorrow ? tomorrow.name : "",
+    tuWang: tuWangYongShi(date),
+  };
+}
 
 function currentSolarTerm(date) {
   return SOLAR_TERMS[Math.floor(sunApparentLongitudeDeg(date) / 15) % 24];
@@ -956,15 +971,14 @@ function computeAlmanac(date) {
   const jianchu = jianchuOf(branchIdx, jm.branchIdx);
   const chong = ZHI_ANIMAL[(branchIdx + 6) % 12];
   const sha = shaDirectionOf(branchIdx);
-  const jiShenObjs = seededDailyPick(JISHEN.map((g) => g.name), 3, jdn * 2 + 3, null)
-    .map((n) => JISHEN.find((g) => g.name === n));
-  const xiongShenObjs = seededDailyPick(XIONGSHEN.map((g) => g.name), 2, jdn * 2 + 4, null)
-    .map((n) => XIONGSHEN.find((g) => g.name === n));
+  // 黄道黑道值神 and the day's 神煞: js/almanac-rules.js (NAM_ALMANAC).
+  const zhiShen = NAM_ALMANAC.zhiShenOf(branchIdx, jm.branchIdx);
+  const gods = NAM_ALMANAC.dayGods(almanacRuleContext(date, gz, jm));
   return {
     lunarLabel,
     yearGanzhi: yearGanzhi(date),       // lunar year, turns at 正月初一 (shown)
     lichunYearGanzhi: ganzhiFromIndex(jm.jieYear - 4), // 立春-based (not shown)
-    monthGanzhi: jieMonthGanzhi(date),  // 节月 pillar, 五虎遁 (not shown yet)
+    monthGanzhi: jieMonthGanzhi(date),  // 节月 pillar, 五虎遁 (shown in the meta line)
     jieMonth: { branchIdx: jm.branchIdx, branch: jm.branch, monthIdx: jm.monthIdx, jieYear: jm.jieYear, termName: jm.termName },
     dayGanzhi: gz,
     yi,
@@ -975,9 +989,26 @@ function computeAlmanac(date) {
     sha,
     chongSha: `冲${chong}煞${sha}`,
     pengzu: [PENGZU_BY_STEM[stem], PENGZU_BY_BRANCH[branch]],
-    jiShen: jiShenObjs,
-    xiongShen: xiongShenObjs,
+    zhiShen,                            // { name, huangdao } — 黄道黑道十二值神
+    jiShen: gods.ji,                    // [{ name, gloss }], fixed rule order
+    xiongShen: gods.xiong,
   };
+}
+
+/* The almanac's reading door (全文): the card lists only the gods'
+   names; this text gives each one its gloss, grouped as on the card. */
+function almanacFullText(a) {
+  const head = [
+    `${a.yearGanzhi}年 ${a.monthGanzhi}月 ${a.dayGanzhi}日` + (a.lunarLabel ? ` · 农历${a.lunarLabel}` : ""),
+    `建除 ${a.jianchu} · 值神 ${a.zhiShen.name}（${a.zhiShen.huangdao ? "黄道" : "黑道"}） · ${a.chongSha}`,
+  ].join("\n");
+  const list = (label, gods) => `${label}\n` + (gods.length ? gods.map((g) => `${g.name}：${g.gloss}`).join("\n") : "无");
+  return [
+    head,
+    list("吉神", a.jiShen),
+    list("凶神", a.xiongShen),
+    "值神、建除与神煞按《钦定协纪辨方书》的月表规则推算，以节气定月；释义为本站自拟的白话概括。宜忌仍为趣味版，仅供参考。",
+  ].join("\n\n");
 }
 
 /* ================= Astrology: see js/astro.js ================= */
@@ -2119,6 +2150,9 @@ function fullTextItemForSelection(sel) {
     const doc = horoscopeFullDoc(sel.horo, lang);
     return { full: horoscopeFullDocText(doc), horoscope: doc };
   }
+  if (sel.cat === "almanac" && sel.data) {
+    return { full: almanacFullText(sel.data), source: "《钦定协纪辨方书》" };
+  }
   return sel.item;
 }
 
@@ -3047,7 +3081,9 @@ function renderSelection(sel, surface) {
   if (sel.cat === "almanac") {
     const a = sel.data;
     const alm = s.almanac;
-    meta = a.lunarLabel ? `农历${a.lunarLabel} · ${a.yearGanzhi}年` : `${a.yearGanzhi}年`;
+    // Lunar date, then the lunar year and the 节月 pillar: 「农历十月十八 · 丙午年 己亥月」.
+    const pillars = `${a.yearGanzhi}年 ${a.monthGanzhi}月`;
+    meta = a.lunarLabel ? `农历${a.lunarLabel} · ${pillars}` : pillars;
     // 节气： the card speaks only of its own day. On a term day it
     // names the term and the exact local time it begins; on an
     // ordinary day it names the term currently in force — never the
@@ -3068,13 +3104,20 @@ function renderSelection(sel, surface) {
     const bits = [termLine];
     // 建除十二神 — labelled 建除, not 值神 (值神 = 黄道黑道十二神).
     if (a.jianchu) bits.push(`建除 <b>${a.jianchu}</b>`);
+    if (a.zhiShen) bits.push(`值神 <b>${a.zhiShen.name}</b>（${a.zhiShen.huangdao ? "黄道" : "黑道"}）`);
     bits.push(`<b>${a.chongSha}</b>`);
+    // Each row holds 0–9 gods (about 3 a day): names only, in rule order, so it
+    // stays within two lines at phone width. The gloss rides on the title
+    // (hover) and in full on the 全文 reading.
+    const godRow = (label, gods) => `<div class="fact-row alm-gods"><span><b>${label}</b> ` +
+      (gods.length ? gods.map((g) => `<span title="${esc(g.gloss)}">${g.name}</span>`).join(" ") : "无") +
+      `</span></div>`;
     body = `<span class="big">${a.dayGanzhi}日</span>` +
       `<div class="fact-row">${bits.map((b) => `<span>${b}</span>`).join("")}</div>` +
       `<div class="fact-row"><span><b>${alm.yi}</b> ${a.yi.join(" · ")}</span></div>` +
       `<div class="fact-row"><span><b>${alm.ji}</b> ${a.ji.join(" · ")}</span></div>` +
-      `<div class="fact-row"><span><b>吉神</b> ${a.jiShen.map((g) => `${g.name}（${g.gloss}）`).join(" · ")}</span></div>` +
-      `<div class="fact-row"><span><b>凶神</b> ${a.xiongShen.map((g) => `${g.name}（${g.gloss}）`).join(" · ")}</span></div>` +
+      godRow("吉神", a.jiShen) +
+      godRow("凶神", a.xiongShen) +
       `<div class="fact-row"><span><b>彭祖百忌</b> ${a.pengzu[0]}；${a.pengzu[1]}</span></div>` +
       `<div class="sub">${alm.footnote}</div>`;
   }

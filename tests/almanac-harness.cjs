@@ -1,6 +1,7 @@
 "use strict";
 /* Shared harness for the almanac tests: evaluates the REAL solar-term,
-   almanac and render code sections of js/app.js (plus js/data.js) in a
+   almanac and render code sections of js/app.js (plus js/data.js and
+   the whole of js/almanac-rules.js, loaded before app.js as in the page) in a
    sandbox function, stubbing only the boundaries — the clock language
    state, the envelope gate (almanac is never a picture card) and the
    full-text door. Dates are built in LOCAL time by the callers,
@@ -17,6 +18,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 function harness(opts = {}) {
   const app = read("js/app.js");
   const data = read("js/data.js");
+  const rules = read("js/almanac-rules.js");
   function section(start, end) {
     const a = app.indexOf(start), b = app.indexOf(end, a + start.length);
     assert.ok(a >= 0 && b > a, start);
@@ -46,7 +48,7 @@ function harness(opts = {}) {
   };
   const enLine = app.match(/const SOLAR_TERMS_EN = \[.*\];/);
   assert.ok(enLine, "SOLAR_TERMS_EN literal");
-  const source = data + "\n" + `
+  const source = data + "\n" + rules + "\n" + `
     let lang = "zh", currentSelection = null, liveWorldTime = null;
     let skyVisualGen = 0;
     const DAY_MS = 86400000;
@@ -63,7 +65,7 @@ function harness(opts = {}) {
     return {
       solarTermInfo, computeAlmanac, renderSelection,
       jieMonthInfo, jieMonthGanzhi, lichunYearGanzhi, yearGanzhi, dayGanzhi,
-      jianchuOf, shaDirectionOf, ZHI,
+      jianchuOf, shaDirectionOf, ZHI, NAM_ALMANAC, tuWangYongShi, almanacRuleContext, almanacFullText,
     };
   `;
   const api = new Function("document", "Intl", source)(documentStub, opts.Intl || Intl);
