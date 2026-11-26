@@ -1011,6 +1011,76 @@ function planetPositions(date) {
   return out;
 }
 
+/* ---- Calendar-day sky events (the same approximate tropical ephemeris) ----
+   The Sun and five classical planets get sign-ingress events, including
+   backward crossings. For planets we also detect the two station types.
+   Ordinary lunar sign changes are intentionally not treated as special.
+   Local days are half-open [midnight, next midnight), including DST days.
+   The numerical event time is for ordering/day ownership, NOT a claim
+   of precise observational timing. */
+const HORO_EVENT_BODIES = ["sun", "mercury", "venus", "mars", "jupiter", "saturn"];
+function detectHoroscopeEvents(start, end, positionsAt = planetPositions) {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return [];
+  const cache = new Map();
+  const position = (body, time) => {
+    if (!cache.has(time)) cache.set(time, positionsAt(new Date(time)));
+    return cache.get(time).find(p => p.key === body);
+  };
+  // Include the instant before midnight to assign a crossing at midnight
+  // to the new day; exclude the next midnight from this day's interval.
+  const ticks = [start - 1, start];
+  for (let time = start + DAY_MS / 8; time < end - 1; time += DAY_MS / 8) ticks.push(time);
+  if (ticks[ticks.length - 1] < end - 1) ticks.push(end - 1);
+  const firstChange = (lo, hi, read, oldValue) => {
+    while (hi - lo > 1) {
+      const mid = lo + Math.floor((hi - lo) / 2);
+      if (read(mid) === oldValue) lo = mid;
+      else hi = mid;
+    }
+    return hi;
+  };
+  const events = [];
+  for (const body of HORO_EVENT_BODIES) {
+    const read = time => position(body, time);
+    const stationTicks = [];
+    if (body !== "sun") {
+      for (let i = 1; i < ticks.length; i++) {
+        const lo = ticks[i - 1], hi = ticks[i];
+        const wasRetrograde = read(lo).retrograde;
+        if (wasRetrograde === read(hi).retrograde) continue;
+        const at = firstChange(lo, hi, time => read(time).retrograde, wasRetrograde);
+        events.push({ type: wasRetrograde ? "retrogradeEnd" : "retrogradeStart", body, at, signIdx: read(at).signIdx });
+        // Split the ingress search at the station, so a short excursion
+        // across a sign boundary and back between coarse samples is not
+        // lost merely because the two outer signs match.
+        stationTicks.push(at - 1, at);
+      }
+    }
+    const signTicks = [...new Set([...ticks, ...stationTicks])].sort((a,b) => a - b);
+    for (let i = 1; i < signTicks.length; i++) {
+      const lo = signTicks[i - 1], hi = signTicks[i];
+      const fromSignIdx = read(lo).signIdx, toSignIdx = read(hi).signIdx;
+      if (fromSignIdx === toSignIdx) continue;
+      const at = firstChange(lo, hi, time => read(time).signIdx, fromSignIdx);
+      const entered = read(at).signIdx;
+      events.push({ type: "ingress", body, at, fromSignIdx, toSignIdx: entered,
+        backward: (entered - fromSignIdx + 12) % 12 === 11 });
+    }
+  }
+  return events.sort((a,b) => a.at - b.at || HORO_EVENT_BODIES.indexOf(a.body) - HORO_EVENT_BODIES.indexOf(b.body));
+}
+let horoscopeEventCache = null;
+function horoscopeEventsForDate(date) {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate()).valueOf();
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).valueOf();
+  // Shared by all twelve signs; bounded to one day and keyed by actual
+  // local-day endpoints so timezone changes cannot reuse the wrong day.
+  if (!horoscopeEventCache || horoscopeEventCache.start !== start || horoscopeEventCache.end !== end) {
+    horoscopeEventCache = { start, end, events: Object.freeze(detectHoroscopeEvents(start, end).map(Object.freeze)) };
+  }
+  return horoscopeEventCache.events;
+}
+
 /* Entertainment rules, not a scientifically validated prediction. All
    houses below are whole-sign SOLAR houses (Sun sign = house 1), not natal
    houses or the ascendant. Only the seven traditional bodies are used. */
@@ -1269,6 +1339,7 @@ function makeHoroscope(date, signIdx) {
   const domain = HORO_DOMAINS.find(d => d.key === scored.primary);
   const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
   return { signIdx, ...scored, actionChoices: chooseHoroscopeActions(noon, signIdx, scored),
+    events: horoscopeEventsForDate(noon),
     adviceIdx: Math.floor(rng() * HORO_ADVICE_FRAMES[scored.tone].length),
     // Symbolic entertainment cues, NOT astronomical predictions.
     luckyNumber: scored.focus.house + 12 * Math.floor(rng() * 8),
@@ -1374,13 +1445,96 @@ function horoscopeFocusGroups(domains) {
 function horoscopeAspectKey(f) {
   return f.aspect ? JSON.stringify([[f.key, f.aspect.other].sort(), f.aspect.angle]) : null;
 }
+/* The daily event interpretation is a separate editorial layer: it
+   describes the actual crossing/station and the selected sign's solar
+   house, without modifying noon ratings, lucky cues or advice choices. */
+const HORO_INGRESS_ACTIONS = {
+  sun: ["重新审视近期目标，确定一件接下来值得投入的事", "review your recent goals and identify one worthwhile next priority"],
+  mercury: ["挑一个值得深入了解的话题，先核实关键信息", "choose a topic worth exploring and verify its key details"],
+  venus: ["留意新的相处方式或审美兴趣，分清喜欢与真正需要", "notice new ways of connecting or new interests, and distinguish preferences from needs"],
+  mars: ["把想尝试的行动变成一项安全、具体而可完成的小任务", "turn an intended action into a safe, concrete and manageable task"],
+  jupiter: ["重新评估一个学习或成长方向，用实际条件衡量可能性", "reassess a learning or growth goal using practical constraints"],
+  saturn: ["梳理长期责任，明确需要坚持的习惯和合理界限", "review long-term responsibilities, sustainable habits and reasonable boundaries"],
+};
+const HORO_DIRECT_ACTIONS = {
+  mercury: ["整理此前核对过的信息，继续推进已经确认的事项", "organize previously checked information and continue with confirmed tasks"],
+  venus: ["回顾自己梳理过的偏好和关系需求，选择一件力所能及的行动", "review your clarified preferences and relationship needs and choose one manageable action"],
+  mars: ["按调整后的计划选择一个可完成的下一步，避免一下子加大负担", "choose one manageable next step in your revised plan without suddenly increasing your workload"],
+  jupiter: ["把重新评估过的长远想法变成一个小规模试验", "turn a reassessed long-term idea into a small-scale experiment"],
+  saturn: ["将重新厘清的责任、期限和界限落实到可持续的安排中", "put clarified responsibilities, deadlines and boundaries into a sustainable plan"],
+};
+function horoscopeEventLabel(event, lang) {
+  const zh = lang === "zh", body = I18N[lang].astro.bodies[event.body];
+  if (event.type === "ingress") {
+    const sign = SIGNS[event.toSignIdx][lang];
+    return zh ? body + (event.backward ? "逆行回到" : "进入") + sign
+      : body + (event.backward ? " retrogrades into " : " enters ") + sign;
+  }
+  if (event.type === "retrogradeStart") return zh ? body + "开始逆行" : body + " stations retrograde";
+  return zh ? body + "恢复顺行" : body + " stations direct";
+}
+function horoscopeEventCopy(event, signIdx, lang) {
+  const zh = lang === "zh", li = zh ? 0 : 1;
+  const houseFor = index => (index - signIdx + 12) % 12 + 1;
+  const body = I18N[lang].astro.bodies[event.body];
+  const title = horoscopeEventLabel(event, lang);
+  const theme = HORO_BODY_THEMES[event.body][li];
+  if (event.type === "ingress") {
+    const from = houseFor(event.fromSignIdx), to = houseFor(event.toSignIdx);
+    const oldHouse = HORO_HOUSE_THEMES[from - 1], newHouse = HORO_HOUSE_THEMES[to - 1];
+    const fromSign = SIGNS[event.fromSignIdx][lang], toSign = SIGNS[event.toSignIdx][lang];
+    return { title,
+      evidence: zh ? `近似回归黄道星位：${fromSign} → ${toSign}；太阳星座第${from}宫 → 第${to}宫。`
+        : `Approximate tropical placement: ${fromSign} → ${toSign}; solar house ${from} → ${to}.`,
+      interpretation: zh
+        ? `${body}象征${theme}。这次${event.backward ? "逆行跨界" : "跨界"}可作为反思主题的转换：从${oldHouse.theme[li]}到${newHouse.theme[li]}。`
+        : `In symbolic terms, ${body} represents ${theme}. This ${event.backward ? "backward " : ""}crossing invites reflection on a shift from ${oldHouse.theme[li]} to ${newHouse.theme[li]}.`,
+      suggestion: zh ? `不妨${HORO_INGRESS_ACTIONS[event.body][li]}；也可${newHouse.action[li]}。`
+        : `Consider taking time to ${HORO_INGRESS_ACTIONS[event.body][li]}, and to ${newHouse.action[li]}.`,
+    };
+  }
+  const house = houseFor(event.signIdx), area = HORO_HOUSE_THEMES[house - 1];
+  const starting = event.type === "retrogradeStart";
+  const action = (starting ? HORO_RETROGRADE_ACTIONS : HORO_DIRECT_ACTIONS)[event.body][li];
+  return { title,
+    evidence: zh ? `近似地心黄经视运动方向由${starting ? "顺行转为逆行" : "逆行转为顺行"}；${SIGNS[event.signIdx][lang]} · 太阳星座第${house}宫。`
+      : `Approximate apparent geocentric longitude changes from ${starting ? "direct to retrograde" : "retrograde to direct"}; ${SIGNS[event.signIdx][lang]} · solar house ${house}.`,
+    interpretation: zh
+      ? `${body}象征${theme}；第${house}宫涉及${area.theme[li]}。可把${starting ? "逆行开始" : "恢复顺行"}当作${starting ? "复核、整理的契机" : "回顾调整并考虑下一步的契机"}，而非对实际吉凶的预示。`
+      : `${body} symbolizes ${theme}; solar house ${house} concerns ${area.theme[li]}. Treat this station as a reflection prompt to ${starting ? "review and reorganize" : "review adjustments and consider next steps"}, not a prediction of outcomes.`,
+    suggestion: zh ? `不妨${action}；也可${area.action[li]}。`
+      : `Consider taking time to ${action}, and to ${area.action[li]}.`,
+  };
+}
+function horoscopeEventSummary(events, lang) {
+  if (!events?.length) return "";
+  const zh = lang === "zh";
+  // A single quiet line even on dates with multiple crossings; all
+  // events (ordered by time) remain available in the existing reader.
+  const first = horoscopeEventLabel(events[0], lang);
+  const more = events.length - 1;
+  return zh ? "今日天象 · " + first + (more ? ` · 另有${more}项` : "")
+    : "Sky event today · " + first + (more ? ` · ${more} more` : "");
+}
+function horoscopeEventParagraphs(h, lang) {
+  if (!h.events?.length) return [];
+  const zh = lang === "zh";
+  const note = zh
+    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；事件可能在正午前或后发生，以下象征提示不改变原正午运势评分。"
+    : "Today's sky events | Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. These symbolic prompts do not change the noon ratings.";
+  return [note, ...h.events.map(event => {
+    const detail = horoscopeEventCopy(event, h.signIdx, lang);
+    return [detail.title, detail.evidence, detail.interpretation,
+      `${zh ? "专题建议：" : "Event reflection: "}${detail.suggestion}`].join("\n");
+  })];
+}
 function horoscopeCopy(h, lang) {
   const zh = lang === "zh";
   const domain = HORO_DOMAINS.find(d => d.key === h.primary);
   const primary = h.domains.find(d => d.key === h.primary);
   const detail = horoscopeDomainCopy(primary, h, lang);
   return { topic: domain[lang], evidence: detail.evidence, aspect: detail.aspect,
-    advice: detail.advice,
+    advice: detail.advice, eventSummary: horoscopeEventSummary(h.events, lang),
     basis: zh ? "本地正午近似星位 · 传统占星规则（太阳星座宫位）"
       : "Approximate local-noon positions · Traditional-inspired solar-sign rules",
     cues: zh ? "趣味幸运提示" : "Playful lucky cues" };
@@ -1400,6 +1554,7 @@ function horoscopeFullText(h, lang) {
     zh
       ? "以下先看四项评分与建议，再阅读对应的星位解读。正向和负向因素来自传统规则的加权评分，不代表实际吉凶；相同星位及相位只展开一次。"
       : "Read the four ratings and practical prompts first, then their referenced sky readings. Positive and negative factors are contributions to an editorial weighted score, not real-world outcomes. Shared placements and aspects are explained once.",
+    ...horoscopeEventParagraphs(h, lang),
   ];
   for (const d of h.domains) {
     const detail = horoscopeDomainCopy(d, h, lang);
@@ -3451,6 +3606,7 @@ function renderSelection(sel, surface) {
         `<div class="fact-row"><span>${A.overall} <b class="astro-stars">${"★".repeat(h.stars)}${"☆".repeat(5 - h.stars)}</b></span></div>` +
         `<div class="fact-row">${h.domains.map(d => `<span>${HORO_DOMAINS.find(x => x.key === d.key)[lang]} <b class="astro-stars" aria-label="${d.stars}/5">${"★".repeat(d.stars)}${"☆".repeat(5 - d.stars)}</b></span>`).join("")}</div>` +
         `<span class="poem-line">${copy.topic} · ${copy.advice}</span>` +
+        (copy.eventSummary ? `<div class="sub astro-event">${esc(copy.eventSummary)}</div>` : "") +
         `<div class="sub">${copy.cues}</div>` +
         `<div class="fact-row"><span>${A.luckyNumber} <b>${h.luckyNumber}</b></span>` +
         `<span>${A.luckyColor}<span class="swatch-sm" style="background:${color.hex}"></span><b>${lang === "zh" ? color.zh : color.en}</b></span>` +

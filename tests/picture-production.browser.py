@@ -290,6 +290,45 @@ def check_modal_isolation(browser, origin):
         context.close()
 
 
+def check_horoscope_events(page, language):
+    # Real main card and shared reader, not a mock DOM. London has UTC
+    # local midnight on this date; the independently verified equinox
+    # occurs on March 20. Ordinary dates must not show an event line.
+    special = page.evaluate("""() => {
+      currentSelection = {cat: 'astro', subtype: 'horoscope',
+        horo: makeHoroscope(new Date(2026, 2, 20, 12), 0)};
+      renderSelection(currentSelection);
+      return {count: encounter, snapshot: JSON.stringify(currentSelection),
+        event: currentSelection.horo.events.find(e => e.body === 'sun' && e.type === 'ingress')};
+    }""")
+    assert special["event"], (language, special)
+    title = "太阳进入白羊座" if language == "zh" else "Sun enters Aries"
+    event_line = page.locator("#card-body .astro-event")
+    assert event_line.is_visible(), language
+    assert title in event_line.inner_text(), language
+    footer = page.locator("#full-text-btn")
+    footer.click()
+    overlay = page.locator("#full-overlay")
+    assert overlay.is_visible(), language
+    text = page.locator("#full-body").inner_text()
+    assert title in text, language
+    assert ("第12宫 → 第1宫" if language == "zh" else "house 12 → 1") in text, language
+    assert ("专题建议" if language == "zh" else "Event reflection") in text, language
+    assert ("仅供娱乐" if language == "zh" else "entertainment only") in text, language
+    assert page.evaluate("() => encounter") == special["count"], language
+    assert page.evaluate("() => JSON.stringify(currentSelection)") == special["snapshot"], language
+    page.keyboard.press("Escape")
+    assert not overlay.is_visible(), language
+    assert page.evaluate("() => document.activeElement.id") == "full-text-btn", language
+    page.evaluate("""() => {
+      currentSelection = {cat: 'astro', subtype: 'horoscope',
+        horo: makeHoroscope(new Date(2026, 2, 22, 12), 0)};
+      renderSelection(currentSelection);
+    }""")
+    assert event_line.count() == 0, language
+    assert footer.is_visible(), language
+
+
 def check_locale(browser, origin, language):
     context = browser.new_context(viewport={"width": 390, "height": 844},
                                   locale="zh-CN" if language == "zh" else "en-US",
@@ -332,6 +371,7 @@ def check_locale(browser, origin, language):
         for kind in ("chart", "postcard", "illustration"):
             page.evaluate(OPEN_PICTURE, kind)
             check_ready_and_download(page, kind, language)
+        check_horoscope_events(page, language)
     finally:
         context.close()
 
@@ -348,4 +388,4 @@ if __name__ == "__main__":
                 check_locale(browser, origin, language)
         finally:
             browser.close()
-    print("Modal isolation, 8 actual picture compositions/downloads and 2 real moon texture retries passed")
+    print("Modal isolation, 8 picture compositions/downloads, 2 moon texture retries and bilingual horoscope event reader passed")

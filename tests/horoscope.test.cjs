@@ -58,7 +58,7 @@ const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 1
     if (result.opened) $("full-close").listeners.click();
     return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
   }
-  return {makeHoroscope, planetPositions, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
+  return {makeHoroscope, planetPositions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -172,16 +172,18 @@ test("full-text door opens the same calculated horoscope in both languages and p
     const full = api.horoscopeFullText(h,lang);
     const paragraphs = full.split("\n\n");
     const groups=api.horoscopeFocusGroups(h.domains);
-    assert.equal(paragraphs.length, 8 + groups.size);
+    const eventParagraphs=api.horoscopeEventParagraphs(h,lang);
+    assert.equal(paragraphs.length, 8 + groups.size + eventParagraphs.length);
+    assert.deepEqual(paragraphs.slice(2,2+eventParagraphs.length),eventParagraphs);
     assert.ok(paragraphs[0].includes(api.SIGNS[h.signIdx][lang]));
     assert.ok(paragraphs[0].includes(h.stars + "/5"));
     for (const [i, d] of h.domains.entries()) {
       const domain = api.HORO_DOMAINS.find(x => x.key === d.key);
       const focus = api.horoscopeFocusCopy(d.focus,lang);
-      const paragraph = paragraphs[2+i];
+      const paragraph = paragraphs[2+eventParagraphs.length+i];
       assert.ok(paragraph.startsWith(domain[lang] + " " + d.stars + "/5"));
       const group=groups.get(api.horoscopeFocusKey(d.focus));
-      const shared=paragraphs[5+group.id];
+      const shared=paragraphs[5+eventParagraphs.length+group.id];
       const title=(lang==="zh"?"星位解读 ":"Sky reading ")+group.id;
       assert.ok(paragraph.includes(title));
       assert.ok(paragraph.includes(api.horoscopeBalanceCopy(d,lang)));
@@ -201,7 +203,7 @@ test("full-text door opens the same calculated horoscope in both languages and p
     assert.ok(dialog.body.includes(copy.evidence) && dialog.body.includes(copy.basis));
     assert.match(dialog.body, lang === "zh" ? /仅供娱乐/ : /entertainment only/);
     assert.ok(!dialog.body.includes("undefined"));
-    assert.equal((dialog.body.match(/<p>/g) || []).length, 8 + groups.size);
+    assert.equal((dialog.body.match(/<p>/g) || []).length, 8 + groups.size + eventParagraphs.length);
     assert.equal(api.horoscopeFullText(h,lang), full);
   }
   assert.equal(JSON.stringify(sel),snapshot);
@@ -398,6 +400,129 @@ test("civil-date advice windows advance across month, year and leap-day boundari
   const leap=[new Date(2028,1,28,12),new Date(2028,1,29,12),new Date(2028,2,1,12)];
   const slot=date=>{const w=api.horoscopeActionWindow(date);return w.start+w.elapsed};
   for(const seq of [dates,leap]) for(let i=1;i<seq.length;i++) assert.equal(slot(seq[i]),(slot(seq[i-1])+1)%10);
+});
+test("sky events use half-open day boundaries, order multiple changes and ignore routine lunar ingresses", () => {
+  const start=Date.parse("2026-03-20T00:00:00Z"), hour=3600000, end=start+24*hour;
+  const sampler=date=>{
+    const t=date.valueOf();
+    return keys.map(key=>{
+      if(key==="sun") return {key,signIdx:t<start?11:0,retrograde:false};
+      if(key==="mercury") return {key,signIdx:t<start+18*hour?0:11,retrograde:t>=start+5*hour};
+      if(key==="venus") return {key,signIdx:11,retrograde:t<end};
+      if(key==="moon") return {key,signIdx:t<start+hour?1:2,retrograde:false};
+      return {key,signIdx:4,retrograde:false};
+    });
+  };
+  const events=api.detectHoroscopeEvents(start,end,sampler);
+  assert.deepEqual(events.map(e=>[e.body,e.type,e.at]),[
+    ["sun","ingress",start],
+    ["mercury","retrogradeStart",start+5*hour],
+    ["mercury","ingress",start+18*hour]
+  ]);
+  assert.equal(events[0].backward,false);
+  assert.equal(events[2].backward,true);
+  assert.equal(events[2].fromSignIdx,0);
+  assert.equal(events[2].toSignIdx,11);
+  assert.deepEqual(api.detectHoroscopeEvents(end,end+23*hour,sampler).map(e=>[e.body,e.type,e.at]),
+    [["venus","retrogradeEnd",end]]);
+});
+test("station split detects a brief ingress and return between coarse samples", () => {
+  const start=Date.parse("2026-03-20T00:00:00Z"), hour=3600000, end=start+25*hour;
+  const station=start+1.5*hour;
+  const sampler=date=>keys.map(key=>{
+    const x=(date.valueOf()-station)/hour;
+    if(key!=="mercury") return {key,signIdx:0,retrograde:false};
+    const lon=30.001-0.004*x*x;
+    return {key,signIdx:lon>=30?1:0,retrograde:x>=0};
+  });
+  const events=api.detectHoroscopeEvents(start,end,sampler);
+  assert.deepEqual(events.map(e=>e.type),["ingress","retrogradeStart","ingress"]);
+  assert.ok(events[0].at<events[1].at && events[1].at<events[2].at);
+  assert.equal(events[0].backward,false);
+  assert.equal(events[2].backward,true);
+});
+test("real ingress and station events agree with independent Moshier reference epochs", () => {
+  // Swiss Ephemeris 2.10.03 / FLG_MOSEPH | FLG_SPEED, UTC, rounded
+  // to minutes. Planetary model is approximate, so tolerate timing error;
+  // no exact-minute promise is exposed to the user.
+  const refs=[
+    ["sun","ingress","2026-03-20T14:45:00Z",11,0,0.15],
+    ["sun","ingress","2026-06-21T08:24:00Z",2,3,0.15],
+    ["mercury","retrogradeStart","2026-02-26T06:48:00Z",null,null,12],
+    ["mercury","retrogradeEnd","2026-03-20T19:32:00Z",null,null,12],
+    ["venus","ingress","2026-10-25T09:09:00Z",7,6,12],
+    ["mars","ingress","2026-11-25T23:37:00Z",4,5,12],
+    ["jupiter","retrogradeEnd","2026-03-11T03:30:00Z",null,null,36],
+    ["saturn","retrogradeStart","2026-07-26T19:56:00Z",null,null,72],
+  ];
+  const hour=3600000;
+  for(const [body,type,epoch,from,to,tolerance] of refs){
+    const target=Date.parse(epoch), events=api.detectHoroscopeEvents(target-tolerance*hour,target+tolerance*hour);
+    const e=events.find(e=>e.body===body&&e.type===type);
+    assert.ok(e,body+"/"+type+"/"+epoch);
+    assert.ok(Math.abs(e.at-target)<=tolerance*hour,body+"/"+type);
+    if(type==="ingress"){
+      assert.equal(e.fromSignIdx,from);assert.equal(e.toSignIdx,to);
+      assert.equal(e.backward,(to-from+12)%12===11);
+    }
+    const earlier=api.planetPositions(new Date(e.at-60*1000)).find(p=>p.key===body);
+    const later=api.planetPositions(new Date(e.at+60*1000)).find(p=>p.key===body);
+    if(type==="ingress"){assert.equal(earlier.signIdx,from);assert.equal(later.signIdx,to);}
+    else {assert.equal(earlier.retrograde,type==="retrogradeEnd");assert.equal(later.retrograde,type==="retrogradeStart");}
+  }
+});
+test("event snapshot is sign-independent, stable through the local day and contextual in both languages", () => {
+  // Use a real event date in local time, regardless of runner timezone.
+  const start=Date.parse("2026-03-20T12:00:00Z"), end=start+8*3600000;
+  const ingress=api.detectHoroscopeEvents(start,end).find(e=>e.body==="sun");
+  assert.ok(ingress);
+  const date=new Date(ingress.at);
+  const h=api.makeHoroscope(date,0), other=api.makeHoroscope(date,6);
+  const evening=new Date(date.getFullYear(),date.getMonth(),date.getDate(),23,59);
+  assert.deepEqual(h.events,other.events);
+  assert.deepEqual(h,api.makeHoroscope(evening,0));
+  const event=h.events.find(e=>e.body==="sun"&&e.type==="ingress");
+  assert.ok(event);
+  const expectedNoon=api.scoreHoroscope(0,api.planetPositions(new Date(date.getFullYear(),date.getMonth(),date.getDate(),12)));
+  assert.deepEqual(h.domains,expectedNoon.domains);
+  assert.equal(h.stars,expectedNoon.stars);
+  for(const lang of ["zh","en"]){
+    const first=api.horoscopeEventCopy(event,0,lang), second=api.horoscopeEventCopy(event,6,lang);
+    assert.match(first.evidence,lang==="zh"?/第12宫 → 第1宫/:/house 12 → 1/);
+    assert.match(second.evidence,lang==="zh"?/第6宫 → 第7宫/:/house 6 → 7/);
+    assert.notEqual(first.interpretation,second.interpretation);
+    assert.notEqual(first.suggestion,second.suggestion);
+    const copy=api.horoscopeCopy(h,lang), full=api.horoscopeFullText(h,lang);
+    const card=api.render({cat:"astro",subtype:"horoscope",horo:h},lang);
+    assert.ok(copy.eventSummary && card.body.includes(copy.eventSummary));
+    assert.ok(!card.body.includes(first.interpretation));
+    assert.ok(full.includes(first.title) && full.includes(first.suggestion));
+    assert.ok(!full.includes("undefined"));
+    const noEvent={...h,events:[]};
+    assert.ok(!api.render({cat:"astro",subtype:"horoscope",horo:noEvent},lang).body.includes("astro-event"));
+    assert.equal(api.horoscopeEventParagraphs(noEvent,lang).length,0);
+    assert.ok(!api.horoscopeFullText(noEvent,lang).includes(first.title));
+    assert.equal(api.horoscopeCopy(noEvent,lang).advice,copy.advice);
+  }
+});
+test("station start/end and backward ingress have distinct bilingual, non-predictive event copy", () => {
+  const events=[
+    {body:"mercury",type:"retrogradeStart",signIdx:11,at:0},
+    {body:"mercury",type:"retrogradeEnd",signIdx:11,at:1},
+    {body:"venus",type:"ingress",fromSignIdx:7,toSignIdx:6,backward:true,at:2},
+  ];
+  for(const lang of ["zh","en"]){
+    const copies=events.map(e=>api.horoscopeEventCopy(e,0,lang));
+    assert.equal(new Set(copies.map(c=>c.title)).size,3);
+    assert.equal(new Set(copies.map(c=>c.suggestion)).size,3);
+    assert.match(copies[0].title,lang==="zh"?/开始逆行/:/stations retrograde/);
+    assert.match(copies[1].title,lang==="zh"?/恢复顺行/:/stations direct/);
+    assert.match(copies[2].title,lang==="zh"?/逆行回到/:/retrogrades into/);
+    assert.match(api.horoscopeEventSummary(events,lang),lang==="zh"?/另有2项/:/2 more/);
+    const paragraphs=api.horoscopeEventParagraphs({signIdx:0,events},lang);
+    assert.equal(paragraphs.length,4);
+    for(let i=0;i<copies.length;i++)assert.ok(paragraphs[i+1].includes(copies[i].title));
+  }
 });
 test("real Mercury stations use the motion at noon and affect the daily rating", () => {
   const positionsAt = day => api.planetPositions(new Date(day + "T12:00:00Z"));
