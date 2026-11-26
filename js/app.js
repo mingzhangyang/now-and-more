@@ -600,11 +600,12 @@ const TERM_VSOP_R0 = [
 ];
 const ARCSEC_RAD = Math.PI / (180 * 3600);
 
-/* ΔT = TT − UT, in seconds. Quadratic through the IERS-observed values
-   for 2000/2010/2020 (63.83 / 66.07 / 69.36 s); Earth's rotation has
-   kept ΔT nearly flat since, so the 2020s continue almost level. An
-   error of even 5 s here moves a crossing by 5 s — far below the
-   minute precision the card displays. */
+/* ΔT = TT − UT, in seconds, for the sky and horoscope positions
+   (sunApparentLongitudeDeg): a quadratic through the IERS-observed values
+   for 2000/2010/2020 (63.83 / 66.07 / 69.36 s), nearly level since. It is
+   pinned by the horoscope regression tests and differs from
+   civilDeltaTSeconds by under 0.4 s in 2000–2030. Calendar instants
+   (solar terms, new moons) use civilDeltaTSeconds instead. */
 function deltaTSeconds(yearFloat) {
   if (yearFloat <= 2020) {
     const u = (yearFloat - 2010) / 10;
@@ -613,11 +614,55 @@ function deltaTSeconds(yearFloat) {
   return 69.36 + 0.03 * (yearFloat - 2020);
 }
 
+/* TT − UTC (civil time), in seconds: what turns an ephemeris instant (TT)
+   into the clock time on which calendar days are decided. Civil time is
+   UTC (Beijing time = UTC+8, GB/T 33661-2017), so:
+   · from 1972 it is exactly 32.184 s + TAI−UTC (the leap-second table,
+     IERS Bulletin C; 69.184 s since 2017-01-01). No leap second has been
+     added since, and the 27th CGPM (2022, Resolution 4) decided to stop
+     them by 2035, so 69.184 s is held for the future: future civil time
+     is UTC as it now runs, the convention JPL Horizons also uses.
+   · before 1972 UTC followed UT, so it is ΔT = TT − UT: observed values
+     every five years 1900–1970 (Espenak & Meeus, "Polynomial expressions
+     for Delta T", NASA 2006), interpolated linearly, joined to 1972.
+   Earth's rotation (UT1) will drift from that UTC by a minute or two by
+   2100; that drift matters for sunrise, not for which civil day holds a
+   new moon or a solar term. Used for the solar terms and the lunar
+   calendar's new moons (js/lunar.js); see docs/almanac-rules.md §1a. */
+const DELTA_T_TABLE = [
+  -2.79, 3.86, 10.46, 17.20, 21.16, 23.62, 24.02, 23.93, 24.33, 26.77, // 1900 … 1945
+  29.07, 31.07, 33.15, 35.73, 40.18,                                   // 1950 … 1970
+];
+// Decimal years at which TAI − UTC stepped to 11, 12, … 37 s (10 s on 1972-01-01).
+const LEAP_SECOND_YEARS = [
+  1972.5, 1973, 1974, 1975, 1976, 1977, 1978, 1979, 1980, 1981.5, 1982.5, 1983.5, 1985.5,
+  1988, 1990, 1991, 1992.5, 1993.5, 1994.5, 1996, 1997.5, 1999, 2006, 2009, 2012.5, 2015.5, 2017,
+];
+function civilDeltaTSeconds(yearFloat) {
+  if (yearFloat >= 1972) {
+    let leap = 10;
+    for (const y of LEAP_SECOND_YEARS) if (yearFloat >= y) leap++;
+    return 32.184 + leap;
+  }
+  if (yearFloat >= 1970) return 40.18 + (42.184 - 40.18) * (yearFloat - 1970) / 2;
+  if (yearFloat <= 1900) return DELTA_T_TABLE[0];
+  const x = (yearFloat - 1900) / 5, i = Math.floor(x);
+  return DELTA_T_TABLE[i] + (DELTA_T_TABLE[i + 1] - DELTA_T_TABLE[i]) * (x - i);
+}
+
 /* Apparent ecliptic longitude of the Sun (degrees, 0..360) at a UTC
    instant (a JS Date). Includes aberration and nutation in longitude. */
 function sunApparentLongitudeDeg(date) {
   const jdUT = date.valueOf() / DAY_MS + 2440587.5;
-  const jdTT = jdUT + deltaTSeconds(1970 + (jdUT - 2440587.5) / 365.25) / 86400;
+  return sunApparentLongitudeTT(jdUT + deltaTSeconds(1970 + (jdUT - 2440587.5) / 365.25) / 86400);
+}
+/* The same at a civil (UTC) instant, with the calendar's TT − UTC. */
+function sunCivilLongitudeDeg(date) {
+  const jdUT = date.valueOf() / DAY_MS + 2440587.5;
+  return sunApparentLongitudeTT(jdUT + civilDeltaTSeconds(1970 + (jdUT - 2440587.5) / 365.25) / 86400);
+}
+/* …and at a Julian Ephemeris Day (TT). */
+function sunApparentLongitudeTT(jdTT) {
   const T = (jdTT - 2451545) / 36525; // Julian centuries of TT from J2000
   const tau = T / 10;                 // Julian millennia
   const L0 = 280.46646 + T * (36000.76983 + 0.0003032 * T);
@@ -656,10 +701,10 @@ function angDiffDeg(a, b) {
 function solveSolarTermInstant(angleDeg, guessMs) {
   let t = guessMs;
   for (let i = 0; i < 40; i++) {
-    const f = angDiffDeg(sunApparentLongitudeDeg(new Date(t)), angleDeg);
+    const f = angDiffDeg(sunCivilLongitudeDeg(new Date(t)), angleDeg);
     if (Math.abs(f) < 1e-9) break;
     const h = 60000;
-    const d = angDiffDeg(sunApparentLongitudeDeg(new Date(t + h)), sunApparentLongitudeDeg(new Date(t - h))) / (2 * h);
+    const d = angDiffDeg(sunCivilLongitudeDeg(new Date(t + h)), sunCivilLongitudeDeg(new Date(t - h))) / (2 * h);
     if (!(d > 0)) break;
     const step = f / d;
     t -= step;
@@ -838,31 +883,20 @@ function jieMonthGanzhi(date) {
   return GAN[stem] + jm.branch;
 }
 
+/* The lunar calendar (农历) — computed by js/lunar.js from Meeus new
+   moons and this file's solar terms (中气) under the GB/T 33661-2017
+   rules, never from Intl's "chinese" calendar (ICU starts 丁未 2027 a day
+   late and differs between browsers). A local date D gets the lunar date
+   of civil date D in Beijing time. lunarDate(date) → { year (the
+   Gregorian year in which that lunar year began), month, day, leap,
+   monthDays, yearGanzhi, label 「十月十八」 }. */
+const LUNAR = NAM_LUNAR.create({ deltaTSeconds: civilDeltaTSeconds, termsOfYear: solarTermInstantsForYear });
+function lunarDate(date) { return LUNAR.fromDate(date); }
+
 /* Lunar-year ganzhi: the year that changes at 正月初一, as printed on
-   almanacs (「乙巳年」 until the 2026 Spring Festival on Feb 17). ICU's
-   chinese calendar reports the year as `relatedYear` (the Gregorian
-   year in which that lunar year began) plus a `yearName`; older or
-   other engines may give a plain `year` — either a Gregorian-like
-   number or the 1…60 cyclic position. Without a usable Intl chinese
-   calendar we fall back to the 立春-based year, which can differ from
-   the lunar year only in the few weeks between 立春 and 春节 (never the
-   five-plus weeks a Gregorian-year fallback would be wrong). */
+   almanacs (「乙巳年」 until the 2026 Spring Festival on Feb 17). */
 function yearGanzhi(date) {
-  try {
-    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { year: "numeric" }).formatToParts(date);
-    const related = parts.find((x) => x.type === "relatedYear");
-    const ry = related ? parseInt(related.value, 10) : NaN;
-    if (!Number.isNaN(ry)) return ganzhiFromIndex(ry - 4);
-    const named = parts.find((x) => x.type === "yearName");
-    if (named && named.value.length === 2 && GAN.includes(named.value[0]) && ZHI.includes(named.value[1])) {
-      return named.value;
-    }
-    const plain = parts.find((x) => x.type === "year");
-    const n = plain ? parseInt(plain.value, 10) : NaN;
-    if (n >= 1 && n <= 60) return ganzhiFromIndex(n - 1); // cyclic year, 1 = 甲子
-    if (n > 60) return ganzhiFromIndex(n - 4);
-  } catch (e) { /* no chinese calendar: fall through */ }
-  return lichunYearGanzhi(date);
+  return lunarDate(date).yearGanzhi;
 }
 
 /* 十二建除: the officer of a day is fixed by the distance from the 节月
@@ -944,10 +978,7 @@ function currentSolarTerm(date) {
 }
 
 function computeAlmanac(date) {
-  let lunarLabel = "";
-  try {
-    lunarLabel = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(date);
-  } catch (e) { lunarLabel = ""; }
+  const lunar = lunarDate(date);
   const gz = dayGanzhi(date);
   const stem = gz[0], branch = gz[1];
   const branchIdx = ZHI.indexOf(branch);
@@ -963,8 +994,9 @@ function computeAlmanac(date) {
   // 宜忌 from the 建除, the gods and the special days (卷十「宜忌」): see NAM_ALMANAC.yiJi.
   const yiji = NAM_ALMANAC.yiJi(ctx, gods);
   return {
-    lunarLabel,
-    yearGanzhi: yearGanzhi(date),       // lunar year, turns at 正月初一 (shown)
+    lunarLabel: lunar.label,            // 「十月十八」
+    lunar,                              // { year, month, day, leap, monthDays, yearGanzhi, label }
+    yearGanzhi: lunar.yearGanzhi,       // lunar year, turns at 正月初一 (shown)
     lichunYearGanzhi: ganzhiFromIndex(jm.jieYear - 4), // 立春-based (not shown)
     monthGanzhi: jieMonthGanzhi(date),  // 节月 pillar, 五虎遁 (shown in the meta line)
     jieMonth: { branchIdx: jm.branchIdx, branch: jm.branch, monthIdx: jm.monthIdx, jieYear: jm.jieYear, termName: jm.termName },
@@ -1062,19 +1094,11 @@ const FESTIVALS = {
   yuandan:   { key: "yuandan",   zh: "元旦",   en: "New Year's Day",          dress: "redgold", anim: null },
 };
 
-/* Lunar (month, day, leap?) via the same Intl chinese calendar the
-   almanac uses. Leap is read off the long month name （闰六月）. */
+/* Lunar (month, day, leap) of the local date — the almanac's own lunar
+   calendar (lunarDate, js/lunar.js). */
 function lunarParts(date) {
-  try {
-    const parts = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "numeric", day: "numeric" }).formatToParts(date);
-    const mp = parts.find((x) => x.type === "month");
-    const dp = parts.find((x) => x.type === "day");
-    const month = mp ? parseInt(mp.value, 10) : NaN;
-    const day = dp ? parseInt(dp.value, 10) : NaN;
-    if (Number.isNaN(month) || Number.isNaN(day)) return null;
-    const long = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long" }).format(date);
-    return { month, day, leap: long.includes("闰") };
-  } catch (e) { return null; }
+  const l = lunarDate(date);
+  return { month: l.month, day: l.day, leap: l.leap };
 }
 function sunLongitudeDeg(date) {
   return sunApparentLongitudeDeg(date);
@@ -1096,7 +1120,6 @@ function solarTermDay(date) {
 }
 function lunarFestivalOn(date) {
   const lp = lunarParts(date);
-  if (!lp) return null;
   if (!lp.leap) {
     if (lp.month === 1 && lp.day === 1) return FESTIVALS.chunjie;
     if (lp.month === 1 && lp.day === 15) return FESTIVALS.yuanxiao;
@@ -1108,7 +1131,7 @@ function lunarFestivalOn(date) {
   if (lp.month === 12) {
     // 除夕： the last day of the lunar year — tomorrow is 正月初一.
     const tm = lunarParts(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1));
-    if (tm && tm.month === 1 && tm.day === 1 && !tm.leap) return FESTIVALS.chuxi;
+    if (tm.month === 1 && tm.day === 1 && !tm.leap) return FESTIVALS.chuxi;
   }
   return null;
 }
@@ -1153,7 +1176,7 @@ function matchPersonalDay(date) {
       if (date.getMonth() + 1 === d.month && date.getDate() === d.day) return d;
     } else {
       if (!lp) lp = lunarParts(date);
-      if (lp && !lp.leap && lp.month === d.month && lp.day === d.day) return d;
+      if (!lp.leap && lp.month === d.month && lp.day === d.day) return d;
     }
   }
   return null;
@@ -1638,9 +1661,7 @@ function easterSunday(year) {
   return { month, day };
 }
 function lunarLabelOf(date) {
-  try {
-    return new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(date);
-  } catch (e) { return null; }
+  return lunarDate(date).label;
 }
 
 /* Which postcard (if any) belongs to the LOCAL day containing `date`.
@@ -1651,7 +1672,7 @@ function postcardForDate(date) {
   const y = date.getFullYear(), mo = date.getMonth() + 1, d = date.getDate();
   const lp = lunarParts(date);
   // Tier 1a: lunar festivals.
-  if (lp && !lp.leap) {
+  if (!lp.leap) {
     const lunarKey =
       (lp.month === 1 && lp.day === 1) ? "chunjie" :
       (lp.month === 1 && lp.day === 15) ? "yuanxiao" :
@@ -1662,10 +1683,10 @@ function postcardForDate(date) {
       (lp.month === 9 && lp.day === 9) ? "chongyang" : null;
     if (lunarKey) return { key: lunarKey, termIdx: null, instantMs: null, lunarLabel: lunarLabelOf(date) };
   }
-  if (lp && lp.month === 12) {
+  if (lp.month === 12) {
     // 除夕： the last day of the lunar year — tomorrow is 正月初一.
     const tm = lunarParts(new Date(y, date.getMonth(), d + 1));
-    if (tm && tm.month === 1 && tm.day === 1 && !tm.leap) {
+    if (tm.month === 1 && tm.day === 1 && !tm.leap) {
       return { key: "chuxi", termIdx: null, instantMs: null, lunarLabel: lunarLabelOf(date) };
     }
   }
@@ -3518,11 +3539,7 @@ function renderDateLine(now) {
     : "";
   if (lang === "zh") {
     const dateStr = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" }).format(now);
-    let lunar = "";
-    try {
-      lunar = new Intl.DateTimeFormat("zh-Hans-u-ca-chinese", { month: "long", day: "numeric" }).format(now);
-    } catch (e) { lunar = ""; }
-    let text = lunar ? `${dateStr} · 农历${lunar}` : dateStr;
+    let text = `${dateStr} · 农历${lunarDate(now).label}`;
     if (note) text += ` · ${note}`;
     $("date-line").textContent = text;
   } else {

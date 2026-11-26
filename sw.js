@@ -3,24 +3,25 @@
    every cache write is guarded, and a failure here must never break the page. */
 "use strict";
 
-var CACHE_NAME = "nam-v64";
+var CACHE_NAME = "nam-v65";
 var GOSSIP_ORIGIN = "https://now-and-more.orangely.workers.dev";
 
 var APP_SHELL = [
   "/",
   "/index.html",
-  "/css/style.css?v=64",
-  "/css/pwa-update.css?v=64",
-  "/js/pwa-update.js?v=64",
-  "/js/data.js?v=64",
-  "/js/dedup.js?v=64",
-  "/gossip-service/news-id.js?v=64",
-  "/js/gossip.js?v=64",
-  "/js/sky-engine-adapter.js?v=64",
-  "/js/horoscope-advice.js?v=64",
-  "/js/astro.js?v=64",
-  "/js/almanac-rules.js?v=64",
-  "/js/app.js?v=64",
+  "/css/style.css?v=65",
+  "/css/pwa-update.css?v=65",
+  "/js/pwa-update.js?v=65",
+  "/js/data.js?v=65",
+  "/js/dedup.js?v=65",
+  "/gossip-service/news-id.js?v=65",
+  "/js/gossip.js?v=65",
+  "/js/sky-engine-adapter.js?v=65",
+  "/js/horoscope-advice.js?v=65",
+  "/js/astro.js?v=65",
+  "/js/almanac-rules.js?v=65",
+  "/js/lunar.js?v=65",
+  "/js/app.js?v=65",
   "/vendor/sky-engine/0.2.0/sky-engine.mjs",
   "/vendor/sky-engine/0.2.0/stars.json",
   "/vendor/sky-engine/0.2.0/manifest.json",

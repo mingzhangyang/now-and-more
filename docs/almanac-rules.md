@@ -13,7 +13,7 @@ are synthesised from the day's 建除 and 神煞 by the rules of 《协纪辨方
 
 | 层 / Layer | 内容 | 状态 |
 | --- | --- | --- |
-| 天文历法 / Astronomical calendar | 节气交节时刻、干支纪日、农历日期、农历年、节月与立春年 | 精确计算（节气为分钟级求解器；农历日期用浏览器 Intl/ICU） |
+| 天文历法 / Astronomical calendar | 节气交节时刻、干支纪日、农历日期、农历年、节月与立春年 | 精确计算（节气为分钟级求解器；农历由站内朔望求解器按国标编排，见 §1a，不用浏览器 Intl/ICU） |
 | 择日规则 / Day-selection rules | 月干支、十二建除、黄道黑道值神、吉神凶神（神煞）、冲煞、彭祖百忌 | 全部按传统规则推算（神煞依《钦定协纪辨方书》，见 §3.2） |
 | 宜忌 / Activities | 宜、忌（36 项用事）及其等第与来历 | 由建除、神煞与几种特定日按《协纪辨方书》卷十「宜忌」合成（§3.3），无随机 |
 
@@ -24,6 +24,60 @@ Each layer reads only the one beneath it: the selection rules read the ganzhi an
 the activities are derived from the selection rules (plus the day ganzhi and the solar term), again never from
 the lunar date.
 
+## 1a. 农历 / The lunar calendar (M5)
+
+`js/lunar.js`（`NAM_LUNAR`，在 `app.js` 之前载入）自行推算农历，取代 M4 以前所用的浏览器
+`Intl.DateTimeFormat("zh-Hans-u-ca-chinese")`。ICU 的农历精度不足，而且随浏览器版本而变：Node 22 自带的 ICU 78
+把 2027 年春节放在 2 月 7 日（朔在北京时间 2 月 6 日 23:56，正月初一应为 2 月 6 日），整个丁未正月和春节、除夕、元宵都晚一天。
+站内已不再有任何 Intl 中国历调用（`tests/lunar.test.cjs` 检查全部页面与脚本）。
+
+**编排规则 / Rules** —— GB/T 33661-2017《农历的编算和颁行》：
+1. 以北京时间（UTC+8）为准；
+2. 朔所在的民用日为每月初一；
+3. 冬至所在之月为十一月；
+4. 两个冬至月之间（一「岁」）若有 13 个月，其中第一个不含中气的月为闰月，月序与前一月相同；
+5. 农历年自正月初一起算（`year` 为该年正月初一所在的公历年，即 ICU 的 `relatedYear`）。
+
+**朔 / New moons**：Meeus《Astronomical Algorithms》（第 2 版）第 49 章的真朔级数——平朔加 25 项周期改正与 14 项行星改正（A1–A14），
+结果为 TT。对 1950–2100 年全部 1868 次朔与 JPL Horizons（DE441）比对：平均绝对误差 3.7 秒，最大 17 秒
+（`tests/fixtures/new-moons-horizons.json`，由 `scripts/new-moon-reference.cjs` 取 Horizons 的月、日视黄经求得）。
+**中气**用卡片「今日交节」的同一个节气求解器（`solarTermInstantsForYear`），两者永远一致。
+
+**TT 换民用时 / TT → civil time**：`civilDeltaTSeconds`（`app.js`）给出 TT − UTC：1972 年以后为 32.184 秒加闰秒表（TAI − UTC，
+IERS C 公报），2017 年起为 69.184 秒；此后未再加闰秒，第 27 届国际计量大会（2022，第 4 号决议）决定于 2035 年前停用闰秒，
+所以未来一律取 69.184 秒——即「未来的北京时间就是现行 UTC+8」，与 JPL Horizons 的做法相同。1972 年以前 UTC 跟随世界时，
+取 Espenak & Meeus（NASA 2006）列出的实测 ΔT（1900–1970 每五年，线性插值）。地球自转（UT1）到 2100 年会与这一 UTC 相差一两分钟，
+那影响日出时刻，不影响「朔落在哪个民用日」。节气求解也改用同一 TT − UTC（2025–2028 年交节时刻变动不足 0.4 秒）。
+星空与运势的位置仍用原来的 ΔT 近似（`deltaTSeconds`，受运势回归测试钉住，2000–2030 年与前者相差不到 0.4 秒）。
+
+**本地日映射 / Mapping convention**：本地公历日期 D 取北京时间民用日 D 的农历日期——与 ICU 的做法相同，
+所以纽约的访客在 11 月 26 日也看到「十月十八」。农历只与公历日期对应，不随本地时刻换日。
+
+**接口 / API**：`NAM_LUNAR.create({ deltaTSeconds, termsOfYear })` 返回 `{ fromDate, fromDayNumber, monthsOfYear, newMoonMs,
+lunationContaining }`；`app.js` 里 `LUNAR = NAM_LUNAR.create({ deltaTSeconds: civilDeltaTSeconds, termsOfYear: solarTermInstantsForYear })`，
+`lunarDate(date)` → `{ year, month, day, leap, monthDays, yearGanzhi, label }`，`label` 如「十月十八」「闰六月初三」「腊月廿九」
+（月名正月…十月、十一月、腊月，与原先 ICU 的月名一致；日名初一…初十、十一…二十、廿一…廿九、三十）。
+每「岁」的月表只算一次并缓存（每岁 14 次朔、13 个中气），逐日查询只是查表。
+使用者：卡片元信息行与全文（`computeAlmanac().lunar`、`lunarLabel`、`yearGanzhi`）、日期行「农历…」、节日（春节、元宵、端午、七夕、
+中秋、重阳、腊八、除夕）、明信片、「我的日子」的农历生日。闰月不承载节日与生日，正月份优先（语义未变）。
+
+**验证 / Verification**（`tests/lunar.test.cjs`）：
+- Meeus 例 49.a（1977 年 2 月朔 JDE 2443192.65118）；1868 次朔对 Horizons 误差 < 18 秒、平均 < 4 秒。
+- `tests/fixtures/lunar-months.json`（`scripts/lunar-golden.py`）：cnlunar 0.2.5 的表（1901–2099 年预制月表，源自香港天文台历表）
+  在 1950-01-01 至 2100-02-08（其表的末日）每个初一的日期、年、月、闰——1856 个月。我们与之**逐月一致，只有两天例外**（下表）。
+  2025–2028 年逐日的农历月日与年名也在 `almanac-golden.test.cjs` 里逐日一致（原先的 `KNOWN_ICU_DEVIATIONS` 已删除）。
+- 2023 闰二月、2025 闰六月、2028 闰五月、2033 闰十一月（所谓「2033 年问题」：那个岁有 13 个月，第一个无中气月是十一月之后的那个月，
+  不是七月之后）。2027-02-06 为丁未年正月初一、春节；2027-02-05（腊月廿九，小月）为除夕。
+
+| 日期 | 我们 | cnlunar | 原因 |
+| --- | --- | --- | --- |
+| 2057-09-28 | 八月三十 | 九月初一 | 朔在北京时间 2057-09-29 00:00:44（Horizons 位置 + TT − UTC 69.184 秒），离午夜 44 秒；按增长的 UT1 ΔT 预报（约 +100 秒）则落在 9 月 28 日 23:59 |
+| 2097-08-07 | 六月三十 | 七月初一 | 朔在 2097-08-08 00:01:48，同理；2097 年的 ΔT 预报本身就有数分钟的不确定 |
+
+这两处都是已知的争议日（各家历表在 2057、2097 年相差一天），取决于未来民用时怎样跟随 TT，而不是星历误差：我们的口径
+（未来 UTC 不再加闰秒）下朔在午夜之后。每处只差一天：前一个月多出一个「三十」，下个月的初一不变。1950–2100 年间离北京午夜
+不到 2 分钟的朔只有这两次和 2089-09-04（23:59:24，双方一致）；离午夜 2–3 分钟的有 2018-11-08（00:02，已成事实，双方一致）。
+
 ## 2. 口径 / Conventions
 
 1. **日界 / Day boundary**：本地民用午夜 00:00。日干支取本地日历日期的干支（不采用子初 23:00 换日）。
@@ -33,7 +87,7 @@ the lunar date.
    （`solarTermsAround()` + `localDayBounds()`），所以建除与「今日交节」永远一致。
    时区取 Asia/Shanghai 时，与印本通书一致。/ A 节 crossing on local day D switches the month branch for the whole
    of D, using the very instants and local-day interval behind the card's 「今日交节」.
-3. **年名 / Year label**：卡片上的「X年」是农历年，正月初一换年（ICU 的 `relatedYear`）。
+3. **年名 / Year label**：卡片上的「X年」是农历年，正月初一换年（§1a 的 `lunarDate().year`）。
    立春年（八字年柱口径）另行提供，不显示。/ The card's year is the lunar year (turns at Spring Festival);
    the 立春-based year is exposed separately and not displayed.
 4. **季节 / Seasons**：神煞中的「春夏秋冬」一律按节月：寅卯辰为春（立春至立夏前一日）、巳午未为夏、申酉戌为秋、亥子丑为冬。
@@ -49,7 +103,7 @@ the lunar date.
 | 项目 | 规则 | 代码 | 出处 / Source |
 | --- | --- | --- | --- |
 | 日干支 | 儒略日数 JDN + 49 取六十甲子（以 1949-10-01、2000-01-07 两个甲子日校准） | `julianDayNumber()`、`dayGanzhi()` | 六十甲子逐日循环，不受月份、闰月影响 |
-| 农历年干支 | Intl 中国历 `formatToParts` 的 `relatedYear`；无则依次用 `yearName`、`year`（数值或 1–60 的序数）；无中国历时退回立春年 | `yearGanzhi()` | 旧代码读取不存在的 `year` 字段，2026-01-01 至 02-16 误显丙午，应为乙巳 |
+| 农历年干支 | 站内农历（§1a）正月初一所在公历年取六十甲子 | `yearGanzhi()`、`lunarDate()` | M1 前读取 ICU 不存在的 `year` 字段，2026-01-01 至 02-16 误显丙午；M5 起不再用 ICU |
 | 节月（月建） | 十二「节」换月：立春寅、惊蛰卯、清明辰、立夏巳、芒种午、小暑未、立秋申、白露酉、寒露戌、立冬亥、大雪子、小寒丑；中气不换月 | `jieMonthInfo()` | 《钦定协纪辨方书》以节气定月建（择日家通例） |
 | 立春年 | 立春交节日起为新的一年；小寒所开的丑月属上一年 | `jieMonthInfo().jieYear`、`lichunYearGanzhi()` | 同上 |
 | 月干支 | 五虎遁：甲己之年丙作首，乙庚之岁戊为头，丙辛必定寻庚起，丁壬壬位顺行流，戊癸何方发，甲寅之上好追求 | `jieMonthGanzhi()` | 通行口诀；逐日与参考数据一致。卡片元信息行显示为「农历十月十六 · 丙午年 己亥月」（年为农历年，月为节月） |
@@ -182,6 +236,7 @@ then applies the six rules above. Each output item carries a trace of its source
 
 ### 3.5 接口 / Helpers
 
+- `lunarDate(date)` → `{ year, month, day, leap, monthDays, yearGanzhi, label }`（§1a）；`computeAlmanac().lunar` 即此。
 - `jieMonthInfo(date)` → `{ branchIdx, branch, monthIdx, jieYear, termIdx, termName, instant, today }`
   — `branchIdx` 为 `ZHI` 下标（0 子 … 11 亥），`monthIdx` 0 = 寅月 … 11 = 丑月，`today` 表示本日即交节日。
 - `lichunYearGanzhi(date)`、`jieMonthGanzhi(date)`、`yearGanzhi(date)`、`dayGanzhi(date)`
@@ -213,17 +268,17 @@ and says plainly that this is traditional custom, not a scientific forecast.
 ## 5. 验证 / Verification
 
 - **金标准数据 / Golden fixture**：`tests/fixtures/almanac-golden.json`，2025–2028 年每一天（1461 天，含 2025 闰六月、
-  2028 闰五月）的农历年干支、立春年干支、月干支、日干支、建除、冲、煞、当日节气、农历日期，以及黄道黑道值神
+  2028 闰五月）的农历年干支、立春年干支、月干支、日干支、建除、冲、煞、当日节气、农历日期（M5 起逐日比对），以及黄道黑道值神
   （cnlunar `today12DayGod`，其「金贵」写法统一为「金匮」）、cnlunar 的全部吉神、凶神名（`goodGodName` / `badGodName`），
   以及 cnlunar 的宜、忌（`goodThing` / `badThing`，按码位排序以保证文件稳定）与等第（`thingLevelName`）。
 - **生成 / Generator**：`scripts/almanac-golden.py`，独立实现为 [cnlunar](https://github.com/OPN48/cnLunar) 0.2.5
-  （MIT 许可，© 2025 OPN48）。它用自带的春节表与按日节气表，方法与本站的 VSOP87D 求解器和 ICU 不同，且以北京时间计。
+  （MIT 许可，© 2025 OPN48）。它用自带的春节表与按日节气表，方法与本站的 VSOP87D 与朔望求解器不同，且以北京时间计。
   cnlunar 只用于离线生成参考数据，代码和表格都未进入 `js/`。cnlunar 不计算煞方，脚本用 cnlunar 的日支查一张显式的
   三合方位表得到参考值（这验证的是取模算术，规则本身见上表出处）。
 - **测试 / Tests**：`tests/almanac-golden.test.cjs` 在载入前固定 `TZ=Asia/Shanghai`，在任何机器上结果一致；逐日比对全部字段，
   并单列本文提到的例子（2026-01-01 乙巳、2026-12-07 平、2027-02-05 除、2026-11-24 冲猴煞北）。
   `tests/almanac.test.cjs` 不固定时区，只断言任何时区都成立的性质（节月恰在本地交节日前进一位、建除逐日前进且交节日重复、
-  三合煞方、Intl 缺失时的年名回退、宜忌的结构与书中不变式）。建议用 `TZ=Asia/Shanghai`、`UTC` 与 `TZ=America/New_York` 各跑一次。
+  三合煞方、农历不读 Intl 且按本地日期映射、宜忌的结构与书中不变式）。建议用 `TZ=Asia/Shanghai`、`UTC` 与 `TZ=America/New_York` 各跑一次。
 - **重新生成 / Regenerate**：`pip install cnlunar==0.2.5 && python3 scripts/almanac-golden.py`。
   cnlunar 的代码与表格从未拷入 `js/`；神煞表按协纪原文自行编写，再拿 cnlunar 的输出逐日核对。
 
@@ -231,11 +286,9 @@ and says plainly that this is traditional custom, not a scientific forecast.
 
 1. **cnlunar 的立春年在冬至后出错**：`year8Char='beginningOfSpring'` 在 12 月冬至至 12 月 31 日把年份减一
    （如 2025-12-25 给甲辰，应为乙巳）。脚本改用 cnlunar 自己的立春日期推出立春年，并断言这是两者唯一的差别。
-2. **ICU 把 2027 年春节放在 2 月 7 日**：2027-02-06 的朔在 15:56 UTC，即北京时间 23:56，正月初一应为 2 月 6 日
-   （cnlunar 与官方历书一致）。Node 22 自带的 ICU 78 农历精度不足，把整个丁未正月（2027-02-06 至 03-07）推迟一天。
-   黄历卡的年名因此在 2027-02-06 显示丙午；同一误差也影响农历日期文字、春节/除夕/元宵等节日判断。
-   测试用 `KNOWN_ICU_DEVIATIONS` 列出这一天（两种值都接受，出现任何新差异即失败）。根治需要自带精确朔望求解器，留待后续阶段。
-3. 除以上两点，日干支、月干支、建除、值神、冲、煞以及 96 个节气的落日在北京时间下与 cnlunar 逐日一致。
+2. **ICU 把 2027 年春节放在 2 月 7 日**（M1–M4 时期）：2027-02-06 的朔在北京时间 23:56，正月初一应为 2 月 6 日。
+   M5 起农历由站内推算（§1a），2027-02-06 为丁未年正月初一，`KNOWN_ICU_DEVIATIONS` 已删除，农历月日与年名逐日一致。
+3. 除第 1 点，日干支、月干支、建除、值神、冲、煞以及 96 个节气的落日在北京时间下与 cnlunar 逐日一致。
 
 ### 神煞逐日比对 / Per-god agreement (1461 days, Beijing time)
 

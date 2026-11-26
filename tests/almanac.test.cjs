@@ -64,21 +64,27 @@ test("year label is the lunar year: 乙巳 until 2026's Spring Festival, then �
   assert.equal(api.computeAlmanac(new Date(2026, 1, 10, 12)).lichunYearGanzhi, "丙午");
 });
 
-test("yearGanzhi survives engines without relatedYear, and without Intl's chinese calendar", () => {
-  const fakeIntl = (parts) => ({ DateTimeFormat: function () { return { formatToParts: () => parts, format: () => "" }; } });
-  const d = new Date(2026, 0, 15, 12);
-  const named = harness({ Intl: fakeIntl([{ type: "yearName", value: "乙巳" }]) }).api;
-  assert.equal(named.yearGanzhi(d), "乙巳");
-  const plain = harness({ Intl: fakeIntl([{ type: "year", value: "2025" }]) }).api;
-  assert.equal(plain.yearGanzhi(d), "乙巳");
-  const cyclic = harness({ Intl: fakeIntl([{ type: "year", value: "42" }]) }).api; // 42nd of 60 = 乙巳
-  assert.equal(cyclic.yearGanzhi(d), "乙巳");
+test("lunar dates never read Intl's chinese calendar (an Intl without it changes nothing)", () => {
   const broken = { DateTimeFormat: function () { throw new RangeError("no chinese calendar"); } };
-  const none = harness({ Intl: broken }).api;
-  // Falls back to the 立春 year: right before 立春, and right after 春节.
-  assert.equal(none.yearGanzhi(new Date(2026, 0, 15, 12)), "乙巳");
-  assert.equal(none.yearGanzhi(new Date(2026, 2, 1, 12)), "丙午");
-  assert.equal(none.computeAlmanac(new Date(2026, 2, 1, 12)).lunarLabel, "");
+  const { api } = harness({ Intl: broken });
+  const a = api.computeAlmanac(new Date(2026, 0, 15, 12));
+  assert.equal(a.yearGanzhi, "乙巳");
+  assert.equal(a.lunarLabel, "十一月廿七");
+  assert.equal(api.computeAlmanac(new Date(2026, 2, 1, 12)).lunarLabel, "正月十三");
+});
+
+test("a local date D gets the lunar date of civil date D in Beijing time, in any zone", () => {
+  const { api } = harness();
+  // Early and late on the same local day give the same lunar day…
+  for (const h of [0, 12, 23]) {
+    assert.equal(api.lunarDate(new Date(2026, 10, 26, h, 30)).label, "十月十八", `hour ${h}`);
+    assert.equal(api.lunarDate(new Date(2027, 1, 6, h, 30)).label, "正月初一", `hour ${h}`);
+  }
+  // …and the card's year/date line follow it: 2027-02-06 is 丁未 正月初一 everywhere.
+  const a = api.computeAlmanac(new Date(2027, 1, 6, 12));
+  assert.deepEqual([a.yearGanzhi, a.lunarLabel], ["丁未", "正月初一"]);
+  assert.equal(api.lunarFestivalOn(new Date(2027, 1, 6, 12)).key, "chunjie");
+  assert.equal(api.computeAlmanac(new Date(2027, 1, 5, 12)).yearGanzhi, "丙午");
 });
 
 test("节月 turns exactly on the local 交节 day of each 节 (and agrees with 今日交节)", () => {

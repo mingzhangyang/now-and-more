@@ -20,17 +20,11 @@ const at = (iso) => {
 };
 const rows = fixture.rows.map((r) => Object.fromEntries(fixture.fields.map((k, i) => [k, r[i]])));
 
-/* Where the reference and our engine are KNOWN to differ, and why.
-   lunarYear comes from the browser's Intl chinese calendar (ICU). The
-   new moon of 2027-02-06 is at 15:56 UTC = 23:56 Beijing time, so
-   正月初一 of 丁未 is Feb 6 (cnlunar, and the official calendar). ICU
-   78's lower-precision lunar model puts the conjunction after midnight
-   and starts the year on Feb 7. Either value is accepted so a fixed ICU
-   does not break the test; any OTHER deviation fails. See
-   docs/almanac-rules.md. */
-const KNOWN_ICU_DEVIATIONS = {
-  "2027-02-06": { lunarYear: "丙午" },
-};
+/* The lunar year and date come from the site's own lunar calendar
+   (js/lunar.js). They used to come from ICU, which starts 丁未 on
+   2027-02-07 (the conjunction is at 23:56 Beijing time on Feb 6); that
+   exception is gone: every field must match on every day. */
+const lunarKey = (l) => `${l.leap ? "L" : ""}${l.month}-${String(l.day).padStart(2, "0")}`;
 
 test("golden fixture covers every day of 2025–2028, Beijing time", () => {
   assert.equal(fixture.timeZone, "Asia/Shanghai");
@@ -55,11 +49,10 @@ for (const year of [2025, 2026, 2027, 2028]) {
         chong: a.chong,
         sha: a.sha,
         term: a.termInfo.today ? a.termInfo.today.name : "",
+        lunar: lunarKey(a.lunar),
       };
       for (const [k, v] of Object.entries(ours)) {
         if (v === r[k]) continue;
-        const known = KNOWN_ICU_DEVIATIONS[r.date];
-        if (known && known[k] === v) continue;
         misses.push(`${r.date} ${k}: ours ${v}, reference ${r[k]}`);
       }
       assert.equal(a.chongSha, `冲${r.chong}煞${r.sha}`);
