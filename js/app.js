@@ -1025,26 +1025,104 @@ const HORO_ASPECTS = [
 ];
 const HORO_DOMAINS = [
   { key: "love", zh: "情感", en: "Love", bodies: ["venus", "moon"], houses: [5, 7],
-    support: [["适合主动表达感谢，给在意的人留一点时间。", "Make time for someone you care about and express your appreciation."], ["不妨安排一件两个人都喜欢的小事。", "Plan something small that you both enjoy."]],
-    neutral: [["留意对方真正想说的话，不必急着给答案。", "Listen to what the other person means before offering an answer."], ["把期待说清楚，也给彼此一点空间。", "Share your expectations and leave each other some space."]],
-    challenge: [["情绪起伏时，先听完再回应，不急于下结论。", "When feelings run high, listen first and avoid rushing to conclusions."], ["重要的谈话可以慢一点，别把一时的情绪当成事实。", "Slow down important conversations; don't mistake a passing feeling for a fact."]],
     items: [4, 12, 19, 17] },
   { key: "work", zh: "事业", en: "Work", bodies: ["sun", "mars", "saturn"], houses: [6, 10],
-    support: [["挑一件重要的事，踏实地推进下一步。", "Choose one important task and move it one step forward."], ["试着把想法落到纸上，做出一个小成果。", "Put an idea on paper and turn it into a small result."]],
-    neutral: [["按优先级处理任务，给计划留一点余量。", "Prioritize your tasks and leave some room in your schedule."], ["把大任务拆成几步，专注眼前的一步。", "Break a large task into steps and focus on the next one."]],
-    challenge: [["别急着同时推进太多事，先核对细节和时间。", "Avoid taking on too much at once; check the details and timing first."], ["遇到阻力时先调整方法，不必急着证明自己。", "If you hit resistance, adjust your approach before trying to prove yourself."]],
     items: [1, 7, 8, 14] },
   { key: "money", zh: "财务", en: "Money", bodies: ["venus", "jupiter", "saturn"], houses: [2, 8],
-    support: [["适合梳理预算，看看哪些支出真正值得。", "Review your budget and consider which expenses are worthwhile."], ["整理手头的账目，给长期计划留出位置。", "Organize your accounts and make room for longer-term plans."]],
-    neutral: [["按实际需要安排开销，不必受一时兴致左右。", "Spend according to actual needs rather than passing impulses."], ["留意日常的小额开销，保持自己的节奏。", "Notice everyday expenses and keep to your own pace."]],
-    challenge: [["重要支出先核对预算，不因运势改变财务决定。", "Check your budget before major expenses; don't let a horoscope guide financial decisions."], ["有压力时先缓一缓，依据实际信息作决定。", "Give yourself time under pressure and make decisions using real information."]],
     items: [0, 5, 8, 14] },
   { key: "social", zh: "人际", en: "Social", bodies: ["mercury", "moon", "jupiter"], houses: [3, 7, 11],
-    support: [["试着主动问候一位许久未联系的朋友。", "Reach out to a friend you haven't spoken to in a while."], ["分享一个有趣的发现，也听听别人的想法。", "Share an interesting discovery and invite other perspectives."]],
-    neutral: [["保持沟通简明，给彼此留出思考的时间。", "Keep communication simple and allow time for reflection."], ["今天不妨少一点猜测，多一点确认。", "Make fewer assumptions and ask a little more directly."]],
-    challenge: [["重要消息发送前多读一遍，遇到误会先确认。", "Reread important messages and clarify possible misunderstandings."], ["需要讨论分歧时，先问清楚对方的意思。", "When discussing disagreements, first clarify what the other person means."]],
     items: [2, 13, 16, 21] },
 ];
+/* Editorial interpretation vocabulary. Every phrase is bilingual and tied
+   to a computed input; these are symbolic reflection prompts, not causal
+   claims or predictions. The scoring weights above/below stay independent. */
+const HORO_BODY_THEMES = {
+  sun: ["目标、意愿与自我表达", "purpose, intention and self-expression"],
+  moon: ["感受、安全感与日常需求", "feelings, security and everyday needs"],
+  mercury: ["沟通、学习与信息核对", "communication, learning and checking information"],
+  venus: ["关系、价值取舍与审美", "relationships, values and appreciation"],
+  mars: ["行动、勇气与冲突处理", "action, courage and handling friction"],
+  jupiter: ["成长、视野与期望", "growth, perspective and expectations"],
+  saturn: ["责任、时间与界限", "responsibility, time and boundaries"],
+};
+// Indexed by solar whole-sign house, NOT the observer's natal houses.
+const HORO_HOUSE_THEMES = [
+  { theme: ["个人选择与自我定位", "identity and personal choices"], action: ["厘清自己的需求和决定权", "clarify your own needs and choices"] },
+  { theme: ["个人资源与价值观", "personal resources and values"], action: ["区分真正重要的事与一时的偏好", "distinguish enduring priorities from passing preferences"] },
+  { theme: ["交流、学习与身边的人", "communication, learning and everyday contacts"], action: ["把关键信息说清楚并听取反馈", "communicate essential details clearly and invite feedback"] },
+  { theme: ["家庭、归属与私人空间", "home, belonging and private life"], action: ["留意熟悉环境中的感受与实际需求", "notice feelings and practical needs in familiar surroundings"] },
+  { theme: ["创造力、兴趣与亲密表达", "creativity, enjoyment and affectionate expression"], action: ["给轻松而有创造性的表达留一点时间", "make room for playful or creative expression"] },
+  { theme: ["日常习惯、工作流程与照料", "daily habits, routines and care"], action: ["从一件具体、可完成的小事开始", "start with one practical, manageable step"] },
+  { theme: ["伙伴关系、协商与承诺", "partnership, negotiation and commitments"], action: ["与相关的人确认彼此期待和界限", "clarify mutual expectations and boundaries"] },
+  { theme: ["共享资源、信任与深层议题", "shared resources, trust and deeper concerns"], action: ["先厘清共同承担的事项及责任", "clarify shared obligations and responsibilities first"] },
+  { theme: ["学习、长远视野与信念", "learning, wider perspectives and beliefs"], action: ["核对自己的假设，并考虑另一种视角", "check your assumptions and consider another perspective"] },
+  { theme: ["目标、角色与公共责任", "goals, roles and public responsibilities"], action: ["明确自己承担的角色及下一步目标", "clarify your role and next realistic goal"] },
+  { theme: ["友谊、团体与共同愿望", "friendship, groups and shared aspirations"], action: ["寻找能够互相支持的共同目标", "look for shared goals that allow mutual support"] },
+  { theme: ["独处、休整与内在整理", "solitude, rest and private reflection"], action: ["留出一点安静时间整理尚未解决的事", "set aside quiet time to reflect on unfinished concerns"] },
+];
+// Domain × strongest contributing body: the actual action changes even
+// when two days have the same rounded star rating or overall tone.
+const HORO_DOMAIN_ACTIONS = {
+  love: {
+    sun: ["坦诚表达自己的心意，同时尊重对方的选择", "express your feelings honestly while respecting the other person's choices"],
+    moon: ["说出自己的感受，并认真听听对方的需求", "name your feelings and listen to the other person's needs"],
+    mercury: ["把容易误解的话题说清楚，确认彼此的理解", "clarify a potentially misunderstood topic and check your mutual understanding"],
+    venus: ["表达具体的感谢，并安排双方都喜欢的小事", "express specific appreciation and make time for something you both enjoy"],
+    mars: ["坦率提出需求，遇到分歧先放慢回应", "state your needs openly and slow down if disagreement arises"],
+    jupiter: ["了解彼此的长远愿望，避免把自己的期待强加给对方", "explore each other's longer-term hopes without imposing your own expectations"],
+    saturn: ["核对彼此的承诺，给关系留出清晰而舒适的界限", "review mutual commitments and agree on comfortable boundaries"],
+  },
+  work: {
+    sun: ["明确最重要的目标，把精力放在自己能负责的成果上", "clarify your main goal and focus on a result you can take responsibility for"],
+    moon: ["留意自己的精力和工作节奏，合理安排任务", "notice your energy and working rhythm and arrange tasks accordingly"],
+    mercury: ["核对信息与任务要求，把关键想法写下来", "verify information and task requirements and write down key ideas"],
+    venus: ["从协作与表达质量入手，改善一项具体成果", "improve one concrete result through collaboration and thoughtful presentation"],
+    mars: ["把行动力用在一个明确的下一步，而不是同时推进多件事", "channel your energy into one clear next step rather than several competing tasks"],
+    jupiter: ["寻找值得学习的方向，把大的计划拆成可验证的小目标", "identify a worthwhile learning direction and break big plans into verifiable steps"],
+    saturn: ["核对期限、责任与资源，把长期任务安排得更稳妥", "check deadlines, responsibilities and resources and plan long-term tasks realistically"],
+  },
+  money: {
+    sun: ["按自己的实际目标梳理开销，分清必要支出与可选消费", "review spending against real goals and distinguish necessities from optional purchases"],
+    moon: ["留意情绪性消费，用实际需求而不是一时感受安排支出", "notice emotion-driven spending and base expenses on actual needs"],
+    mercury: ["核对账目、价格和条款，避免因信息不清而作决定", "check accounts, prices and terms before making decisions"],
+    venus: ["区分喜欢与需要，用现有预算衡量一项想要的消费", "distinguish wants from needs and evaluate a desired purchase against your budget"],
+    mars: ["给冲动消费留出冷静时间，先检查已有预算", "allow a cooling-off period for impulse purchases and check your budget first"],
+    jupiter: ["复核长期预算和假设，不把乐观预期当作确定收益", "review long-term budgets and assumptions without treating optimistic expectations as guaranteed returns"],
+    saturn: ["整理固定开支与已有义务，为必要支出留出余量", "organize recurring expenses and existing obligations and leave room for necessities"],
+  },
+  social: {
+    sun: ["清楚表达自己的立场，也给别人表达意见的机会", "express your position clearly and give others a chance to speak"],
+    moon: ["留意朋友的感受，先倾听再回应", "pay attention to friends' feelings and listen before responding"],
+    mercury: ["把重要消息再读一遍，有疑问时主动确认", "reread important messages and ask directly when something is unclear"],
+    venus: ["用具体的感谢或善意表达维护已有关系", "strengthen existing relationships through specific appreciation or kindness"],
+    mars: ["讨论分歧时聚焦事情本身，不急着争输赢", "keep disagreements focused on the issue rather than winning the argument"],
+    jupiter: ["分享一个值得交流的发现，同时认真听取不同观点", "share something worth discussing and listen to different viewpoints"],
+    saturn: ["明确能够兑现的承诺，尊重彼此的时间与界限", "make only commitments you can keep and respect each other's time and boundaries"],
+  },
+};
+const HORO_ADVICE_FRAMES = {
+  support: [["不妨{action}。", "Consider making time to {action}."], ["可以主动{action}。", "Take the initiative to {action}."]],
+  neutral: [["今天可以{action}。", "Today, aim to {action}."], ["按自己的节奏{action}。", "At your own pace, try to {action}."]],
+  challenge: [["不必急于求成，先{action}。", "Rather than rushing, take time to {action}."], ["遇到阻力时，试着{action}。", "If you encounter friction, try to {action}."]],
+};
+const HORO_ASPECT_ACTIONS = {
+  60: ["寻找两者可以配合的小机会，并先做一次小尝试", "look for a small opportunity to combine the two themes and try it on a modest scale"],
+  90: ["把两种需求分开看，先处理具体的摩擦点", "separate the two needs and address a specific point of friction first"],
+  120: ["寻找两种主题相互支持的方式，并落实到可行的小事上", "look for ways the two themes can reinforce each other in a manageable action"],
+  180: ["兼顾两种需求，避免急于站到任何一端", "consider both needs without rushing to choose one extreme"],
+};
+const HORO_CONJUNCTION_ACTIONS = {
+  support: ["两个主题可以相互配合，寻找一件能够共同推进的小事", "the two themes may complement each other; identify one small way to advance both"],
+  challenge: ["留意两个主题叠加的压力，避免一味加码", "notice the combined demands of the two themes and avoid taking on too much"],
+  neutral: ["两个主题值得同时关注，但不把合相本身视为吉凶", "consider both themes together without treating the conjunction itself as favorable or unfavorable"],
+};
+const HORO_RETROGRADE_ACTIONS = {
+  mercury: ["重新核对表述、时间和已知信息", "recheck wording, timing and known information"],
+  venus: ["回顾已有的关系、偏好与价值取舍", "review existing relationships, preferences and value judgments"],
+  mars: ["复盘行动顺序，重新安排速度与精力", "review the order of actions and reconsider pace and effort"],
+  jupiter: ["检查较大的期望与计划是否符合实际资源", "check whether larger expectations and plans match actual resources"],
+  saturn: ["重新审视已有责任、期限与界限", "review existing responsibilities, deadlines and boundaries"],
+};
 const HORO_ELEMENT_CUES = {
   fire: { colors: [0, 6, 14, 17], dirs: [1, 2, 3] },
   earth: { colors: [3, 9, 14, 16], dirs: [5, 6, 7] },
@@ -1127,7 +1205,7 @@ function makeHoroscope(date, signIdx) {
   const choose = list => list[Math.floor(rng() * list.length)];
   const domain = HORO_DOMAINS.find(d => d.key === scored.primary);
   const cues = HORO_ELEMENT_CUES[SIGNS[signIdx].element];
-  return { signIdx, ...scored, adviceIdx: Math.floor(rng() * domain[scored.tone].length),
+  return { signIdx, ...scored, adviceIdx: Math.floor(rng() * HORO_ADVICE_FRAMES[scored.tone].length),
     // Symbolic entertainment cues, NOT astronomical predictions.
     luckyNumber: scored.focus.house + 12 * Math.floor(rng() * 8),
     colorIdx: choose(cues.colors), dirIdx: choose(cues.dirs), itemIdx: choose(domain.items) };
@@ -1147,11 +1225,55 @@ function horoscopeFocusCopy(f, lang) {
     : "";
   return { evidence, aspect };
 }
+/* Select a wording frame from the date seed, but derive the action and
+   every explanatory sentence from the stored domain score and real focus.
+   Aspect guidance describes that individual aspect, not the aggregate
+   rating; a zero-strength orb boundary is explicitly non-contributing. */
+function horoscopeDomainCopy(d, h, lang) {
+  const zh = lang === "zh";
+  const li = zh ? 0 : 1;
+  const domain = HORO_DOMAINS.find(x => x.key === d.key);
+  const f = d.focus;
+  const names = I18N[lang].astro.bodies;
+  const house = HORO_HOUSE_THEMES[f.house - 1];
+  const bodyTheme = HORO_BODY_THEMES[f.key][li];
+  const action = HORO_DOMAIN_ACTIONS[d.key][f.key][li];
+  const frames = HORO_ADVICE_FRAMES[horoscopeTone(d.raw)];
+  const variant = (h.adviceIdx + (d.key === h.primary ? 0 : HORO_DOMAINS.indexOf(domain))) % frames.length;
+  const advice = frames[variant][li].replace("{action}", action);
+  const placement = zh
+    ? `象征含义：${names[f.key]}关联${bodyTheme}；第${f.house}宫侧重${house.theme[li]}。可尝试${house.action[li]}。`
+    : `Symbolic reading: ${names[f.key]} represents ${bodyTheme}; solar house ${f.house} concerns ${house.theme[li]}. Try to ${house.action[li]}.`;
+  let aspectInterpretation = "";
+  if (f.aspect) {
+    const a = f.aspect;
+    const otherTheme = HORO_BODY_THEMES[a.other][li];
+    if (a.strength === 0) {
+      aspectInterpretation = zh
+        ? `${a.zh}处于容许度边缘，在本次评分中不产生相位贡献。`
+        : `The ${a.en} is at the edge of its orb and contributes no aspect weight to this rating.`;
+    } else {
+      const guidance = a.angle === 0
+        ? HORO_CONJUNCTION_ACTIONS[a.value > 0 ? "support" : a.value < 0 ? "challenge" : "neutral"][li]
+        : HORO_ASPECT_ACTIONS[a.angle][li];
+      aspectInterpretation = zh
+        ? `${a.zh}把${names[f.key]}的${bodyTheme}与${names[a.other]}的${otherTheme}联系起来：${guidance}。`
+        : `The ${a.en} connects ${names[f.key]}'s themes of ${bodyTheme} with ${names[a.other]}'s themes of ${otherTheme}; ${guidance}.`;
+    }
+  }
+  const review = f.retrograde && HORO_RETROGRADE_ACTIONS[f.key];
+  const retrogradeInterpretation = review
+    ? (zh ? `逆行复核提示：${review[li]}。` : `Retrograde reflection prompt: ${review[li]}.`)
+    : "";
+  return { ...horoscopeFocusCopy(f, lang), advice, placement, aspectInterpretation, retrogradeInterpretation };
+}
 function horoscopeCopy(h, lang) {
   const zh = lang === "zh";
   const domain = HORO_DOMAINS.find(d => d.key === h.primary);
-  return { topic: domain[lang], ...horoscopeFocusCopy(h.focus, lang),
-    advice: domain[h.tone][h.adviceIdx][zh ? 0 : 1],
+  const primary = h.domains.find(d => d.key === h.primary);
+  const detail = horoscopeDomainCopy(primary, h, lang);
+  return { topic: domain[lang], evidence: detail.evidence, aspect: detail.aspect,
+    advice: detail.advice,
     basis: zh ? "本地正午近似星位 · 传统占星规则（太阳星座宫位）"
       : "Approximate local-noon positions · Traditional-inspired solar-sign rules",
     cues: zh ? "趣味幸运提示" : "Playful lucky cues" };
@@ -1166,15 +1288,18 @@ function horoscopeFullText(h, lang) {
   const paragraphs = [
     `${A.daily} · ${sg.symbol} ${sg[lang]}\n${A.overall} ${h.stars}/5`,
     zh
-      ? "评分综合守护星、相关天体、太阳星座宫位、相位及逆行等因素。以下列出各领域影响最大的天体及其最显著相位（若有），并非全部计算依据。"
-      : "Ratings combine the traditional ruler, relevant bodies, solar-sign houses, aspects and retrograde. Each section highlights the most influential body and its strongest aspect, if any, rather than every scoring input.",
+      ? "评分综合守护星、相关天体、太阳星座宫位、相位及逆行等因素。下文依据各领域影响最大的天体及其最显著相位（若有）组合象征解释与生活建议；这不是全部计算依据，也不预测实际事件。"
+      : "Ratings combine the traditional ruler, relevant bodies, solar-sign houses, aspects and retrograde. The following symbolic readings and practical prompts use each domain's most influential body and its strongest aspect, if any; they neither explain every scoring input nor predict events.",
   ];
-  for (const [i, d] of h.domains.entries()) {
+  for (const d of h.domains) {
     const domain = HORO_DOMAINS.find(x => x.key === d.key);
-    const choices = domain[horoscopeTone(d.raw)];
-    const advice = d.key === h.primary ? copy.advice : choices[(h.adviceIdx + i) % choices.length][zh ? 0 : 1];
-    const focus = horoscopeFocusCopy(d.focus, lang);
-    paragraphs.push(`${domain[lang]} ${d.stars}/5\n${zh ? "主要依据：" : "Main basis: "}${focus.evidence}${focus.aspect ? " · " + focus.aspect : ""}\n${advice}`);
+    const detail = horoscopeDomainCopy(d, h, lang);
+    paragraphs.push([
+      `${domain[lang]} ${d.stars}/5`,
+      `${zh ? "主要依据：" : "Main basis: "}${detail.evidence}${detail.aspect ? " · " + detail.aspect : ""}`,
+      detail.placement, detail.aspectInterpretation, detail.retrogradeInterpretation,
+      `${zh ? "建议：" : "Suggestion: "}${detail.advice}`,
+    ].filter(Boolean).join("\n"));
   }
   paragraphs.push(`${copy.cues}\n${A.luckyNumber} ${h.luckyNumber} · ${A.luckyColor} ${LUCKY_COLORS[h.colorIdx][lang]} · ${A.luckyDirection} ${LUCKY_DIRECTIONS[h.dirIdx][lang]} · ${A.luckyItem} ${LUCKY_ITEMS[h.itemIdx][lang]}`);
   paragraphs.push(`${copy.basis} · ${A.footnote}`);

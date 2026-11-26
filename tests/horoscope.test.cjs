@@ -57,7 +57,7 @@ const api = new Function(data + "\nconst RAD = Math.PI / 180, DAY_MS = 86400000;
     if (result.opened) $("full-close").listeners.click();
     return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
   }
-  return {makeHoroscope, planetPositions, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeFullText, render, reading, HORO_DOMAINS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
+  return {makeHoroscope, planetPositions, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -114,6 +114,17 @@ test("every day's focus and aspect are traceable to its noon positions; scores a
         assert.equal(f.signIdx, actual.signIdx);
         assert.equal(f.retrograde, actual.retrograde);
         assert.equal(f.house,(actual.signIdx-sign+12)%12+1);
+        for (const [li, lang] of ["zh","en"].entries()) {
+          const detail = api.horoscopeDomainCopy(d,h,lang);
+          assert.ok(detail.advice.includes(api.HORO_DOMAIN_ACTIONS[d.key][f.key][li]));
+          assert.ok(detail.placement.includes(api.HORO_BODY_THEMES[f.key][li]));
+          assert.ok(detail.placement.includes(api.HORO_HOUSE_THEMES[f.house-1].theme[li]));
+          assert.ok(detail.placement.includes(api.HORO_HOUSE_THEMES[f.house-1].action[li]));
+          assert.equal(Boolean(detail.aspectInterpretation),Boolean(f.aspect));
+          assert.equal(Boolean(detail.retrogradeInterpretation),f.retrograde);
+          if (f.retrograde) assert.ok(detail.retrogradeInterpretation.includes(api.HORO_RETROGRADE_ACTIONS[f.key][li]));
+          assert.ok(!JSON.stringify(detail).includes("undefined"));
+        }
         if(f.aspect) {
           const other = positions.find(p=>p.key===f.aspect.other);
           assert.ok(other && other.key !== actual.key);
@@ -164,8 +175,10 @@ test("full-text door opens the same calculated horoscope in both languages and p
       assert.ok(paragraph.startsWith(domain[lang] + " " + d.stars + "/5"));
       assert.ok(paragraph.includes(focus.evidence));
       if (focus.aspect) assert.ok(paragraph.includes(focus.aspect));
-      const choices = domain[api.horoscopeTone(d.raw)];
-      assert.ok(choices.some(choice => paragraph.includes(choice[lang === "zh" ? 0 : 1])));
+      const detail = api.horoscopeDomainCopy(d,h,lang);
+      assert.ok(paragraph.includes(detail.placement) && paragraph.includes(detail.advice));
+      if (detail.aspectInterpretation) assert.ok(paragraph.includes(detail.aspectInterpretation));
+      if (detail.retrogradeInterpretation) assert.ok(paragraph.includes(detail.retrogradeInterpretation));
       if (d.key === h.primary) assert.ok(paragraph.includes(copy.advice));
     }
     const dialog = api.reading(sel,lang);
@@ -192,6 +205,65 @@ test("the shared full-text door preserves ordinary bilingual passages and hides 
     const dialog = api.reading(sel,"zh");
     assert.equal(dialog.visible,false);
     assert.equal(dialog.opened,false);
+  }
+});
+test("identical ratings produce different bilingual advice for different actual bodies, houses and aspects", () => {
+  const base = {key:"social", stars:3, raw:0, focus:{key:"mercury",signIdx:2,house:3,retrograde:false,aspect:null}};
+  const h = {primary:"social",adviceIdx:0};
+  const make = (changes, lang, domain=base.key) => api.horoscopeDomainCopy({...base,key:domain,focus:{...base.focus,...changes}},h,lang);
+  const aspect = (angle, other, strength=1, value=0.6) => ({
+    angle, other, strength, value, zh:{0:"合相",60:"六合",90:"四分相",120:"三分相",180:"对冲"}[angle],
+    en:{0:"conjunction",60:"sextile",90:"square",120:"trine",180:"opposition"}[angle]
+  });
+  for (const [li,lang] of ["zh","en"].entries()) {
+    const direct = make({},lang);
+    const jupiter = make({key:"jupiter"},lang);
+    const venus = make({key:"venus"},lang);
+    assert.ok(direct.advice.includes(api.HORO_DOMAIN_ACTIONS.social.mercury[li]));
+    assert.notEqual(direct.advice,jupiter.advice);
+    assert.notEqual(venus.advice,jupiter.advice);
+    assert.notEqual(direct.advice,make({},lang,"work").advice);
+    assert.equal(direct.aspectInterpretation,"");
+    assert.equal(direct.retrogradeInterpretation,"");
+    const fourth = make({house:4,signIdx:3},lang);
+    assert.notEqual(fourth.placement,direct.placement);
+    assert.ok(fourth.placement.includes(api.HORO_HOUSE_THEMES[3].action[li]));
+    const retro = make({retrograde:true},lang);
+    assert.ok(retro.retrogradeInterpretation.includes(api.HORO_RETROGRADE_ACTIONS.mercury[li]));
+    const square = make({aspect:aspect(90,"saturn",0.8,-0.68)},lang);
+    const trine = make({aspect:aspect(120,"saturn",0.8,0.52)},lang);
+    assert.ok(square.aspectInterpretation.includes(api.HORO_ASPECT_ACTIONS[90][li]));
+    assert.ok(trine.aspectInterpretation.includes(api.HORO_ASPECT_ACTIONS[120][li]));
+    assert.notEqual(square.aspectInterpretation,trine.aspectInterpretation);
+    assert.notEqual(square.aspectInterpretation,make({aspect:aspect(90,"venus",0.8,-0.68)},lang).aspectInterpretation);
+    for (const [value,tone] of [[0.55,"support"],[-0.55,"challenge"],[0,"neutral"]]) {
+      const detail=make({aspect:aspect(0,"venus",1,value)},lang);
+      assert.ok(detail.aspectInterpretation.includes(api.HORO_CONJUNCTION_ACTIONS[tone][li]));
+    }
+    const edge=make({aspect:aspect(90,"saturn",0,0)},lang);
+    assert.match(edge.aspectInterpretation,li===0?/不产生相位贡献/:/contributes no aspect weight/);
+    assert.ok(!edge.aspectInterpretation.includes(api.HORO_ASPECT_ACTIONS[90][li]));
+    const cautious=api.horoscopeDomainCopy({...base,raw:-0.5,stars:2},h,lang);
+    assert.notEqual(cautious.advice,direct.advice);
+    assert.ok(cautious.advice.includes(api.HORO_DOMAIN_ACTIONS.social.mercury[li]));
+  }
+});
+test("interpretation tables cover all seven bodies, twelve houses and four domains in both languages", () => {
+  assert.equal(api.HORO_HOUSE_THEMES.length,12);
+  for (const domain of api.HORO_DOMAINS) {
+    for (const key of keys) {
+      for (let house=1; house<=12; house++) {
+        for (const [li,lang] of ["zh","en"].entries()) {
+          const d={key:domain.key,raw:0,stars:3,focus:{key,house,signIdx:house-1,retrograde:false,aspect:null}};
+          const detail=api.horoscopeDomainCopy(d,{primary:domain.key,adviceIdx:1},lang);
+          assert.ok(detail.advice.includes(api.HORO_DOMAIN_ACTIONS[domain.key][key][li]));
+          assert.ok(detail.placement.includes(api.HORO_BODY_THEMES[key][li]));
+          assert.ok(detail.placement.includes(api.HORO_HOUSE_THEMES[house-1].theme[li]));
+          assert.ok(detail.placement.includes(api.HORO_HOUSE_THEMES[house-1].action[li]));
+          assert.ok(!JSON.stringify(detail).includes("undefined"));
+        }
+      }
+    }
   }
 });
 test("real Mercury stations use the motion at noon and affect the daily rating", () => {
