@@ -16,12 +16,48 @@ assert.ok(solarStart >= 0 && solarEnd > solarStart);
 const renderStart = app.indexOf('  if (sel.cat === "astro") {');
 const renderEnd = app.indexOf('  if (sel.cat === "gossip") {', renderStart);
 assert.ok(renderStart >= 0 && renderEnd > renderStart);
+const fullStart = app.indexOf("let fullOpener = null;");
+const fullEnd = app.indexOf("/* ================= Picture cards:", fullStart);
+const escStart = app.indexOf("function esc(str)");
+const escEnd = app.indexOf("function renderPostcard(", escStart);
+const footerStart = app.indexOf("  if (surface.foot && surface.fullBtn && fullTextOf(");
+const footerEnd = app.indexOf("\n\n  // Chart and the in-card", footerStart);
+assert.ok(fullStart >= 0 && fullEnd > fullStart && escStart >= 0 && escEnd > escStart && footerStart >= 0 && footerEnd > footerStart);
 const api = new Function(data + "\nconst RAD = Math.PI / 180, DAY_MS = 86400000;\n" +
   app.slice(solarStart, solarEnd) + "\n" +
   app.slice(start, end) + "\n" +
   "function render(sel, lang) { let meta, body; const s = I18N[lang];\n" +
   app.slice(renderStart, renderEnd) + "\nreturn {meta, body}; }\n" +
-  "return {makeHoroscope, planetPositions, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, render, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};")();
+  app.slice(escStart, escEnd) + "\n" +
+  `function reading(sel, lang) {
+    const ids = ["full-text-btn", "full-close", "full-overlay", "full-body", "full-cat", "full-source"];
+    const elements = Object.fromEntries(ids.map(id => [id, {
+      hidden: true, isConnected: true, listeners: {}, focused: false,
+      addEventListener(type, fn) { this.listeners[type] = fn; },
+      setAttribute() {}, focus() { this.focused = true; }
+    }]));
+    const $ = id => elements[id];
+    const dialog = { scrollTop: 42 };
+    const document = { addEventListener() {}, querySelector: () => dialog };
+    const t = () => I18N[lang];
+    const s = t();
+    let currentSelection = sel, ambientOn = false, activeModal = null, stopped = false;
+    const showModal = id => { $(id).hidden = false; activeModal = id; };
+    const hideModal = id => { $(id).hidden = true; activeModal = null; };
+  ` + app.slice(fullStart, fullEnd) + `
+    const surface = { foot: { hidden: true }, fullBtn: $("full-text-btn") };
+  ` + app.slice(footerStart, footerEnd) + `
+    const visible = !surface.foot.hidden;
+    if (visible) $("full-text-btn").listeners.click({ currentTarget: $("full-text-btn"),
+      stopPropagation() { stopped = true; } });
+    const result = { visible, stopped, opened: activeModal === "full-overlay",
+      title: $("full-cat").textContent, body: $("full-body").innerHTML,
+      source: $("full-source").textContent, label: $("full-text-btn").textContent,
+      resetScroll: dialog.scrollTop === 0, closeFocused: $("full-close").focused };
+    if (result.opened) $("full-close").listeners.click();
+    return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
+  }
+  return {makeHoroscope, planetPositions, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeFullText, render, reading, HORO_DOMAINS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -91,17 +127,17 @@ test("every day's focus and aspect are traceable to its noon positions; scores a
   }
   assert.ok(seen.size >= 3);
 });
-test("bilingual card displays the same stored ratings, real evidence and entertainment disclaimer", () => {
+test("bilingual compact card displays the stored ratings, summary advice and entertainment disclaimer", () => {
   const h = api.makeHoroscope(new Date(2026,10,25),7);
   for(const lang of ["zh","en"]) {
     const sel = {cat:"astro",subtype:"horoscope",horo:h};
     const copy = api.horoscopeCopy(h,lang);
     const card = api.render(sel,lang);
-    assert.ok(card.body.includes(copy.evidence));
+    assert.ok(!card.body.includes(copy.evidence));
     assert.ok(card.body.includes(copy.advice));
-    assert.ok(card.body.includes(copy.basis));
+    assert.ok(!card.body.includes(copy.basis));
     assert.ok(card.body.includes(copy.cues));
-    if(copy.aspect) assert.ok(card.body.includes(copy.aspect));
+    if(copy.aspect) assert.ok(!card.body.includes(copy.aspect));
     assert.ok(card.body.includes("★".repeat(h.stars)+"☆".repeat(5-h.stars)));
     for (const d of h.domains) assert.ok(card.body.includes('aria-label="'+d.stars+'/5"'));
     assert.match(card.body, lang === "zh" ? /仅供娱乐/ : /entertainment only/);
@@ -109,6 +145,54 @@ test("bilingual card displays the same stored ratings, real evidence and enterta
   }
   assert.ok(!api.render({cat:"astro",subtype:"positions",positions:api.planetPositions(new Date(2026,10,25,12))},"en").body.includes("undefined"));
   assert.ok(!api.render({cat:"astro",subtype:"profile",signIdx:7},"zh").body.includes("undefined"));
+});
+test("full-text door opens the same calculated horoscope in both languages and preserves reading behavior", () => {
+  const h = api.makeHoroscope(new Date(2026,10,25),7);
+  const sel = {cat:"astro",subtype:"horoscope",horo:h};
+  const snapshot = JSON.stringify(sel);
+  for (const lang of ["zh","en"]) {
+    const copy = api.horoscopeCopy(h,lang);
+    const full = api.horoscopeFullText(h,lang);
+    const paragraphs = full.split("\n\n");
+    assert.equal(paragraphs.length, 8);
+    assert.ok(paragraphs[0].includes(api.SIGNS[h.signIdx][lang]));
+    assert.ok(paragraphs[0].includes(h.stars + "/5"));
+    for (const [i, d] of h.domains.entries()) {
+      const domain = api.HORO_DOMAINS.find(x => x.key === d.key);
+      const focus = api.horoscopeFocusCopy(d.focus,lang);
+      const paragraph = paragraphs[2+i];
+      assert.ok(paragraph.startsWith(domain[lang] + " " + d.stars + "/5"));
+      assert.ok(paragraph.includes(focus.evidence));
+      if (focus.aspect) assert.ok(paragraph.includes(focus.aspect));
+      const choices = domain[api.horoscopeTone(d.raw)];
+      assert.ok(choices.some(choice => paragraph.includes(choice[lang === "zh" ? 0 : 1])));
+      if (d.key === h.primary) assert.ok(paragraph.includes(copy.advice));
+    }
+    const dialog = api.reading(sel,lang);
+    assert.ok(dialog.visible && dialog.stopped && dialog.opened && dialog.resetScroll && dialog.closeFocused);
+    assert.ok(dialog.closed && dialog.restoredFocus);
+    assert.equal(dialog.label, lang === "zh" ? "全文 ›" : "Full text ›");
+    assert.ok(dialog.body.includes(copy.evidence) && dialog.body.includes(copy.basis));
+    assert.match(dialog.body, lang === "zh" ? /仅供娱乐/ : /entertainment only/);
+    assert.ok(!dialog.body.includes("undefined"));
+    assert.equal((dialog.body.match(/<p>/g) || []).length, 8);
+    assert.equal(api.horoscopeFullText(h,lang), full);
+  }
+  assert.equal(JSON.stringify(sel),snapshot);
+});
+test("the shared full-text door preserves ordinary bilingual passages and hides for non-reading cards", () => {
+  const passage = {cat:"classics",item:{full:"中文 <文>",fullEn:"English <text>",source:"Source"}};
+  for (const [lang,expected] of [["zh","中文 &lt;文&gt;"],["en","English &lt;text&gt;"]]) {
+    const dialog = api.reading(passage,lang);
+    assert.ok(dialog.visible && dialog.opened && dialog.closed && dialog.restoredFocus);
+    assert.ok(dialog.body.includes(expected));
+    assert.equal(dialog.source,"Source");
+  }
+  for (const sel of [{cat:"astro",subtype:"positions"},{cat:"astro",subtype:"profile",signIdx:7},{cat:"world"},{cat:"classics",item:{text:"short"}}]) {
+    const dialog = api.reading(sel,"zh");
+    assert.equal(dialog.visible,false);
+    assert.equal(dialog.opened,false);
+  }
 });
 test("real Mercury stations use the motion at noon and affect the daily rating", () => {
   const positionsAt = day => api.planetPositions(new Date(day + "T12:00:00Z"));

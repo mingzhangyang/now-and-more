@@ -1074,6 +1074,9 @@ function horoscopeAspectValue(aspect, a, b) {
 function horoscopeStars(raw) {
   return Math.max(1, Math.min(5, Math.round(3 + raw * 1.8)));
 }
+function horoscopeTone(raw) {
+  return raw >= 0.28 ? "support" : raw <= -0.28 ? "challenge" : "neutral";
+}
 /* Pure, injectable scoring. The date seed does NOT participate in scores.
    Whole-sign aspects to the selected solar sign, relevant solar houses,
    ruler weighting, retrograde and degree-based planet-to-planet aspects
@@ -1112,7 +1115,7 @@ function scoreHoroscope(signIdx, positions) {
   // Spotlight the strongest deviation from neutral, not a random topic.
   const primary = domains.reduce((best, d) => Math.abs(d.raw) > Math.abs(best.raw) ? d : best);
   return { stars: horoscopeStars(raw), domains, primary: primary.key, focus: primary.focus,
-    tone: primary.raw >= 0.28 ? "support" : primary.raw <= -0.28 ? "challenge" : "neutral" };
+    tone: horoscopeTone(primary.raw) };
 }
 /* One local calendar day = one fixed local-noon ephemeris. Language,
    refresh time, Math.random, and lucky-cue choices cannot affect scores. */
@@ -1130,14 +1133,11 @@ function makeHoroscope(date, signIdx) {
     colorIdx: choose(cues.colors), dirIdx: choose(cues.dirs), itemIdx: choose(domain.items) };
 }
 /* Localized presentation uses the stored calculation, never a new draw. */
-function horoscopeCopy(h, lang) {
+function horoscopeFocusCopy(f, lang) {
   const zh = lang === "zh";
   const a = I18N[lang].astro;
-  const domain = HORO_DOMAINS.find(d => d.key === h.primary);
-  const f = h.focus;
   const body = a.bodies[f.key];
   const sign = SIGNS[f.signIdx][lang];
-  const topic = domain[lang];
   const evidence = zh
     ? body + "位于" + sign + " · 太阳星座第" + f.house + "宫" + (f.retrograde ? " · 逆行" : "")
     : body + " in " + sign + " · Solar house " + f.house + (f.retrograde ? " · Retrograde" : "");
@@ -1145,10 +1145,40 @@ function horoscopeCopy(h, lang) {
     ? (zh ? body + "与" + a.bodies[f.aspect.other] + f.aspect.zh
       : body + " / " + a.bodies[f.aspect.other] + " · " + f.aspect.en)
     : "";
-  return { topic, evidence, aspect, advice: domain[h.tone][h.adviceIdx][zh ? 0 : 1],
+  return { evidence, aspect };
+}
+function horoscopeCopy(h, lang) {
+  const zh = lang === "zh";
+  const domain = HORO_DOMAINS.find(d => d.key === h.primary);
+  return { topic: domain[lang], ...horoscopeFocusCopy(h.focus, lang),
+    advice: domain[h.tone][h.adviceIdx][zh ? 0 : 1],
     basis: zh ? "本地正午近似星位 · 传统占星规则（太阳星座宫位）"
       : "Approximate local-noon positions · Traditional-inspired solar-sign rules",
     cues: zh ? "趣味幸运提示" : "Playful lucky cues" };
+}
+/* The reading dialog expands the same stored snapshot into four domain
+   explanations. No fresh Date, ephemeris calculation, RNG or deck draw. */
+function horoscopeFullText(h, lang) {
+  const zh = lang === "zh";
+  const A = I18N[lang].astro;
+  const sg = SIGNS[h.signIdx];
+  const copy = horoscopeCopy(h, lang);
+  const paragraphs = [
+    `${A.daily} · ${sg.symbol} ${sg[lang]}\n${A.overall} ${h.stars}/5`,
+    zh
+      ? "评分综合守护星、相关天体、太阳星座宫位、相位及逆行等因素。以下列出各领域影响最大的天体及其最显著相位（若有），并非全部计算依据。"
+      : "Ratings combine the traditional ruler, relevant bodies, solar-sign houses, aspects and retrograde. Each section highlights the most influential body and its strongest aspect, if any, rather than every scoring input.",
+  ];
+  for (const [i, d] of h.domains.entries()) {
+    const domain = HORO_DOMAINS.find(x => x.key === d.key);
+    const choices = domain[horoscopeTone(d.raw)];
+    const advice = d.key === h.primary ? copy.advice : choices[(h.adviceIdx + i) % choices.length][zh ? 0 : 1];
+    const focus = horoscopeFocusCopy(d.focus, lang);
+    paragraphs.push(`${domain[lang]} ${d.stars}/5\n${zh ? "主要依据：" : "Main basis: "}${focus.evidence}${focus.aspect ? " · " + focus.aspect : ""}\n${advice}`);
+  }
+  paragraphs.push(`${copy.cues}\n${A.luckyNumber} ${h.luckyNumber} · ${A.luckyColor} ${LUCKY_COLORS[h.colorIdx][lang]} · ${A.luckyDirection} ${LUCKY_DIRECTIONS[h.dirIdx][lang]} · ${A.luckyItem} ${LUCKY_ITEMS[h.itemIdx][lang]}`);
+  paragraphs.push(`${copy.basis} · ${A.footnote}`);
+  return paragraphs.join("\n\n");
 }
 
 /* ================= End astrology ================= */
@@ -2282,6 +2312,16 @@ function fullTextOf(item) {
   return typeof item.full === "string" ? item.full : "";
 }
 
+/* Static pools and calculated horoscope snapshots share one reading door.
+   Generate only the currently selected language; never mutate the selection. */
+function fullTextItemForSelection(sel) {
+  if (!sel) return null;
+  if (sel.cat === "astro" && sel.subtype === "horoscope" && sel.horo) {
+    return { full: horoscopeFullText(sel.horo, lang) };
+  }
+  return sel.item;
+}
+
 function openFullText(item, opener, cat) {
   if (ambientOn || activeModal) return; // no overlapping dialogs or ambient editing
   const full = fullTextOf(item);
@@ -2306,9 +2346,8 @@ function closeFullText() {
 }
 $("full-text-btn").addEventListener("click", (e) => {
   e.stopPropagation(); // the card itself advances the draw on click
-  if (currentSelection && fullTextOf(currentSelection.item)) {
-    openFullText(currentSelection.item, e.currentTarget, currentSelection.cat);
-  }
+  const sel = currentSelection;
+  if (sel) openFullText(fullTextItemForSelection(sel), e.currentTarget, sel.cat);
 });
 $("full-close").addEventListener("click", closeFullText);
 $("full-overlay").addEventListener("click", (e) => {
@@ -3155,13 +3194,12 @@ function renderSelection(sel, surface) {
         `<div class="fact-row"><span>${A.overall} <b class="astro-stars">${"★".repeat(h.stars)}${"☆".repeat(5 - h.stars)}</b></span></div>` +
         `<div class="fact-row">${h.domains.map(d => `<span>${HORO_DOMAINS.find(x => x.key === d.key)[lang]} <b class="astro-stars" aria-label="${d.stars}/5">${"★".repeat(d.stars)}${"☆".repeat(5 - d.stars)}</b></span>`).join("")}</div>` +
         `<span class="poem-line">${copy.topic} · ${copy.advice}</span>` +
-        `<div class="sub">${copy.evidence}${copy.aspect ? " · " + copy.aspect : ""}</div>` +
         `<div class="sub">${copy.cues}</div>` +
         `<div class="fact-row"><span>${A.luckyNumber} <b>${h.luckyNumber}</b></span>` +
         `<span>${A.luckyColor}<span class="swatch-sm" style="background:${color.hex}"></span><b>${lang === "zh" ? color.zh : color.en}</b></span>` +
         `<span>${A.luckyDirection} <b>${lang === "zh" ? dir.zh : dir.en}</b></span>` +
         `<span>${A.luckyItem} <b>${lang === "zh" ? item.zh : item.en}</b></span></div>` +
-        `<div class="sub">${copy.basis} · ${A.footnote}</div>`;
+        `<div class="sub">${A.footnote}</div>`;
     } else if (sel.subtype === "positions") {
       meta = A.positions;
       const spans = sel.positions.map((p) => {
@@ -3227,10 +3265,10 @@ function renderSelection(sel, surface) {
   surface.meta.textContent = meta;
   surface.body.innerHTML = body;
 
-  // An item whose complete text is on file (a classics passage, a
-  // full tale) gets a quiet door to it at the card's foot (outside
-  // the body, so the keepsake keeps capturing the card text only).
-  if (surface.foot && surface.fullBtn && sel.item && fullTextOf(sel.item)) {
+  // Static full passages and generated horoscope explanations get the same
+  // quiet reading door, outside the body so keepsakes stay faithful to
+  // the compact stage card.
+  if (surface.foot && surface.fullBtn && fullTextOf(fullTextItemForSelection(sel))) {
     surface.fullBtn.textContent = `${s.fullText} ›`;
     surface.foot.hidden = false;
   }
