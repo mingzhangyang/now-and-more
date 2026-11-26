@@ -2024,9 +2024,10 @@ const horoStarsHtml = (n) =>
   `<span class="hr-stars" role="img" aria-label="${n}/5">${"★".repeat(n)}<span class="hr-stars-off">${"☆".repeat(5 - n)}</span></span>`;
 // "Label：rest" / "Label: rest" -> a quiet run-in label and the sentence.
 function horoLabelledHtml(text) {
-  const m = /^([^：:。.]{2,30}?)(：|: )([\s\S]+)$/.exec(text);
+  const m = /^([^：:。.]{2,48}?)(：|: )([\s\S]+)$/.exec(text);
   return m ? `<span class="hr-label">${esc(m[1])}</span>${esc(m[3])}` : esc(text);
 }
+const horoSigned = (n) => (n >= 0 ? "+" : "−") + Math.abs(n).toFixed(2);
 function horoTagsHtml(evidence, aspect) {
   const tags = evidence.split(" · ").concat(aspect ? [aspect] : []);
   return `<ul class="hr-tags">${tags.map((tag) => `<li>${esc(tag)}</li>`).join("")}</ul>`;
@@ -2035,7 +2036,7 @@ function horoContributionHtml(d, doc, scale) {
   const c = d.contribution;
   if (!c) return d.contributionText ? `<p class="hr-why-line">${esc(d.contributionText).replace(/\n/g, "<br>")}</p>` : "";
   const L = doc.labels;
-  const fmt = (n) => (n >= 0 ? "+" : "−") + Math.abs(n).toFixed(2);
+  const fmt = horoSigned;
   const rows = c.bodies.map((term) => {
     const width = scale > 0 ? Math.min(50, (Math.abs(term.value) / scale) * 50) : 0;
     const side = term.value >= 0 ? "pos" : "neg";
@@ -2049,7 +2050,8 @@ function horoContributionHtml(d, doc, scale) {
     `<div class="hr-contrib-head"><span class="hr-label">${esc(L.contributions)}</span>` +
     `<span class="hr-contrib-total">${esc(L.total)} <b>${fmt(c.total)}</b></span></div>` +
     `<ul class="hr-bars">${rows}</ul>` +
-    `<div class="hr-factors"><span class="hr-label">${esc(L.factors)}</span><ul>${factors}</ul></div></div>`;
+    `<div class="hr-factors"><span class="hr-label">${esc(L.factors)}</span><ul>${factors}</ul></div>` +
+    (d.timeUnits ? `<div class="hr-factors"><p>${horoLabelledHtml(d.timeUnits)}</p></div>` : "") + `</div>`;
 }
 function horoscopeReadingHtml(doc) {
   const L = doc.labels;
@@ -2062,6 +2064,15 @@ function horoscopeReadingHtml(doc) {
   const tiles = `<nav class="hr-tiles" aria-label="${esc(L.domains)}">` + doc.domains.map((d) =>
     `<button type="button" class="hr-tile" data-jump="hr-area-${d.key}"><span class="hr-tile-name">${esc(d.label)}</span>${horoStarsHtml(d.stars)}</button>`).join("") + `</nav>`;
   const intro = `<p class="hr-intro">${esc(doc.intro)}</p>`;
+  // V3.3 time scales: the first summary line becomes the section title and
+  // three totals; the representative and day-over-day lines follow.
+  const scaleLines = doc.timeSummary ? doc.timeSummary.split("\n") : [];
+  const scales = doc.timeScales && scaleLines.length ? `<section class="hr-section" aria-labelledby="hr-scales-title">` +
+    `<h3 class="hr-section-title" id="hr-scales-title">${esc(scaleLines[0].split(/：|: /)[0])}</h3>` +
+    `<dl class="hr-scales">${doc.timeScales.map((t) =>
+      `<div><dt>${esc(t.label)}</dt><dd>${horoSigned(t.value)}</dd></div>`).join("")}</dl>` +
+    (scaleLines.length > 1 ? `<div class="hr-scale-notes">${scaleLines.slice(1).map((l) => `<p>${horoLabelledHtml(l)}</p>`).join("")}</div>` : "") +
+    `</section>` : "";
   const events = doc.events ? `<section class="hr-section hr-events" aria-labelledby="hr-events-title">` +
     `<h3 class="hr-section-title" id="hr-events-title">${esc(doc.events.title)}</h3>` +
     `<p class="hr-note">${esc(doc.events.note)}</p>` +
@@ -2089,7 +2100,7 @@ function horoscopeReadingHtml(doc) {
   const lucky = `<section class="hr-section" aria-labelledby="hr-lucky-title"><h3 class="hr-section-title" id="hr-lucky-title">${esc(doc.lucky.title)}</h3>` +
     `<dl class="hr-lucky">${doc.lucky.items.map((i) => `<div><dt>${esc(i.label)}</dt><dd>${esc(i.value)}</dd></div>`).join("")}</dl></section>`;
   const foot = `<footer class="hr-foot"><p>${esc(doc.basis)}</p><p>${esc(doc.footnote)}</p></footer>`;
-  return head + tiles + intro + events + areas + readings + lucky + foot;
+  return head + tiles + intro + scales + events + areas + readings + lucky + foot;
 }
 
 function openFullText(item, opener, cat) {

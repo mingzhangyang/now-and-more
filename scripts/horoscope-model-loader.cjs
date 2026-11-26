@@ -7,6 +7,7 @@ function loadHoroscope(astro, app, data = "", advice = "") {
   return new Function(data+"\n"+advice+"\nconst RAD=Math.PI/180,DAY_MS=86400000;\n"+app.slice(start,end)+"\n"+astro+
     "\nreturn {scoreHoroscope,scoreHoroscopeSamples,scoreHoroscopeDay,horoscopeSky,planetPositions,horoscopeAspect,horoscopeAspectValue,horoscopeStars,HORO_DOMAINS,HORO_RULERS,HORO_BODIES,HORO_FACTORS,makeHoroscope,horoscopeFullText,horoscopeDomainCopy,"+
     (astro.includes("const HORO_V32") ? "HORO_V32,HORO_V31,HORO_ROLE_WEIGHTS,HORO_PAIR_WEIGHTS,horoscopePairRecords,horoscopeHouseRulers,horoscopeRoleWeight,horoscopeCombinationWeight,horoscopeRulerCopy,horoscopeCombinationCopy," : "")+
+    (astro.includes("const HORO_V33") ? "HORO_V33,HORO_TIME_LAYERS,HORO_TIME_NEUTRAL,horoscopeTimeLayer,horoscopeTimeAdjust,horoscopeTimeTotals,horoscopeTimeChanges,horoscopeTimeSummaryCopy,horoscopeTimeDriver," : "")+
     "};")();
 }
 

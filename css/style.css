@@ -1635,6 +1635,12 @@ html.modal-open body {
   font-family: var(--sans); font-size: 12px; line-height: 1.5; color: var(--ink-soft);
   padding: 2px 8px; border-radius: 999px; border: 1px solid var(--card-border);
 }
+.hr-scales { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.hr-scales div { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--card-bg); text-align: center; }
+.hr-scales dt { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); letter-spacing: 0.06em; }
+.hr-scales dd { margin: 2px 0 0; font-family: var(--sans); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.hr-scale-notes { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; font-family: var(--sans); font-size: 13px; line-height: 1.7; color: var(--ink); }
+.hr-scale-notes .hr-label, .hr-factors .hr-label { color: var(--ink-soft); }
 .hr-lucky { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .hr-lucky div { padding: 8px 10px; border-radius: 10px; background: var(--bg-soft); text-align: center; }
 .hr-lucky dt { font-family: var(--sans); font-size: 12px; color: var(--ink-soft); letter-spacing: 0.06em; }
