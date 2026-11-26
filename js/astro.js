@@ -7,7 +7,8 @@
 "use strict";
 /* Two kinds of content live here:
    - 星位 star positions: REAL astronomy, computed live from JPL Keplerian
-     elements (approximate, sign-level accuracy).
+     elements (approximate; measured against JPL Horizons in
+     docs/ephemeris-accuracy.md).
    - 每日运势 daily horoscope: traditional-inspired entertainment rules
      based on duration-weighted complete ephemeris snapshots over the local
      civil day; seeded variation is confined to advice
@@ -94,7 +95,8 @@ function planetLongitude(body, date, e = helioRect("earth", date)) {
   return tropicalLongitudeOfDate(p.x - e.x, p.y - e.y, p.z - e.z, date);
 }
 /* Simplified lunar longitude: mean longitude plus the main perturbation
-   terms (evection, variation, equation of centre...). ~1° accuracy. */
+   terms (evection, variation, equation of centre...). Against JPL
+   Horizons 2000-2050: P95 0.18°, max 0.32° (docs/ephemeris-accuracy.md). */
 function moonLongitude(date) {
   const T = julianCenturies(date);
   const Lp = norm360(218.3164477 + 481267.88123421 * T); // mean longitude

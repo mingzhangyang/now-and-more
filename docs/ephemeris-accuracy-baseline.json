@@ -1,0 +1,330 @@
+{
+  "reference": {
+    "grid": {
+      "from": "2000-01-01T00:00:00.000Z",
+      "to": "2049-12-29T00:54:00.000Z",
+      "samples": 1315
+    },
+    "positions": "NASA/JPL Horizons API, observer table quantity 31 (ObsEcLon), centre 500@399",
+    "velocitiesAndEvents": "astronomy-engine 2.1.19 (MIT, https://github.com/cosinekitty/astronomy), Ecliptic(GeoVector(body, t, aberration=true))"
+  },
+  "bodies": {
+    "sun": {
+      "longitudeDeg": {
+        "n": 1315,
+        "mean": 0.0002,
+        "rms": 0.0002,
+        "p95": 0.0004,
+        "p99": 0.0006,
+        "max": 0.0008
+      },
+      "velocityDegPerDay": {
+        "n": 1315,
+        "mean": 0.000002,
+        "rms": 0.000002,
+        "p95": 0.000004,
+        "p99": 0.000005,
+        "max": 0.000006
+      },
+      "signAgreementPct": 100
+    },
+    "moon": {
+      "longitudeDeg": {
+        "n": 1315,
+        "mean": 0.0722,
+        "rms": 0.0921,
+        "p95": 0.184,
+        "p99": 0.2537,
+        "max": 0.3176
+      },
+      "velocityDegPerDay": {
+        "n": 1315,
+        "mean": 0.02592,
+        "rms": 0.032151,
+        "p95": 0.063267,
+        "p99": 0.082971,
+        "max": 0.109218
+      },
+      "signAgreementPct": 99.62
+    },
+    "mercury": {
+      "longitudeDeg": {
+        "n": 1315,
+        "mean": 0.0083,
+        "rms": 0.0098,
+        "p95": 0.0173,
+        "p99": 0.0198,
+        "max": 0.0242
+      },
+      "velocityDegPerDay": {
+        "n": 1315,
+        "mean": 0.00037,
+        "rms": 0.00047,
+        "p95": 0.000951,
+        "p99": 0.001175,
+        "max": 0.001407
+      },
+      "signAgreementPct": 99.924,
+      "directionAgreementPct": 100
+    },
+    "venus": {
+      "longitudeDeg": {
+        "n": 1315,
+        "mean": 0.0081,
+        "rms": 0.0094,
+        "p95": 0.0165,
+        "p99": 0.0194,
+        "max": 0.0275
+      },
+      "velocityDegPerDay": {
+        "n": 1315,
+        "mean": 0.000299,
+        "rms": 0.000415,
+        "p95": 0.000983,
+        "p99": 0.001418,
+        "max": 0.001681
+      },
+      "signAgreementPct": 100,
+      "directionAgreementPct": 100
+    },
+    "mars": {
+      "longitudeDeg": {
+        "n": 1315,
+        "mean": 0.0101,
+        "rms": 0.0127,
+        "p95": 0.0252,
+        "p99": 0.0359,
+        "max": 0.0532
+      },
+      "velocityDegPerDay": {
+        "n": 1315,
+        "mean": 0.000202,
+        "rms": 0.000274,
+        "p95": 0.00061,
+        "p99": 0.000895,
+        "max": 0.001296
+      },
+      "signAgreementPct": 100,
+      "directionAgreementPct": 100
+    },
+    "jupiter": {
+      "longitudeDeg": {
+        "n": 1315,
+        "mean": 0.0425,
+        "rms": 0.0533,
+        "p95": 0.1143,
+        "p99": 0.152,
+        "max": 0.169
+      },
+      "velocityDegPerDay": {
+        "n": 1315,
+        "mean": 0.000125,
+        "rms": 0.000157,
+        "p95": 0.000315,
+        "p99": 0.000418,
+        "max": 0.000509
+      },
+      "signAgreementPct": 99.924,
+      "directionAgreementPct": 100
+    },
+    "saturn": {
+      "longitudeDeg": {
+        "n": 1315,
+        "mean": 0.0834,
+        "rms": 0.094,
+        "p95": 0.1526,
+        "p99": 0.1715,
+        "max": 0.1787
+      },
+      "velocityDegPerDay": {
+        "n": 1315,
+        "mean": 0.000152,
+        "rms": 0.000187,
+        "p95": 0.000359,
+        "p99": 0.000419,
+        "max": 0.000477
+      },
+      "signAgreementPct": 99.544,
+      "directionAgreementPct": 99.848
+    }
+  },
+  "aspects": {
+    "pairSamples": 27615,
+    "referenceAspects": 6684,
+    "productionAspects": 6687,
+    "identificationAgreementPct": 99.743,
+    "moonPairsAgreementPct": 99.582,
+    "otherPairsAgreementPct": 99.807,
+    "motionStateAgreementPct": 98.932
+  },
+  "events": {
+    "sun ingress": {
+      "reference": 600,
+      "matched": 600,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 600,
+        "mean": 0.2,
+        "rms": 0.2,
+        "p95": 0.5,
+        "p99": 0.6,
+        "max": 0.7
+      }
+    },
+    "mercury ingress": {
+      "reference": 738,
+      "matched": 738,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 738,
+        "mean": 10,
+        "rms": 12.8,
+        "p95": 16.7,
+        "p99": 33.5,
+        "max": 115.3
+      }
+    },
+    "mercury station": {
+      "reference": 315,
+      "matched": 315,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 315,
+        "mean": 6.3,
+        "rms": 7.9,
+        "p95": 14.5,
+        "p99": 20.5,
+        "max": 25.6
+      }
+    },
+    "venus ingress": {
+      "reference": 631,
+      "matched": 631,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 631,
+        "mean": 10.4,
+        "rms": 12,
+        "p95": 20,
+        "p99": 23.7,
+        "max": 50.4
+      }
+    },
+    "venus station": {
+      "reference": 62,
+      "matched": 62,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 62,
+        "mean": 28.5,
+        "rms": 32.3,
+        "p95": 50,
+        "p99": 58.1,
+        "max": 58.1
+      }
+    },
+    "mars ingress": {
+      "reference": 341,
+      "matched": 341,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 341,
+        "mean": 23.3,
+        "rms": 29.9,
+        "p95": 56.8,
+        "p99": 88.4,
+        "max": 144.4
+      }
+    },
+    "mars station": {
+      "reference": 46,
+      "matched": 46,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 46,
+        "mean": 61.4,
+        "rms": 69.7,
+        "p95": 122.5,
+        "p99": 169.4,
+        "max": 169.4
+      }
+    },
+    "jupiter ingress": {
+      "reference": 76,
+      "matched": 76,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 76,
+        "mean": 366.8,
+        "rms": 534.1,
+        "p95": 1004.1,
+        "p99": 2281.4,
+        "max": 2281.4
+      }
+    },
+    "jupiter station": {
+      "reference": 91,
+      "matched": 91,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 91,
+        "mean": 71.4,
+        "rms": 87.9,
+        "p95": 160.1,
+        "p99": 242.7,
+        "max": 242.7
+      }
+    },
+    "saturn ingress": {
+      "reference": 40,
+      "matched": 40,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 40,
+        "mean": 1813.1,
+        "rms": 2585.6,
+        "p95": 6698.6,
+        "p99": 7401.7,
+        "max": 7401.7
+      }
+    },
+    "saturn station": {
+      "reference": 97,
+      "matched": 97,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 97,
+        "mean": 164.9,
+        "rms": 197.7,
+        "p95": 321.2,
+        "p99": 367.3,
+        "max": 367.3
+      }
+    },
+    "moon ingress": {
+      "reference": 802,
+      "matched": 802,
+      "missed": 0,
+      "extra": 0,
+      "errorMinutes": {
+        "n": 802,
+        "mean": 8,
+        "rms": 10.1,
+        "p95": 20.3,
+        "p99": 26,
+        "max": 32.2
+      }
+    }
+  }
+}
