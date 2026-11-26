@@ -19,7 +19,7 @@ const fullStart = app.indexOf("let fullOpener = null;");
 const fullEnd = app.indexOf("/* ================= Picture cards:", fullStart);
 const escStart = app.indexOf("function esc(str)");
 const escEnd = app.indexOf("function renderPostcard(", escStart);
-const footerStart = app.indexOf("  if (surface.foot && surface.fullBtn && fullTextOf(");
+const footerStart = app.indexOf("  if (surface.foot && surface.fullBtn && ");
 const footerEnd = app.indexOf("\n\n  // Chart and the in-card", footerStart);
 assert.ok(fullStart >= 0 && fullEnd > fullStart && escStart >= 0 && escEnd > escStart && footerStart >= 0 && footerEnd > footerStart);
 const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 180, DAY_MS = 86400000;\n" +
@@ -56,7 +56,7 @@ const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 1
     if (result.opened) $("full-close").listeners.click();
     return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
   }
-  return {longitudeVelocity, horoscopeAspectMotionCopy, makeHoroscope, planetPositions, horoscopeBodyState, horoscopeSky, scoreHoroscopeDay, scoreHoroscopeSamples, horoscopeSamplePlan, HORO_FACTORS, horoscopeStars, horoscopeDignity, horoscopeSolarCondition, HORO_MODEL, HORO_ADVICE_FRAMES, HORO_ADVICE_VARIANTS, HORO_CONDITION_LABELS, chooseHoroscopeActions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
+  return {detectExactHoroscopeAspects, longitudeVelocity, horoscopeAspectMotionCopy, makeHoroscope, planetPositions, horoscopeBodyState, horoscopeSky, scoreHoroscopeDay, scoreHoroscopeSamples, horoscopeSamplePlan, HORO_FACTORS, horoscopeStars, horoscopeDignity, horoscopeSolarCondition, HORO_MODEL, HORO_ADVICE_FRAMES, HORO_ADVICE_VARIANTS, HORO_CONDITION_LABELS, chooseHoroscopeActions, detectHoroscopeEvents, horoscopeEventsForDate, horoscopeEventCopy, horoscopeEventLabel, horoscopeEventParagraphs, horoscopeEventSummary, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeActionFor, horoscopeAdviceWeights, bestHoroscopeAction, horoscopeActionOrder, horoscopeActionWindow, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -820,4 +820,15 @@ test("v3.1 card uses boundary events while reader retains exact aspects", () => 
   assert.ok(h.events.some(e=>e.type==="aspect"));
   assert.ok(h.cardEvents.every(e=>h.events.includes(e)));
   assert.ok(h.events===h.events);
+});
+
+test("exact aspects own the half-open day and canonical pair across longitude wrap", () => {
+  const day=86400000, start=Date.UTC(2026,2,22), end=start+day;
+  const position=(body,at)=>body==="mars"?{lon:((at-start)/day+360)%360,velocity:1}:body==="jupiter"?{lon:0,velocity:0}:undefined;
+  const events=api.detectExactHoroscopeAspects(start,end,position);
+  assert.deepEqual(events.map(e=>[e.pair,e.angle,e.at]),[["jupiter/mars",0,start]]);
+  assert.equal(api.detectExactHoroscopeAspects(start-day,start,position).length,0);
+  const h=api.makeHoroscope(new Date(2026,2,22,12),0);
+  assert.ok(h.events.some(e=>e.pair==="jupiter/mars"&&e.angle===120));
+  assert.ok(!h.cardEvents.some(e=>e.type==="aspect"));
 });

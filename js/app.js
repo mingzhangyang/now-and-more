@@ -2961,7 +2961,7 @@ function renderSelection(sel, surface) {
   // Static full passages and generated horoscope explanations get the same
   // quiet reading door, outside the body so keepsakes stay faithful to
   // the compact stage card.
-  if (surface.foot && surface.fullBtn && fullTextOf(fullTextItemForSelection(sel))) {
+  if (surface.foot && surface.fullBtn && ((sel.cat === "astro" && sel.subtype === "horoscope" && sel.horo) || fullTextOf(fullTextItemForSelection(sel)))) {
     surface.fullBtn.textContent = `${s.fullText} ›`;
     surface.foot.hidden = false;
   }

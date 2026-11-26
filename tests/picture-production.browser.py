@@ -328,6 +328,19 @@ def check_horoscope_events(page, language):
         horo: makeHoroscope(new Date(2026, 2, 22, 12), 0)};
       renderSelection(currentSelection);
     }""")
+    # Exact aspects are deliberately reader-only after the performance change.
+    assert event_line.count() == 0, language
+    assert footer.is_visible(), language
+    footer.click()
+    assert overlay.is_visible(), language
+    aspect_title = "木星与火星近似精确三分相" if language == "zh" else "Jupiter / Mars · near-exact trine"
+    assert aspect_title in page.locator("#full-body").inner_text(), language
+    page.keyboard.press("Escape")
+    page.evaluate("""() => {
+      currentSelection = {cat: 'astro', subtype: 'horoscope',
+        horo: makeHoroscope(new Date(2026, 2, 21, 12), 0)};
+      renderSelection(currentSelection);
+    }""")
     assert event_line.count() == 0, language
     assert footer.is_visible(), language
 
