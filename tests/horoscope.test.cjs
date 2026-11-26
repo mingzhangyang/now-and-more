@@ -8,9 +8,7 @@ const read = name => fs.readFileSync(path.join(root, name), "utf8");
 const app = read("js/app.js");
 const data = read("js/data.js");
 const adviceSource = read("js/horoscope-advice.js");
-const start = app.indexOf("/* ================= Astrology (astro) ================= */");
-const end = app.indexOf("/* ================= End astrology ================= */", start);
-assert.ok(start >= 0 && end > start);
+const astro = read("js/astro.js");
 const solarStart = app.indexOf("const TERM_VSOP_L0 =");
 const solarEnd = app.indexOf("function angDiffDeg(", solarStart);
 assert.ok(solarStart >= 0 && solarEnd > solarStart);
@@ -26,7 +24,7 @@ const footerEnd = app.indexOf("\n\n  // Chart and the in-card", footerStart);
 assert.ok(fullStart >= 0 && fullEnd > fullStart && escStart >= 0 && escEnd > escStart && footerStart >= 0 && footerEnd > footerStart);
 const api = new Function(data + "\n" + adviceSource + "\nconst RAD = Math.PI / 180, DAY_MS = 86400000;\n" +
   app.slice(solarStart, solarEnd) + "\n" +
-  app.slice(start, end) + "\n" +
+  astro + "\n" +
   "function render(sel, lang) { let meta, body; const s = I18N[lang];\n" +
   app.slice(renderStart, renderEnd) + "\nreturn {meta, body}; }\n" +
   app.slice(escStart, escEnd) + "\n" +
