@@ -16,7 +16,8 @@ function runBacktest(api,prior,start,end){
     B:{...api.HORO_V32,combinationScale:0},
     C:{...api.HORO_V32,houseRulerScale:0},
     D:api.HORO_V32,
-    E:{houseRulerScale:1,combinationScale:1},
+    E:{houseRulerScale:0.5,combinationScale:0.5},
+    F:{houseRulerScale:1,combinationScale:1},
   };
   const labels=["overall",...api.HORO_DOMAINS.map(d=>d.key)];
   const zero=()=>({n:0,sum:0,sq:0,stars:[0,0,0,0,0],change:0,delta:0,starChanges:0,adj:0,adjStar:0,adjN:0,maxHigh:0,maxLow:0});

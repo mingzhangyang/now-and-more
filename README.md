@@ -149,3 +149,5 @@ TZ=UTC node scripts/horoscope-v3.2-backtest.cjs 2026-01-01 2031-01-01 > horoscop
 node --test tests/horoscope-v3.2.test.cjs
 ```
 
+
+Final candidate: house scale 0.2, pair scale 0.5. See [five-year ablation](docs/horoscope-v3.2.md) and [raw report](docs/horoscope-v3.2-backtest.json).

@@ -414,7 +414,7 @@ function horoscopeV31AspectValue(aspect, a, b) {
 /* V3.2: independently switchable scales. Zero restores the original
    domain membership/weights and V3.1 aspect contributions. */
 const HORO_V32 = Object.freeze({
-  houseRulerScale: 0.5, combinationScale: 0.5,
+  houseRulerScale: 0.2, combinationScale: 0.5,
 });
 const HORO_V31 = Object.freeze({ houseRulerScale: 0, combinationScale: 0 });
 const HORO_ROLE_WEIGHTS = Object.freeze({
