@@ -705,7 +705,7 @@ function horoscopeAspectKey(f) {
 }
 /* The daily event interpretation is a separate editorial layer: it
    describes the actual crossing/station and the selected sign's solar
-   house, without modifying noon ratings, lucky cues or advice choices. */
+   house, without modifying daily ratings, lucky cues or advice choices. */
 const HORO_INGRESS_ACTIONS = {
   sun: ["重新审视近期目标，确定一件接下来值得投入的事", "review your recent goals and identify one worthwhile next priority"],
   mercury: ["挑一个值得深入了解的话题，先核实关键信息", "choose a topic worth exploring and verify its key details"],
@@ -778,8 +778,8 @@ function horoscopeEventParagraphs(h, lang) {
   if (!h.events?.length) return [];
   const zh = lang === "zh";
   const note = zh
-    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；事件可能在正午前或后发生，以下象征提示不改变原正午运势评分。"
-    : "Today's sky events | Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. These symbolic prompts do not change the noon ratings.";
+    ? "今日特别天象｜按本地自然日和近似星历估算，临界时刻可能跨日；事件可能在正午前或后发生，以下象征提示不改变当天运势评分。"
+    : "Today's sky events | Estimated for the local calendar day using an approximate ephemeris. Near-midnight events may fall on a neighboring date. These symbolic prompts do not change the daily ratings.";
   return [note, ...h.events.map(event => {
     const detail = horoscopeEventCopy(event, h.signIdx, lang);
     return [detail.title, detail.evidence, detail.interpretation,
@@ -793,8 +793,8 @@ function horoscopeCopy(h, lang) {
   const detail = horoscopeDomainCopy(primary, h, lang);
   return { topic: domain[lang], evidence: detail.evidence, aspect: detail.aspect,
     advice: detail.advice, eventSummary: horoscopeEventSummary(h.events, lang),
-    basis: zh ? "本地正午近似星位 · 传统占星规则（太阳星座宫位）"
-      : "Approximate local-noon positions · Traditional-inspired solar-sign rules",
+    basis: zh ? "评分：其余天体采用本地正午近似星位，月亮贡献取本地 06:00、12:00、18:00 三次采样的平均；展示的星位与相位均为正午快照。传统占星规则（太阳星座宫位）"
+      : "Ratings use approximate local-noon positions for the other bodies; the Moon's contribution averages local 06:00, 12:00 and 18:00 samples. Displayed positions and aspects are noon snapshots. Traditional-inspired solar-sign rules",
     cues: zh ? "趣味幸运提示" : "Playful lucky cues" };
 }
 /* The reading dialog expands the same stored snapshot into four domain

@@ -642,6 +642,38 @@ test("the Moon is scored across the day while noon remains the displayed evidenc
   assert.equal(sky.moonSamples[1], sky.positions.find(p => p.key === "moon"));
   assert.ok(sky.moonSamples[0].lon !== sky.moonSamples[2].lon);
 });
+test("lunar ingress ratings explain the three local Moon samples in both languages", () => {
+  const previousTZ = process.env.TZ;
+  try {
+    process.env.TZ = "UTC";
+    const date = new Date(2026, 0, 2, 12);
+    const sky = api.horoscopeSky(date);
+    assert.equal(sky.moonSamples[1].signIdx, 2); // Gemini at noon
+    assert.equal(sky.moonSamples[2].signIdx, 3); // Cancer by 18:00
+    const h = api.makeHoroscope(date, 11); // Pisces
+    const love = reading => reading.domains.find(d => d.key === "love");
+    assert.equal(love(api.scoreHoroscope(11, sky.positions)).stars, 2);
+    assert.equal(love(h).stars, 3);
+    assert.equal(love(h).focus.key, "moon");
+    assert.equal(love(h).focus.signIdx, 2);
+    assert.equal(love(h).focus.house, 4);
+    const eventDay = api.makeHoroscope(new Date(2026, 2, 20, 12), 11);
+    assert.ok(eventDay.events.length);
+    for (const lang of ["zh", "en"]) {
+      const copy = api.horoscopeCopy(h, lang);
+      const full = api.horoscopeFullText(h, lang);
+      assert.ok(full.includes(copy.basis));
+      for (const hour of ["06:00", "12:00", "18:00"]) assert.ok(copy.basis.includes(hour));
+      assert.match(copy.basis, lang === "zh" ? /月亮贡献.*平均.*正午快照/ : /Moon's contribution averages.*noon snapshots/);
+      const eventText = api.horoscopeFullText(eventDay, lang);
+      assert.match(eventText, lang === "zh" ? /不改变当天运势评分/ : /do not change the daily ratings/);
+      assert.doesNotMatch(eventText, /不改变原正午运势评分|do not change the noon ratings/);
+    }
+  } finally {
+    if (previousTZ === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTZ;
+  }
+});
 test("wording frames have one shared variant count for every tone", () => {
   for (const frames of Object.values(api.HORO_ADVICE_FRAMES)) assert.equal(frames.length, api.HORO_ADVICE_VARIANTS);
   for (let offset = 0; offset < 40; offset++) {
