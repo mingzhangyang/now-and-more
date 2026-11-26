@@ -1101,9 +1101,9 @@ const HORO_DOMAIN_ACTIONS = {
   },
 };
 const HORO_ADVICE_FRAMES = {
-  support: [["不妨{action}。", "Consider making time to {action}."], ["可以主动{action}。", "Take the initiative to {action}."]],
-  neutral: [["今天可以{action}。", "Today, aim to {action}."], ["按自己的节奏{action}。", "At your own pace, try to {action}."]],
-  challenge: [["不必急于求成，先{action}。", "Rather than rushing, take time to {action}."], ["遇到阻力时，试着{action}。", "If you encounter friction, try to {action}."]],
+  support: [["不妨{action}。", "Consider making time to {action}."], ["可以试着{action}。", "Take the opportunity to {action}."]],
+  neutral: [["今天可以{action}。", "Today, aim to {action}."], ["可把注意力放在这件事上：{action}。", "One useful focus today is to {action}."]],
+  challenge: [["不必急于求成，{action}。", "Rather than rushing, take time to {action}."], ["遇到阻力时，不妨{action}。", "If you encounter friction, try to {action}."]],
 };
 const HORO_ASPECT_ACTIONS = {
   60: ["寻找两者可以配合的小机会，并先做一次小尝试", "look for a small opportunity to combine the two themes and try it on a modest scale"],
@@ -1182,10 +1182,15 @@ function scoreHoroscope(signIdx, positions) {
       const value = p.base + (domain.houses.includes(p.house) ? 0.35 : 0);
       return { planet: p, value, weight, impact: value * weight };
     });
-    const raw = values.reduce((s, v) => s + v.impact, 0) / values.reduce((s, v) => s + v.weight, 0);
+    const totalWeight = values.reduce((s, v) => s + v.weight, 0);
+    const raw = values.reduce((s, v) => s + v.impact, 0) / totalWeight;
+    // Preserve each body's signed contribution to the unrounded domain
+    // score for explanations. This is a decomposition of the existing
+    // weighted mean, not another scoring rule.
+    const contributions = values.map(v => ({ key: v.planet.key, value: v.impact / totalWeight }));
     const driver = values.reduce((best, v) => Math.abs(v.impact) > Math.abs(best.impact) ? v : best);
     const p = driver.planet;
-    return { key: domain.key, raw, stars: horoscopeStars(raw),
+    return { key: domain.key, raw, stars: horoscopeStars(raw), contributions,
       focus: { key: p.key, signIdx: p.signIdx, house: p.house, retrograde: p.retrograde,
         aspect: p.aspects[0] || null } };
   });
@@ -1242,8 +1247,8 @@ function horoscopeDomainCopy(d, h, lang) {
   const variant = (h.adviceIdx + (d.key === h.primary ? 0 : HORO_DOMAINS.indexOf(domain))) % frames.length;
   const advice = frames[variant][li].replace("{action}", action);
   const placement = zh
-    ? `象征含义：${names[f.key]}关联${bodyTheme}；第${f.house}宫侧重${house.theme[li]}。可尝试${house.action[li]}。`
-    : `Symbolic reading: ${names[f.key]} represents ${bodyTheme}; solar house ${f.house} concerns ${house.theme[li]}. Try to ${house.action[li]}.`;
+    ? `象征解读：${names[f.key]}象征${bodyTheme}。它所在的太阳星座第${f.house}宫涉及${house.theme[li]}，不妨${house.action[li]}。`
+    : `Symbolic reading: ${names[f.key]} represents ${bodyTheme}. Its solar house ${f.house} concerns ${house.theme[li]}. Try to ${house.action[li]}.`;
   let aspectInterpretation = "";
   if (f.aspect) {
     const a = f.aspect;
@@ -1257,8 +1262,8 @@ function horoscopeDomainCopy(d, h, lang) {
         ? HORO_CONJUNCTION_ACTIONS[a.value > 0 ? "support" : a.value < 0 ? "challenge" : "neutral"][li]
         : HORO_ASPECT_ACTIONS[a.angle][li];
       aspectInterpretation = zh
-        ? `${a.zh}把${names[f.key]}的${bodyTheme}与${names[a.other]}的${otherTheme}联系起来：${guidance}。`
-        : `The ${a.en} connects ${names[f.key]}'s themes of ${bodyTheme} with ${names[a.other]}'s themes of ${otherTheme}; ${guidance}.`;
+        ? `相位提示：${names[f.key]}（${bodyTheme}）与${names[a.other]}（${otherTheme}）形成${a.zh}。${guidance}。`
+        : `The ${a.en} links ${names[f.key]} (${bodyTheme}) and ${names[a.other]} (${otherTheme}). ${guidance[0].toUpperCase() + guidance.slice(1)}.`;
     }
   }
   const review = f.retrograde && HORO_RETROGRADE_ACTIONS[f.key];
@@ -1266,6 +1271,49 @@ function horoscopeDomainCopy(d, h, lang) {
     ? (zh ? `逆行复核提示：${review[li]}。` : `Retrograde reflection prompt: ${review[li]}.`)
     : "";
   return { ...horoscopeFocusCopy(f, lang), advice, placement, aspectInterpretation, retrogradeInterpretation };
+}
+/* Report only the largest positive/negative terms of this domain's actual
+   weighted mean, not an inference from planet names or from rounded stars.
+   The two extrema are selected independently, so mixed evidence stays visible. */
+function horoscopeBalanceCopy(d, lang) {
+  const zh = lang === "zh";
+  const names = I18N[lang].astro.bodies;
+  let positive = null, negative = null;
+  for (const term of d.contributions) {
+    if (term.value > 0 && (!positive || term.value > positive.value)) positive = term;
+    if (term.value < 0 && (!negative || term.value < negative.value)) negative = term;
+  }
+  const parts = [];
+  if (positive) parts.push(zh
+    ? `${names[positive.key]}是最大的正向评分因素`
+    : `${names[positive.key]} contributes the most positive weight`);
+  if (negative) parts.push(zh
+    ? `${names[negative.key]}是最大的负向评分因素`
+    : `${names[negative.key]} contributes the most negative weight`);
+  if (!parts.length) return zh
+    ? "规则评分：各项贡献均为中性。"
+    : "Rule-based score: all contributions are neutral.";
+  return zh ? "规则评分：" + parts.join("；") + "。"
+    : "Rule-based score: " + parts.join("; ") + ".";
+}
+/* A single stored noon snapshot can give several domains the same focus.
+   Group by evidence, not by localized text or rounded score, and keep
+   reciprocal descriptions of the same aspect from being repeated. */
+function horoscopeFocusKey(f) {
+  return JSON.stringify([f.key, f.signIdx, f.house, f.retrograde,
+    f.aspect ? [f.aspect.other, f.aspect.angle, f.aspect.strength, f.aspect.value] : null]);
+}
+function horoscopeFocusGroups(domains) {
+  const groups = new Map();
+  for (const d of domains) {
+    const key = horoscopeFocusKey(d.focus);
+    if (!groups.has(key)) groups.set(key, { id: groups.size + 1, domains: [] });
+    groups.get(key).domains.push(d);
+  }
+  return groups;
+}
+function horoscopeAspectKey(f) {
+  return f.aspect ? JSON.stringify([[f.key, f.aspect.other].sort(), f.aspect.angle]) : null;
 }
 function horoscopeCopy(h, lang) {
   const zh = lang === "zh";
@@ -1285,20 +1333,45 @@ function horoscopeFullText(h, lang) {
   const A = I18N[lang].astro;
   const sg = SIGNS[h.signIdx];
   const copy = horoscopeCopy(h, lang);
+  const groups = horoscopeFocusGroups(h.domains);
+  const title = id => zh ? `星位解读 ${id}` : `Sky reading ${id}`;
+  const label = d => HORO_DOMAINS.find(x => x.key === d.key)[lang];
   const paragraphs = [
     `${A.daily} · ${sg.symbol} ${sg[lang]}\n${A.overall} ${h.stars}/5`,
     zh
-      ? "评分综合守护星、相关天体、太阳星座宫位、相位及逆行等因素。下文依据各领域影响最大的天体及其最显著相位（若有）组合象征解释与生活建议；这不是全部计算依据，也不预测实际事件。"
-      : "Ratings combine the traditional ruler, relevant bodies, solar-sign houses, aspects and retrograde. The following symbolic readings and practical prompts use each domain's most influential body and its strongest aspect, if any; they neither explain every scoring input nor predict events.",
+      ? "以下先看四项评分与建议，再阅读对应的星位解读。正向和负向因素来自传统规则的加权评分，不代表实际吉凶；相同星位及相位只展开一次。"
+      : "Read the four ratings and practical prompts first, then their referenced sky readings. Positive and negative factors are contributions to an editorial weighted score, not real-world outcomes. Shared placements and aspects are explained once.",
   ];
   for (const d of h.domains) {
-    const domain = HORO_DOMAINS.find(x => x.key === d.key);
     const detail = horoscopeDomainCopy(d, h, lang);
+    const group = groups.get(horoscopeFocusKey(d.focus));
     paragraphs.push([
-      `${domain[lang]} ${d.stars}/5`,
-      `${zh ? "主要依据：" : "Main basis: "}${detail.evidence}${detail.aspect ? " · " + detail.aspect : ""}`,
-      detail.placement, detail.aspectInterpretation, detail.retrogradeInterpretation,
+      `${label(d)} ${d.stars}/5`,
+      zh ? `主要依据：${title(group.id)}（${A.bodies[d.focus.key]}）`
+        : `Main basis: ${title(group.id)} (${A.bodies[d.focus.key]})`,
+      horoscopeBalanceCopy(d, lang),
       `${zh ? "建议：" : "Suggestion: "}${detail.advice}`,
+    ].join("\n"));
+  }
+  const aspectOwners = new Map();
+  for (const group of groups.values()) {
+    const d = group.domains[0];
+    const detail = horoscopeDomainCopy(d, h, lang);
+    const aspectKey = horoscopeAspectKey(d.focus);
+    let aspectText = detail.aspectInterpretation;
+    if (aspectKey) {
+      if (aspectOwners.has(aspectKey)) {
+        const earlier = title(aspectOwners.get(aspectKey));
+        aspectText = zh ? `相位提示：同一相位见${earlier}。`
+          : `Aspect note: the same aspect is explained in ${earlier}.`;
+      } else {
+        aspectOwners.set(aspectKey, group.id);
+      }
+    }
+    paragraphs.push([
+      `${title(group.id)} · ${group.domains.map(label).join(zh ? "、" : ", ")}`,
+      `${detail.evidence}${detail.aspect ? " · " + detail.aspect : ""}`,
+      detail.placement, aspectText, detail.retrogradeInterpretation,
     ].filter(Boolean).join("\n"));
   }
   paragraphs.push(`${copy.cues}\n${A.luckyNumber} ${h.luckyNumber} · ${A.luckyColor} ${LUCKY_COLORS[h.colorIdx][lang]} · ${A.luckyDirection} ${LUCKY_DIRECTIONS[h.dirIdx][lang]} · ${A.luckyItem} ${LUCKY_ITEMS[h.itemIdx][lang]}`);

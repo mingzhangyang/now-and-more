@@ -57,7 +57,7 @@ const api = new Function(data + "\nconst RAD = Math.PI / 180, DAY_MS = 86400000;
     if (result.opened) $("full-close").listeners.click();
     return { ...result, closed: $("full-overlay").hidden, restoredFocus: $("full-text-btn").focused };
   }
-  return {makeHoroscope, planetPositions, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
+  return {makeHoroscope, planetPositions, scoreHoroscope, horoscopeAspect, horoscopeAspectValue, horoscopeCopy, horoscopeFocusCopy, horoscopeTone, horoscopeDomainCopy, horoscopeBalanceCopy, horoscopeFocusGroups, horoscopeFocusKey, horoscopeAspectKey, horoscopeFullText, render, reading, HORO_DOMAINS, HORO_BODY_THEMES, HORO_HOUSE_THEMES, HORO_DOMAIN_ACTIONS, HORO_ASPECT_ACTIONS, HORO_CONJUNCTION_ACTIONS, HORO_RETROGRADE_ACTIONS, SIGNS, LUCKY_COLORS, LUCKY_ITEMS, LUCKY_DIRECTIONS};`)();
 const keys = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 const fixture = (lon, retrograde = []) => keys.map(key => ({
   key, lon, signIdx: Math.floor(lon / 30), retrograde: retrograde.includes(key)
@@ -109,6 +109,11 @@ test("every day's focus and aspect are traceable to its noon positions; scores a
       assert.equal(h.domains.length,4);
       for(const d of h.domains) {
         assert.ok(Number.isFinite(d.raw) && d.stars >= 1 && d.stars <= 5);
+        assert.ok(Math.abs(d.contributions.reduce((s,t)=>s+t.value,0)-d.raw)<1e-12);
+        assert.equal(new Set(d.contributions.map(t=>t.key)).size,d.contributions.length);
+        assert.ok(d.contributions.every(t=>keys.includes(t.key)&&Number.isFinite(t.value)));
+        const largest=d.contributions.reduce((best,t)=>Math.abs(t.value)>Math.abs(best.value)?t:best);
+        assert.equal(largest.key,d.focus.key);
         const f = d.focus, actual = positions.find(p => p.key === f.key);
         assert.ok(actual);
         assert.equal(f.signIdx, actual.signIdx);
@@ -165,7 +170,8 @@ test("full-text door opens the same calculated horoscope in both languages and p
     const copy = api.horoscopeCopy(h,lang);
     const full = api.horoscopeFullText(h,lang);
     const paragraphs = full.split("\n\n");
-    assert.equal(paragraphs.length, 8);
+    const groups=api.horoscopeFocusGroups(h.domains);
+    assert.equal(paragraphs.length, 8 + groups.size);
     assert.ok(paragraphs[0].includes(api.SIGNS[h.signIdx][lang]));
     assert.ok(paragraphs[0].includes(h.stars + "/5"));
     for (const [i, d] of h.domains.entries()) {
@@ -173,12 +179,18 @@ test("full-text door opens the same calculated horoscope in both languages and p
       const focus = api.horoscopeFocusCopy(d.focus,lang);
       const paragraph = paragraphs[2+i];
       assert.ok(paragraph.startsWith(domain[lang] + " " + d.stars + "/5"));
-      assert.ok(paragraph.includes(focus.evidence));
-      if (focus.aspect) assert.ok(paragraph.includes(focus.aspect));
+      const group=groups.get(api.horoscopeFocusKey(d.focus));
+      const shared=paragraphs[5+group.id];
+      const title=(lang==="zh"?"星位解读 ":"Sky reading ")+group.id;
+      assert.ok(paragraph.includes(title));
+      assert.ok(paragraph.includes(api.horoscopeBalanceCopy(d,lang)));
+      assert.ok(shared.startsWith(title+" · "));
+      assert.ok(shared.includes(domain[lang]));
+      assert.ok(shared.includes(focus.evidence));
+      if (focus.aspect) assert.ok(shared.includes(focus.aspect));
       const detail = api.horoscopeDomainCopy(d,h,lang);
-      assert.ok(paragraph.includes(detail.placement) && paragraph.includes(detail.advice));
-      if (detail.aspectInterpretation) assert.ok(paragraph.includes(detail.aspectInterpretation));
-      if (detail.retrogradeInterpretation) assert.ok(paragraph.includes(detail.retrogradeInterpretation));
+      assert.ok(shared.includes(detail.placement) && paragraph.includes(detail.advice));
+      if (detail.retrogradeInterpretation) assert.ok(shared.includes(detail.retrogradeInterpretation));
       if (d.key === h.primary) assert.ok(paragraph.includes(copy.advice));
     }
     const dialog = api.reading(sel,lang);
@@ -188,7 +200,7 @@ test("full-text door opens the same calculated horoscope in both languages and p
     assert.ok(dialog.body.includes(copy.evidence) && dialog.body.includes(copy.basis));
     assert.match(dialog.body, lang === "zh" ? /仅供娱乐/ : /entertainment only/);
     assert.ok(!dialog.body.includes("undefined"));
-    assert.equal((dialog.body.match(/<p>/g) || []).length, 8);
+    assert.equal((dialog.body.match(/<p>/g) || []).length, 8 + groups.size);
     assert.equal(api.horoscopeFullText(h,lang), full);
   }
   assert.equal(JSON.stringify(sel),snapshot);
@@ -232,17 +244,17 @@ test("identical ratings produce different bilingual advice for different actual 
     assert.ok(retro.retrogradeInterpretation.includes(api.HORO_RETROGRADE_ACTIONS.mercury[li]));
     const square = make({aspect:aspect(90,"saturn",0.8,-0.68)},lang);
     const trine = make({aspect:aspect(120,"saturn",0.8,0.52)},lang);
-    assert.ok(square.aspectInterpretation.includes(api.HORO_ASPECT_ACTIONS[90][li]));
-    assert.ok(trine.aspectInterpretation.includes(api.HORO_ASPECT_ACTIONS[120][li]));
+    assert.ok(square.aspectInterpretation.toLowerCase().includes(api.HORO_ASPECT_ACTIONS[90][li].toLowerCase()));
+    assert.ok(trine.aspectInterpretation.toLowerCase().includes(api.HORO_ASPECT_ACTIONS[120][li].toLowerCase()));
     assert.notEqual(square.aspectInterpretation,trine.aspectInterpretation);
     assert.notEqual(square.aspectInterpretation,make({aspect:aspect(90,"venus",0.8,-0.68)},lang).aspectInterpretation);
     for (const [value,tone] of [[0.55,"support"],[-0.55,"challenge"],[0,"neutral"]]) {
       const detail=make({aspect:aspect(0,"venus",1,value)},lang);
-      assert.ok(detail.aspectInterpretation.includes(api.HORO_CONJUNCTION_ACTIONS[tone][li]));
+      assert.ok(detail.aspectInterpretation.toLowerCase().includes(api.HORO_CONJUNCTION_ACTIONS[tone][li].toLowerCase()));
     }
     const edge=make({aspect:aspect(90,"saturn",0,0)},lang);
     assert.match(edge.aspectInterpretation,li===0?/不产生相位贡献/:/contributes no aspect weight/);
-    assert.ok(!edge.aspectInterpretation.includes(api.HORO_ASPECT_ACTIONS[90][li]));
+    assert.ok(!edge.aspectInterpretation.toLowerCase().includes(api.HORO_ASPECT_ACTIONS[90][li].toLowerCase()));
     const cautious=api.horoscopeDomainCopy({...base,raw:-0.5,stars:2},h,lang);
     assert.notEqual(cautious.advice,direct.advice);
     assert.ok(cautious.advice.includes(api.HORO_DOMAIN_ACTIONS.social.mercury[li]));
@@ -264,6 +276,58 @@ test("interpretation tables cover all seven bodies, twelve houses and four domai
         }
       }
     }
+  }
+});
+test("domain balance reports only the actual largest positive and negative contributions", () => {
+  const mixed = {contributions:[{key:"sun",value:0.12},{key:"venus",value:0.3},{key:"mars",value:-0.4},{key:"saturn",value:-0.1}]};
+  for (const [lang,positive,negative,excluded] of [["zh","金星","火星",["太阳","土星"]],["en","Venus","Mars",["Sun","Saturn"]]]) {
+    const copy=api.horoscopeBalanceCopy(mixed,lang);
+    assert.ok(copy.includes(positive) && copy.includes(negative));
+    assert.ok(excluded.every(name=>!copy.includes(name)));
+    assert.ok(!api.horoscopeBalanceCopy({contributions:[{key:"moon",value:0.1}]},lang).includes(lang==="zh"?"负向":"negative"));
+    assert.ok(!api.horoscopeBalanceCopy({contributions:[{key:"moon",value:-0.1}]},lang).includes(lang==="zh"?"正向":"positive"));
+    assert.match(api.horoscopeBalanceCopy({contributions:[{key:"sun",value:0}]},lang),lang==="zh"?/中性/:/neutral/);
+  }
+});
+test("shared focus appears once with all four domain references; reciprocal aspects are expanded only once", () => {
+  const actual=api.scoreHoroscope(7,api.planetPositions(new Date("2026-11-25T12:00:00Z")));
+  const h={signIdx:7,...actual,adviceIdx:0,luckyNumber:10,colorIdx:0,dirIdx:0,itemIdx:0};
+  assert.equal(api.horoscopeFocusGroups(h.domains).size,1);
+  assert.ok(h.domains.every(d=>d.focus.key==="mars"));
+  for(const lang of ["zh","en"]) {
+    const full=api.horoscopeFullText(h,lang);
+    const detail=api.horoscopeDomainCopy(h.domains[0],h,lang);
+    assert.equal(full.split(detail.placement).length-1,1);
+    assert.equal(full.split(detail.aspectInterpretation).length-1,1);
+    assert.equal(full.split(detail.evidence).length-1,1);
+    assert.equal(full.split(lang==="zh"?"主要依据：星位解读 1":"Main basis: Sky reading 1").length-1,4);
+    assert.equal(full.split("\n\n").length,9);
+    for(const d of h.domains) {
+      const advice=api.horoscopeDomainCopy(d,h,lang).advice;
+      assert.equal(full.split(advice).length-1,1);
+    }
+  }
+  // Use two actual reciprocal aspect objects from the same real snapshot.
+  // The Sun's opposite view of Mars is the same geometric aspect, even
+  // though the solar house and its own body interpretation differ.
+  const first=h.domains[0].focus;
+  const positions=api.planetPositions(new Date("2026-11-25T12:00:00Z"));
+  const sun=positions.find(p=>p.key==="sun");
+  assert.equal(first.aspect.other,"sun");
+  const reverse={key:"sun",signIdx:sun.signIdx,house:(sun.signIdx-7+12)%12+1,retrograde:false,
+    aspect:{...first.aspect,other:"mars"}};
+  const domains=h.domains.map((d,i)=>i===1?{...d,focus:reverse}:d);
+  assert.equal(api.horoscopeAspectKey(first),api.horoscopeAspectKey(reverse));
+  assert.equal(api.horoscopeFocusGroups(domains).size,2);
+  const fixture={...h,domains};
+  for(const lang of ["zh","en"]) {
+    const text=api.horoscopeFullText(fixture,lang);
+    const firstDetail=api.horoscopeDomainCopy(domains[0],fixture,lang);
+    const secondDetail=api.horoscopeDomainCopy(domains[1],fixture,lang);
+    assert.ok(text.includes(firstDetail.placement) && text.includes(secondDetail.placement));
+    assert.equal(text.split(firstDetail.aspectInterpretation).length-1,1);
+    assert.ok(!text.includes(secondDetail.aspectInterpretation));
+    assert.ok(text.includes(lang==="zh"?"同一相位见星位解读 1":"the same aspect is explained in Sky reading 1"));
   }
 });
 test("real Mercury stations use the motion at noon and affect the daily rating", () => {
