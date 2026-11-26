@@ -1,3 +1,7 @@
 .DS_Store
 node_modules
 .wrangler
+
+# Generated full backtest reports
+/backtest-output/
+/horoscope-v3.2-backtest.json

@@ -390,14 +390,14 @@ function horoscopeAspect(a, b) {
         (cfg.exactBlend - cfg.exactTolerance));
       dynamicWeight = cfg.exact + distanceMix * (directional - cfg.exact);
     }
-    return { angle: rule.angle, deviation, strength: 1 - deviation / rule.orb,
+    return { angle: rule.angle, separation: Math.abs(delta), orb: rule.orb, deviation, strength: 1 - deviation / rule.orb,
       zh: rule.zh, en: rule.en, kind: rule.kind, relativeSpeed, state, dynamicWeight };
   }
   return null;
 }
 
 const HORO_PLANETS = ["mercury", "venus", "mars", "jupiter", "saturn"];
-function horoscopeAspectValue(aspect, a, b) {
+function horoscopeV31AspectValue(aspect, a, b) {
   const strength = aspect.strength * (aspect.dynamicWeight ?? 1);
   if (aspect.kind === "support") return 0.65 * strength;
   if (aspect.kind === "challenge") return -0.85 * strength;
@@ -410,6 +410,61 @@ function horoscopeAspectValue(aspect, a, b) {
   const favorable = keys.filter(k => k === "venus" || k === "jupiter").length;
   const demanding = keys.filter(k => k === "mars" || k === "saturn").length;
   return 0.55 * (favorable - demanding) * strength;
+}
+/* V3.2: independently switchable scales. Zero restores the original
+   domain membership/weights and V3.1 aspect contributions. */
+const HORO_V32 = Object.freeze({
+  houseRulerScale: 0.2, combinationScale: 0.5,
+});
+const HORO_V31 = Object.freeze({ houseRulerScale: 0, combinationScale: 0 });
+const HORO_ROLE_WEIGHTS = Object.freeze({
+  natural: 1, other: 0.6, solarRuler: 0.5,
+  houseRoles: Object.freeze([0.30, 0.15, 0.05]), houseCap: 0.45, max: 1.95,
+});
+// Sparse symmetric table; unspecified pairs/angles (including conjunctions)
+// are neutral. Coefficients multiply the existing signed V3.1 value once.
+const HORO_PAIR_WEIGHTS = Object.freeze({
+  "jupiter/venus": Object.freeze({60:1.06, 90:0.96, 120:1.10, 180:1.02}),
+  "mars/saturn": Object.freeze({60:1.04, 90:1.10, 120:1.08, 180:1.08}),
+  "mercury/saturn": Object.freeze({60:1.08, 90:1.04, 120:1.06, 180:1.04}),
+  "moon/venus": Object.freeze({60:1.06, 120:1.08}),
+  "mars/mercury": Object.freeze({60:1.04, 90:1.06, 120:1.04, 180:1.06}),
+  "jupiter/saturn": Object.freeze({60:1.04, 90:1.06, 120:1.04, 180:1.06}),
+});
+function horoscopePairId(a, b) {
+  return [a, b].sort().join("/");
+}
+function horoscopeCombinationWeight(a, b, angle, model = HORO_V32) {
+  const configured = HORO_PAIR_WEIGHTS[horoscopePairId(a, b)]?.[angle] ?? 1;
+  return 1 + (configured - 1) * model.combinationScale;
+}
+function horoscopeAspectValue(aspect, a, b, model = HORO_V32) {
+  return horoscopeV31AspectValue(aspect, a, b) *
+    horoscopeCombinationWeight(a.key, b.key, aspect.angle, model);
+}
+function horoscopeHouseRulers(signIdx, domain) {
+  return domain.houses.map(house => {
+    const sign = (signIdx + house - 1) % 12;
+    return { house, signIdx: sign, ruler: HORO_RULERS[sign] };
+  });
+}
+function horoscopeRoleWeight(signIdx, domain, key, model = HORO_V32) {
+  const cfg = HORO_ROLE_WEIGHTS;
+  const natural = domain.bodies.includes(key), solarRuler = HORO_RULERS[signIdx] === key;
+  const houses = model.houseRulerScale > 0 ?
+    horoscopeHouseRulers(signIdx, domain).filter(h => h.ruler === key) : [];
+  if (!natural && !solarRuler && !houses.length) return null;
+  const baseWeight = natural ? cfg.natural : solarRuler ? cfg.other : cfg.other * model.houseRulerScale;
+  const solarExtra = solarRuler ? cfg.solarRuler : 0;
+  let remaining = Math.min(cfg.houseCap, cfg.max - baseWeight - solarExtra);
+  const houseRoles = houses.map((house, i) => {
+    const extra = Math.min(remaining, (cfg.houseRoles[i] ?? 0) * model.houseRulerScale);
+    remaining -= extra;
+    return { ...house, extra };
+  });
+  const houseExtra = houseRoles.reduce((sum, h) => sum + h.extra, 0);
+  return { natural, solarRuler, baseWeight, solarExtra, houseRoles, houseExtra,
+    weight: baseWeight + solarExtra + houseExtra };
 }
 /* Editorial weights of the traditional-inspired model (v3.1 dynamics). Kept in one
    table so the distribution simulation and tests can reason about them. */
@@ -474,34 +529,74 @@ function horoscopeTone(raw) {
 /* Cache pair geometry across signs only for immutable sky snapshots.
    Allocate the signed net aspect cap proportionally for an additive audit. */
 const horoscopeAspectCache = new WeakMap();
-function horoscopeBodyAspects(p, positions) {
-  const immutable = Object.isFrozen(positions) && positions.every(Object.isFrozen);
-  let byBody = immutable ? horoscopeAspectCache.get(positions) : null;
-  if (byBody?.has(p.key)) return byBody.get(p.key);
-  const aspects = positions.filter(q => q.key !== p.key).map(q => {
-    const aspect = horoscopeAspect(p, q);
-    return aspect && { ...aspect, body: p.key, other: q.key,
-      pair: [p.key, q.key].sort().join("/"), value: horoscopeAspectValue(aspect, p, q) };
-  }).filter(Boolean).sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.deviation - b.deviation);
-  const sum = aspects.reduce((total, aspect) => total + aspect.value, 0);
-  const total = Math.max(-0.9, Math.min(0.9, sum));
-  const scale = sum === 0 ? 1 : total / sum;
-  const result = { aspects: aspects.map(a => ({ ...a, cappedValue: a.value * scale })), total };
-  if (immutable) {
-    result.aspects.forEach(Object.freeze);
-    Object.freeze(result.aspects);
-    Object.freeze(result);
-    if (!byBody) horoscopeAspectCache.set(positions, byBody = new Map());
-    byBody.set(p.key, result);
+// Geometry is sign/domain independent. Canonical orientation is lexical;
+// endpoint projections retain the old endpoint-relative velocity sign.
+function horoscopePairRecords(positions) {
+  const records = [];
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
+      const [a, b] = [positions[i], positions[j]].sort((x,y) => x.key < y.key ? -1 : 1);
+      const aspect = horoscopeAspect(a, b);
+      records.push(Object.freeze({
+        pair: horoscopePairId(a.key, b.key), bodies: Object.freeze([a.key,b.key]),
+        separation: Math.abs(norm180(a.lon - b.lon)),
+        relativeSpeed: Number.isFinite(a.velocity) && Number.isFinite(b.velocity) ? a.velocity-b.velocity : null,
+        aspect: aspect && Object.freeze(aspect),
+        valueBeforeDynamics: aspect ? horoscopeV31AspectValue({...aspect, dynamicWeight:1},a,b) : 0,
+        valueBeforeCombination: aspect ? horoscopeV31AspectValue(aspect,a,b) : 0,
+      }));
+    }
   }
-  return result;
+  return Object.freeze(records);
+}
+function horoscopeSnapshotAspects(positions, model = HORO_V32) {
+  const immutable = Object.isFrozen(positions) && positions.every(Object.isFrozen);
+  let entry = immutable ? horoscopeAspectCache.get(positions) : null;
+  if (!entry) {
+    entry = { pairs: horoscopePairRecords(positions), variants: new Map() };
+    if (immutable) horoscopeAspectCache.set(positions, entry);
+  }
+  const key = model.combinationScale;
+  if (entry.variants.has(key)) return entry.variants.get(key);
+  const byBody = new Map(positions.map(p => [p.key, {aspects:[],total:0}]));
+  for (const record of entry.pairs) {
+    if (!record.aspect) continue;
+    const [a,b] = record.bodies;
+    const combinationWeight = horoscopeCombinationWeight(a,b,record.aspect.angle,model);
+    const value = record.valueBeforeCombination * combinationWeight;
+    for (const [body,other] of [[a,b],[b,a]]) {
+      const relativeSpeed = record.relativeSpeed === null ? null :
+        body === a ? record.relativeSpeed : -record.relativeSpeed;
+      byBody.get(body).aspects.push({ ...record.aspect, relativeSpeed, body, other,
+        pair:record.pair, pairRecord:record, combinationWeight,
+        valueBeforeDynamics:record.valueBeforeDynamics,
+        valueBeforeCombination:record.valueBeforeCombination, value });
+    }
+  }
+  for (const result of byBody.values()) {
+    result.aspects.sort((a,b) => Math.abs(b.value)-Math.abs(a.value) || a.deviation-b.deviation);
+    const sum = result.aspects.reduce((total,a) => total+a.value,0);
+    result.total = Math.max(-0.9, Math.min(0.9,sum));
+    const scale = sum === 0 ? 1 : result.total/sum;
+    result.aspects = Object.freeze(result.aspects.map(a=>Object.freeze({...a,cappedValue:a.value*scale})));
+    Object.freeze(result);
+  }
+  // Only the shared immutable sky cache retains variants; bound experiments.
+  if (immutable) {
+    if (entry.variants.size >= 4) entry.variants.delete(entry.variants.keys().next().value);
+    entry.variants.set(key,byBody);
+  }
+  return byBody;
+}
+function horoscopeBodyAspects(p, positions, model = HORO_V32) {
+  return horoscopeSnapshotAspects(positions,model).get(p.key);
 }
 /* One body's state against the selected solar sign in one snapshot. */
-function horoscopeBodyState(p, positions, signIdx) {
+function horoscopeBodyState(p, positions, signIdx, model = HORO_V32, snapshot = null) {
   const house = (p.signIdx - signIdx + 12) % 12 + 1;
   const distance = Math.min(house - 1, 13 - house);
   const relation = [0.55, 0, 0.55, -0.8, 0.95, 0, -0.85][distance];
-  const { aspects, total: aspectValue } = horoscopeBodyAspects(p, positions);
+  const { aspects, total: aspectValue } = snapshot ? snapshot.get(p.key) : horoscopeBodyAspects(p, positions, model);
   const dignity = horoscopeDignity(p.key, p.signIdx);
   const solar = horoscopeSolarCondition(p, positions);
   const scale = HORO_MODEL.placementScale[p.key] ?? 1;
@@ -537,25 +632,26 @@ function horoscopeRatingResult(domains) {
 function weightedHoroscopeAspect(a, contribution, sampleAt) {
   return { angle:a.angle, deviation:a.deviation, strength:a.strength, zh:a.zh, en:a.en,
     kind:a.kind, relativeSpeed:a.relativeSpeed, state:a.state, dynamicWeight:a.dynamicWeight,
-    body:a.body, other:a.other, pair:a.pair, value:a.value, cappedValue:a.cappedValue,
+    body:a.body, other:a.other, pair:a.pair, pairRecord:a.pairRecord, separation:a.separation, orb:a.orb,
+    combinationWeight:a.combinationWeight, valueBeforeDynamics:a.valueBeforeDynamics,
+    valueBeforeCombination:a.valueBeforeCombination, value:a.value, cappedValue:a.cappedValue,
     contribution, sampleAt };
 }
-function scoreHoroscope(signIdx, positions) {
-  const ruler = HORO_RULERS[signIdx];
-  const planets = positions.map(p => ({ ...p, ...horoscopeBodyState(p, positions, signIdx) }));
+function scoreHoroscope(signIdx, positions, model = HORO_V32) {
+  const snapshot = horoscopeSnapshotAspects(positions, model);
+  const planets = positions.map(p => ({ ...p, ...horoscopeBodyState(p, positions, signIdx, model, snapshot) }));
   const domains = HORO_DOMAINS.map(domain => {
-    const relevant = planets.filter(p => domain.bodies.includes(p.key) || p.key === ruler);
-    const weighted = relevant.map(p => ({
-      p, weight: (domain.bodies.includes(p.key) ? 1 : 0.6) + (p.key === ruler ? 0.5 : 0),
-    }));
-    const totalWeight = weighted.reduce((sum, term) => sum + term.weight, 0);
-    const contributions = weighted.map(({p, weight}) => {
-      const share = weight / totalWeight;
+    const weighted = planets.map(p => ({p, role:horoscopeRoleWeight(signIdx,domain,p.key,model)}))
+      .filter(term => term.role && term.role.weight > 0);
+    const totalWeight = weighted.reduce((sum, term) => sum + term.role.weight, 0);
+    const contributions = weighted.map(({p, role}) => {
+      const share = role.weight / totalWeight;
       const factors = { ...p.components,
         house: domain.houses.includes(p.house) ? p.placementScale * HORO_MODEL.houseBonus : 0 };
       const components = Object.fromEntries(HORO_FACTORS.map(key => [key, factors[key] * share]));
       const aspects = p.aspects.map(a => weightedHoroscopeAspect(a, a.cappedValue * share));
-      return { key: p.key, value: horoscopeFactorTotal(components), components, aspects, focus: horoscopeFocus(p, aspects) };
+      return { key: p.key, role, share, value: horoscopeFactorTotal(components), components, aspects,
+        focus: horoscopeFocus(p, aspects) };
     });
     return horoscopeDomainResult(domain.key, contributions);
   });
@@ -642,14 +738,14 @@ function horoscopeSky(date) {
    weighted value/evidence. Pick the strongest actual contributing sample
    in the direction of the integrated term; ties keep chronological order.
    Consequently displayed evidence is a real sampled sky, not a noon proxy. */
-function scoreHoroscopeSamples(signIdx, samples) {
+function scoreHoroscopeSamples(signIdx, samples, model = HORO_V32) {
   const totalWeight = samples.reduce((sum, sample) => sum + sample.weight, 0);
   if (!samples.length || !Number.isFinite(totalWeight) || totalWeight <= 0 ||
       samples.some(sample => !Number.isFinite(sample.weight) || sample.weight <= 0))
     throw new RangeError("Invalid horoscope samples");
   const scored = samples.map(sample => ({
     ...sample, weight: sample.weight / totalWeight,
-    score: scoreHoroscope(signIdx, sample.positions),
+    score: scoreHoroscope(signIdx, sample.positions, model),
   }));
   const domains = HORO_DOMAINS.map((domain, i) => {
     const contributions = scored[0].score.domains[i].contributions.map(initial => {
@@ -665,14 +761,14 @@ function scoreHoroscopeSamples(signIdx, samples) {
       const value = horoscopeFactorTotal(components);
       const strength = term => value === 0 ? Math.abs(term.value) : Math.sign(value) * term.value;
       const representative = terms.reduce((best, term) => strength(term) > strength(best) ? term : best);
-      return { key: initial.key, value, components, focus: representative.focus, samples: terms };
+      return { key: initial.key, role:initial.role, share:initial.share, value, components, focus: representative.focus, samples: terms };
     });
     return horoscopeDomainResult(domain.key, contributions);
   });
   return { ...horoscopeRatingResult(domains), samples: scored.map(({from,to,at,weight,label}) => ({from,to,at,weight,label})) };
 }
-function scoreHoroscopeDay(date, signIdx) {
-  return scoreHoroscopeSamples(signIdx, horoscopeSky(date).samples);
+function scoreHoroscopeDay(date, signIdx, model = HORO_V32) {
+  return scoreHoroscopeSamples(signIdx, horoscopeSky(date).samples, model);
 }
 /* Context matching is restricted to the preassigned date window to
    guarantee a seven-day no-repeat interval without local storage, network
@@ -828,6 +924,51 @@ function horoscopeAspectMotionCopy(f, lang) {
   return zh ? timing + names[f.key] + "与" + names[a.other] + "的" + a.zh + motion[0] + "。"
     : timing + "the " + a.en + " between " + names[f.key] + " and " + names[a.other] + " " + motion[1] + ".";
 }
+// Localized pair-specific reflection prompts. Only displayed for a nonzero
+// scored aspect whose configured multiplier actually changed its magnitude.
+const HORO_PAIR_REFLECTIONS = {
+  "jupiter/venus": {
+    support:["在关系、享受与成长之间寻找适度的配合","look for a measured balance of relationships, enjoyment and growth"],
+    challenge:["核对期待与实际资源，不把愿望当作承诺","check expectations against actual resources rather than treating wishes as commitments"],
+  },
+  "mars/saturn": {
+    support:["让行动力与纪律配合，把任务分成可完成的步骤","combine initiative with discipline by breaking tasks into manageable steps"],
+    challenge:["协调行动节奏与现实约束，给必要的等待留出空间","coordinate the pace of action with real constraints and allow room for necessary delays"],
+  },
+  "mercury/saturn": {
+    support:["将信息整理与耐心、结构化思考结合","combine organizing information with patient, structured thinking"],
+    challenge:["检查沟通中的限制与假设，避免过早下结论","check constraints and assumptions in communication before drawing conclusions"],
+  },
+  "moon/venus": {support:["兼顾感受与关系中的实际需要","consider feelings together with practical needs in relationships"]},
+  "mars/mercury": {
+    support:["让清晰沟通服务于具体行动","connect clear communication to practical action"],
+    challenge:["在表达意见与采取行动前核实信息","check information before expressing opinions or taking action"],
+  },
+  "jupiter/saturn": {
+    support:["在成长目标与可持续责任之间寻找配合","align growth goals with sustainable responsibilities"],
+    challenge:["核对扩展计划与时间、资源的界限","check expansion plans against limits of time and resources"],
+  },
+};
+function horoscopeCombinationCopy(a, lang) {
+  if (!a || !a.value || !a.contribution || a.combinationWeight === 1) return "";
+  const phrase = HORO_PAIR_REFLECTIONS[a.pair]?.[a.kind];
+  if (!phrase) return "";
+  return lang === "zh"
+    ? "组合反思：" + phrase[0] + "。"
+    : "Pair reflection: " + phrase[1] + ".";
+}
+function horoscopeRulerCopy(d, lang) {
+  const term = (d.contributions || []).filter(t=>t.role?.houseExtra > 0)
+    .sort((a,b)=>Math.abs(b.value)-Math.abs(a.value))[0];
+  if (!term) return "";
+  const zh = lang === "zh", names = I18N[lang].astro.bodies;
+  const houses = term.role.houseRoles.filter(h=>h.extra>0)
+    .map(h=>zh ? "第"+h.house+"宫（"+SIGNS[h.signIdx][lang]+"）" :
+      "house "+h.house+" ("+SIGNS[h.signIdx][lang]+")").join(zh?"、":" and ");
+  const shared = term.role.houseRoles.length>1;
+  return zh ? "守护角色："+names[term.key]+"守护此领域的太阳星座"+houses+"，因此获得额外权重"+(shared?"（多宫位增量递减且有上限）":"")+"。"
+    : "Rulership: "+names[term.key]+" rules solar "+houses+" in this domain and receives extra weight"+(shared?" (diminishing, capped additions for shared rulership)":"")+".";
+}
 function horoscopeDomainCopy(d, h, lang) {
   const zh = lang === "zh";
   const li = zh ? 0 : 1;
@@ -862,6 +1003,8 @@ function horoscopeDomainCopy(d, h, lang) {
   }
   const motion = horoscopeAspectMotionCopy(f, lang);
   if (motion) aspectInterpretation += (aspectInterpretation ? " " : "") + motion;
+  const pairReflection = horoscopeCombinationCopy(f.aspect, lang);
+  if (pairReflection) aspectInterpretation += " " + pairReflection;
   let conditionInterpretation = "";
   if (f.dignity?.length) {
     const labels = f.dignity.map(c => HORO_CONDITION_LABELS[c][li]).join(zh ? "、" : " and ");
@@ -1096,6 +1239,7 @@ function horoscopeFullText(h, lang) {
         : `Main basis: ${title(group.id)} (${A.bodies[d.focus.key]})`,
       horoscopeBalanceCopy(d, lang),
       horoscopeContributionCopy(d, lang),
+      horoscopeRulerCopy(d, lang),
       `${zh ? "建议：" : "Suggestion: "}${detail.advice}`,
     ].filter(Boolean).join("\n"));
   }

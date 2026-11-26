@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The V3.2 audit regression reads the pinned V3.1 source from Git.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
