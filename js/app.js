@@ -3206,7 +3206,19 @@ function focusInsideModal(last = false) {
 function trapModalTab(e) {
   if (!activeModal || e.key !== "Tab") return;
   const items = modalFocusables();
-  const index = items.indexOf(document.activeElement);
+  const current = document.activeElement;
+  const index = items.indexOf(current);
+  // Focus can rest on a programmatic target inside the dialog (tabindex
+  // -1, e.g. a section the reading's tiles jump to). Continue from its
+  // place in document order; wrap only at the real first/last control.
+  if (index < 0 && items.length && current !== activeModal && activeModal.contains(current)) {
+    e.preventDefault();
+    const next = e.shiftKey
+      ? items.filter(el => current.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING && !el.contains(current)).pop()
+      : items.find(el => current.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (next) next.focus(); else focusInsideModal(e.shiftKey);
+    return;
+  }
   if (!items.length || index < 0 ||
       (e.shiftKey ? index === 0 : index === items.length - 1)) {
     e.preventDefault();

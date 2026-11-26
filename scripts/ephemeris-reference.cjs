@@ -116,8 +116,13 @@ function stations(body, start, stop) {
 }
 
 /* ---- spot checks of the astronomy-engine event epochs against Horizons ---- */
+/* Each search returns a finite epoch or null. A null retries once in a
+   wider window; a second miss stops generation (see requireEpoch). */
 function horizonsIngress(body, approx) {
-  const { rows } = horizons(body, approx - 30 * MIN, approx + 30 * MIN, "1m");
+  return ingressIn(body, approx, 30 * MIN, "1m") ?? ingressIn(body, approx, 6 * 60 * MIN, "2m");
+}
+function ingressIn(body, approx, half, step) {
+  const { rows } = horizons(body, approx - half, approx + half, step);
   for (let i = 1; i < rows.length; i++) {
     const a = rows[i - 1], b = rows[i];
     if (signOf(a.lon) === signOf(b.lon)) continue;
@@ -128,7 +133,10 @@ function horizonsIngress(body, approx) {
   return null;
 }
 function horizonsStation(body, approx) {
-  const { rows } = horizons(body, approx - 3 * DAY, approx + 3 * DAY, "30m");
+  return stationIn(body, approx, 3 * DAY, "30m") ?? stationIn(body, approx, 10 * DAY, "60m");
+}
+function stationIn(body, approx, half, step) {
+  const { rows } = horizons(body, approx - half, approx + half, step);
   const v = [];
   for (let i = 1; i < rows.length; i++) v.push({ at: (rows[i].at + rows[i - 1].at) / 2,
     rate: norm180(rows[i].lon - rows[i - 1].lon) / ((rows[i].at - rows[i - 1].at) / DAY) });
@@ -139,9 +147,27 @@ function horizonsStation(body, approx) {
     const near = v.filter(p => Math.abs(p.at - v[i].at) <= 12 * HOUR);
     const mx = near.reduce((s, p) => s + p.at, 0) / near.length, my = near.reduce((s, p) => s + p.rate, 0) / near.length;
     const slope = near.reduce((s, p) => s + (p.at - mx) * (p.rate - my), 0) / near.reduce((s, p) => s + (p.at - mx) ** 2, 0);
-    return mx - my / slope;
+    const root = mx - my / slope;
+    return Number.isFinite(root) ? root : null;
   }
   return null;
+}
+function requireEpoch(value, label) {
+  if (!Number.isFinite(value) || value < EVENT_RANGE.start || value > EVENT_RANGE.stop)
+    throw Error(`Horizons spot check found no ${label} (got ${value}); not writing the fixture`);
+  return value;
+}
+/* Largest believable |astronomy-engine - Horizons| per spot check, in
+   minutes. Slow bodies turn arcsecond differences into tens of minutes.
+   tests/ephemeris-accuracy.test.cjs holds the same limits. */
+const SPOT_LIMIT_MINUTES = { ingress: { sun: 2, moon: 2, mercury: 2, venus: 2, mars: 5, jupiter: 90, saturn: 90 },
+  station: { mercury: 20, venus: 20, mars: 20, jupiter: 30, saturn: 30 } };
+function spotCheck(kind, body, at, horizonsAt) {
+  const h = requireEpoch(horizonsAt, `${body} ${kind} near ${new Date(at).toISOString()}`);
+  const diffMinutes = round((at - h) / MIN, 3);
+  if (Math.abs(diffMinutes) > SPOT_LIMIT_MINUTES[kind][body])
+    throw Error(`${body} ${kind} spot check differs by ${diffMinutes} min (limit ${SPOT_LIMIT_MINUTES[kind][body]}); not writing the fixture`);
+  return { kind, body, astronomyEngine: at, horizons: Math.round(h), diffMinutes };
 }
 
 function main() {
@@ -174,18 +200,11 @@ function main() {
   process.stderr.write("Horizons spot checks\n");
   const spot = [];
   const pick = (list, n) => Array.from({ length: n }, (_, i) => list[Math.floor((i + 0.5) * list.length / n)]);
-  for (const [at] of pick(events.ingress.moon, 6)) {
-    const h = horizonsIngress("moon", at);
-    spot.push({ kind: "ingress", body: "moon", astronomyEngine: at, horizons: Math.round(h), diffMinutes: round((at - h) / MIN, 3) });
-  }
-  for (const body of ["sun", "mercury", "saturn"]) for (const [at] of pick(events.ingress[body], 1)) {
-    const h = horizonsIngress(body, at);
-    spot.push({ kind: "ingress", body, astronomyEngine: at, horizons: Math.round(h), diffMinutes: round((at - h) / MIN, 3) });
-  }
-  for (const body of ["mercury", "venus", "mars", "jupiter", "saturn"]) for (const [at] of pick(events.station[body], 1)) {
-    const h = horizonsStation(body, at);
-    spot.push({ kind: "station", body, astronomyEngine: at, horizons: Math.round(h), diffMinutes: round((at - h) / MIN, 1) });
-  }
+  for (const [at] of pick(events.ingress.moon, 6)) spot.push(spotCheck("ingress", "moon", at, horizonsIngress("moon", at)));
+  for (const body of ["sun", "mercury", "saturn"]) for (const [at] of pick(events.ingress[body], 1))
+    spot.push(spotCheck("ingress", body, at, horizonsIngress(body, at)));
+  for (const body of ["mercury", "venus", "mars", "jupiter", "saturn"]) for (const [at] of pick(events.station[body], 1))
+    spot.push(spotCheck("station", body, at, horizonsStation(body, at)));
   const fixture = {
     meta: {
       purpose: "Offline accuracy reference for the horoscope ephemeris (development only; never fetched at runtime).",
