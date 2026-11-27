@@ -2964,17 +2964,28 @@ function makeSelection(cat, now = new Date()) {
       // Recheck at selection as well as eligibility. Count the new
       // encounter in the render draft; language/ambient repaints do not
       // call makeSelection. Use the same local day as the eligibility check.
-      if (!deckState.recordHistory(postcardDayKey(now))) {
+      const day = postcardDayKey(now);
+      if (!deckState.recordHistory(day)) {
         const fallback = NAM_DEDUP.weightedCategory(
           availableCategories(now).filter(c => c.key !== "history"), lastCategory, Math.random);
         return makeSelection(fallback, now);
       }
       const key = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      // Today's entry is date-determined; the deck governs only the
-      // random-day fallback pool. Both consume the daily history budget.
-      if (HISTORY[key]) return { cat, key, entry: HISTORY[key], today: true };
+      // Today's events are date-determined: the nth history encounter of
+      // the local day shows the nth event for the date, rotated by year so
+      // the first card differs from one year to the next. The daily budget
+      // already counts this encounter, so no extra state is stored. Once a
+      // date's events are used up, the deck governs the random-day pool.
+      const todays = (HISTORY[key] ? [HISTORY[key]] : []).concat(HISTORY_MORE[key] || []);
+      const spent = deckState.state.historyDaily.find(item => item.day === day);
+      const nth = spent ? spent.count - 1 : 0;
+      if (nth < todays.length) {
+        return { cat, key, entry: todays[(nth + now.getFullYear()) % todays.length], today: true };
+      }
       const keys = Object.keys(HISTORY);
-      const rk = keys[deckDraw("history")];
+      let rk = keys[deckDraw("history")];
+      // Today's own date was just shown as today's event; draw past it.
+      if (rk === key) rk = keys[deckDraw("history")];
       return { cat, key: rk, entry: HISTORY[rk], today: false };
     }
     case "thought":

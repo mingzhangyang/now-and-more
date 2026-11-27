@@ -1124,6 +1124,1111 @@ const HISTORY = {
   "12-31": { year: 1879, zh: "爱迪生在门洛帕克首次公开演示白炽灯，实验室与街道被电灯照亮，迎接新年。", en: "Edison gives the first public demonstration of his incandescent light at Menlo Park, lighting up the laboratory to greet the new year." },
 };
 
+/* More events per date, drawn after HISTORY's own entry for the day.
+   Each entry keeps a permanent id (history:MM-DD:n, n ≥ 2); append new
+   entries with the next n, never renumber. HISTORY itself stays keyed
+   by date because its keys are the frozen random-day deck ids. */
+const HISTORY_MORE = {
+  "01-01": [
+    { id: "history:01-01:2", year: 1912, zh: "中华民国在南京成立，孙中山就任临时大总统，亚洲第一个共和国诞生。", en: "The Republic of China is founded in Nanjing, with Sun Yat-sen as provisional president: Asia's first republic." },
+  ],
+  "01-02": [
+    { id: "history:01-02:2", year: 1492, zh: "格拉纳达向天主教双王投降，伊比利亚半岛上最后一个穆斯林王国就此终结。", en: "Granada surrenders to Ferdinand and Isabella, ending the last Muslim kingdom on the Iberian Peninsula." },
+  ],
+  "01-03": [
+    { id: "history:01-03:2", year: 1892, zh: "托尔金出生于南非布隆方丹，他后来写出了《霍比特人》和《魔戒》。", en: "J. R. R. Tolkien is born in Bloemfontein, South Africa; he will go on to write The Hobbit and The Lord of the Rings." },
+  ],
+  "01-04": [
+    { id: "history:01-04:2", year: 1958, zh: "人类第一颗人造卫星斯普特尼克一号在绕地球飞行三个月后坠入大气层烧毁。", en: "Sputnik 1, the first artificial satellite, falls back into the atmosphere and burns up after three months in orbit." },
+  ],
+  "01-05": [
+    { id: "history:01-05:2", year: 1914, zh: "福特公司宣布将工人日薪提高到 5 美元，几乎是当时行业水平的两倍。", en: "Ford announces a $5 daily wage for its workers, roughly double the going rate in the industry." },
+  ],
+  "01-06": [
+    { id: "history:01-06:2", year: 1884, zh: "遗传学奠基人孟德尔在布尔诺去世。他的豌豆实验要到 1900 年才被重新发现。", en: "Gregor Mendel, founder of genetics, dies in Brno. His pea experiments will not be rediscovered until 1900." },
+  ],
+  "01-07": [
+    { id: "history:01-07:2", year: 1927, zh: "伦敦与纽约之间开通第一条商用跨大西洋电话线路，三分钟通话收费 75 美元。", en: "Commercial transatlantic telephone service opens between London and New York, at $75 for three minutes." },
+  ],
+  "01-08": [
+    { id: "history:01-08:2", year: 1642, zh: "伽利略在佛罗伦萨附近的阿切特里去世，生命最后几年他一直处于软禁之中。", en: "Galileo Galilei dies at Arcetri near Florence, having spent his final years under house arrest." },
+  ],
+  "01-09": [
+    { id: "history:01-09:2", year: 1793, zh: "法国人布朗夏尔在费城放飞热气球，完成美洲大陆上第一次载人气球飞行，华盛顿亲临观看。", en: "Jean-Pierre Blanchard makes the first manned balloon flight in North America, from Philadelphia, watched by George Washington." },
+  ],
+  "01-10": [
+    { id: "history:01-10:2", year: 1920, zh: "《凡尔赛和约》生效，国际联盟正式成立，这是第一个以维护世界和平为宗旨的国际组织。", en: "The Treaty of Versailles takes effect and the League of Nations comes into being, the first international body devoted to keeping world peace." },
+  ],
+  "01-11": [
+    { id: "history:01-11:2", year: 1787, zh: "威廉·赫歇尔发现天王星的两颗卫星，后来被命名为泰坦尼亚和奥伯龙。", en: "William Herschel discovers two moons of Uranus, later named Titania and Oberon." },
+  ],
+  "01-12": [
+    { id: "history:01-12:2", year: 1876, zh: "美国作家杰克·伦敦出生于旧金山，后来写出《野性的呼唤》。", en: "American writer Jack London is born in San Francisco; he will later write The Call of the Wild." },
+  ],
+  "01-13": [
+    { id: "history:01-13:2", year: 1910, zh: "纽约大都会歌剧院的演出通过无线电向公众播出，男高音卡鲁索的歌声成为最早的公共广播之一。", en: "A performance at New York's Metropolitan Opera, featuring tenor Enrico Caruso, is among the first public radio broadcasts." },
+  ],
+  "01-14": [
+    { id: "history:01-14:2", year: 1784, zh: "美国邦联国会批准《巴黎条约》，美国独立战争在法律上正式画上句号。", en: "The U.S. Congress of the Confederation ratifies the Treaty of Paris, formally closing the American Revolutionary War." },
+  ],
+  "01-15": [
+    { id: "history:01-15:2", year: 1759, zh: "大英博物馆在伦敦对公众开放，免费向「所有勤学好奇之人」开放。", en: "The British Museum opens to the public in London, free to 'all studious and curious persons'." },
+  ],
+  "01-16": [
+    { id: "history:01-16:2", year: 1605, zh: "塞万提斯的《堂吉诃德》第一部在马德里出版，常被视为第一部现代小说。", en: "The first part of Cervantes's Don Quixote is published in Madrid; it is often called the first modern novel." },
+  ],
+  "01-17": [
+    { id: "history:01-17:2", year: 1773, zh: "库克船长的「决心号」成为第一艘驶入南极圈的船只。", en: "Captain James Cook's ship Resolution becomes the first known vessel to cross the Antarctic Circle." },
+  ],
+  "01-18": [
+    { id: "history:01-18:2", year: 1871, zh: "德意志帝国在凡尔赛宫镜厅宣告成立，普鲁士国王威廉一世加冕为德意志皇帝。", en: "The German Empire is proclaimed in the Hall of Mirrors at Versailles, with Wilhelm I of Prussia as emperor." },
+  ],
+  "01-19": [
+    { id: "history:01-19:2", year: 1736, zh: "詹姆斯·瓦特出生于苏格兰格里诺克，他改良的蒸汽机推动了工业革命。", en: "James Watt is born in Greenock, Scotland; his improved steam engine will help drive the Industrial Revolution." },
+  ],
+  "01-20": [
+    { id: "history:01-20:2", year: 1265, zh: "西蒙·德·孟福尔召集的议会在威斯敏斯特开幕，首次邀请城镇代表参加，被视为英国下议院的雏形。", en: "Simon de Montfort's parliament meets at Westminster, the first to summon town representatives: an early ancestor of the House of Commons." },
+  ],
+  "01-21": [
+    { id: "history:01-21:2", year: 1954, zh: "世界上第一艘核动力潜艇「鹦鹉螺号」在美国下水。", en: "USS Nautilus, the world's first nuclear-powered submarine, is launched in Connecticut." },
+  ],
+  "01-22": [
+    { id: "history:01-22:2", year: 1788, zh: "英国诗人拜伦出生于伦敦，他后来成为浪漫主义运动的代表人物。", en: "The poet Lord Byron is born in London; he will become a leading figure of the Romantic movement." },
+  ],
+  "01-23": [
+    { id: "history:01-23:2", year: 1556, zh: "明朝嘉靖年间，陕西华县发生大地震，死者逾八十万，是有记载以来死亡人数最多的地震。", en: "An earthquake strikes Shaanxi, China, under the Ming dynasty, killing over 800,000 people: the deadliest earthquake on record." },
+  ],
+  "01-24": [
+    { id: "history:01-24:2", year: 1984, zh: "苹果公司的第一台 Macintosh 电脑开始发售，让图形界面和鼠标走进普通人家。", en: "Apple's first Macintosh goes on sale, bringing the graphical interface and the mouse into ordinary homes." },
+  ],
+  "01-25": [
+    { id: "history:01-25:2", year: 1924, zh: "第一届冬季奥运会在法国夏蒙尼开幕。", en: "The first Winter Olympic Games open in Chamonix, France." },
+  ],
+  "01-26": [
+    { id: "history:01-26:2", year: 1950, zh: "《印度宪法》生效，印度成为共和国，这一天后来定为印度共和国日。", en: "India's constitution takes effect and the country becomes a republic; the day is now celebrated as Republic Day." },
+  ],
+  "01-27": [
+    { id: "history:01-27:2", year: 1756, zh: "莫扎特出生于萨尔茨堡，五岁就开始作曲。", en: "Wolfgang Amadeus Mozart is born in Salzburg; he will be composing by the age of five." },
+  ],
+  "01-28": [
+    { id: "history:01-28:2", year: 1813, zh: "简·奥斯汀的《傲慢与偏见》在伦敦出版，出版时没有署作者真名。", en: "Jane Austen's Pride and Prejudice is published in London, without her name on the title page." },
+  ],
+  "01-29": [
+    { id: "history:01-29:2", year: 1845, zh: "爱伦·坡的诗《乌鸦》在纽约《晚镜报》上发表，几乎一夜成名。", en: "Edgar Allan Poe's poem The Raven appears in the New York Evening Mirror and makes him famous almost overnight." },
+  ],
+  "01-30": [
+    { id: "history:01-30:2", year: 1649, zh: "英国国王查理一世在伦敦白厅外被斩首，英国随即进入短暂的共和时期。", en: "King Charles I of England is beheaded outside Whitehall in London, and England briefly becomes a republic." },
+  ],
+  "01-31": [
+    { id: "history:01-31:2", year: 1797, zh: "奥地利作曲家舒伯特出生于维也纳，他在 31 年的短暂一生中写下六百多首艺术歌曲。", en: "Franz Schubert is born in Vienna; in a life of only 31 years he will write more than 600 songs." },
+  ],
+  "02-01": [
+    { id: "history:02-01:2", year: 2003, zh: "哥伦比亚号航天飞机返回地球时在得克萨斯州上空解体，七名宇航员全部遇难。", en: "The space shuttle Columbia breaks apart over Texas while returning to Earth, killing all seven astronauts aboard." },
+  ],
+  "02-02": [
+    { id: "history:02-02:2", year: 1922, zh: "乔伊斯的小说《尤利西斯》在巴黎出版，这一天正是他的 40 岁生日。", en: "James Joyce's novel Ulysses is published in Paris, on the author's fortieth birthday." },
+  ],
+  "02-03": [
+    { id: "history:02-03:2", year: 1809, zh: "德国作曲家门德尔松出生于汉堡，《仲夏夜之梦》中的《婚礼进行曲》出自他手。", en: "Felix Mendelssohn is born in Hamburg; his Wedding March from A Midsummer Night's Dream is still played at weddings." },
+  ],
+  "02-04": [
+    { id: "history:02-04:2", year: 1789, zh: "乔治·华盛顿被选举人团全票选为美国第一任总统，他至今仍是唯一全票当选的总统。", en: "George Washington is unanimously elected first President of the United States by the Electoral College; he remains the only president ever elected unanimously." },
+  ],
+  "02-05": [
+    { id: "history:02-05:2", year: 1919, zh: "卓别林、玛丽·璧克馥、道格拉斯·范朋克和格里菲斯共同创办联美电影公司，让演员掌握自己的作品。", en: "Chaplin, Mary Pickford, Douglas Fairbanks and D. W. Griffith found United Artists so that performers can control their own films." },
+  ],
+  "02-06": [
+    { id: "history:02-06:2", year: 1840, zh: "英国代表与毛利酋长签署《怀唐伊条约》，这一天后来成为新西兰国庆日。", en: "British representatives and Māori chiefs sign the Treaty of Waitangi; the day becomes New Zealand's national day." },
+  ],
+  "02-07": [
+    { id: "history:02-07:2", year: 1812, zh: "狄更斯出生于英格兰朴次茅斯，童年在鞋油工厂做工的经历日后反复出现在他的小说里。", en: "Charles Dickens is born in Portsmouth, England; his childhood work in a blacking factory will echo through his novels." },
+  ],
+  "02-08": [
+    { id: "history:02-08:2", year: 1834, zh: "门捷列夫出生于西伯利亚托博尔斯克，他后来编出了化学元素周期表。", en: "Dmitri Mendeleev is born in Tobolsk, Siberia; he will later devise the periodic table of the elements." },
+  ],
+  "02-09": [
+    { id: "history:02-09:2", year: 1969, zh: "波音 747 首飞成功，这架「巨无霸」让远程航空旅行走向大众。", en: "The Boeing 747 makes its first flight; the 'jumbo jet' will bring long-haul air travel to the masses." },
+  ],
+  "02-10": [
+    { id: "history:02-10:2", year: 1763, zh: "英、法、西三国签订《巴黎和约》，七年战争结束，法国失去在北美的大片领土。", en: "The Treaty of Paris ends the Seven Years' War; France cedes most of its North American territory." },
+  ],
+  "02-11": [
+    { id: "history:02-11:2", year: 1847, zh: "爱迪生出生于美国俄亥俄州米兰镇，一生拥有一千多项美国专利。", en: "Thomas Edison is born in Milan, Ohio; he will hold more than a thousand U.S. patents." },
+  ],
+  "02-12": [
+    { id: "history:02-12:2", year: 1912, zh: "清帝溥仪颁布退位诏书，延续两千多年的帝制在中国结束。", en: "The Xuantong Emperor Puyi abdicates, ending more than two thousand years of imperial rule in China." },
+  ],
+  "02-13": [
+    { id: "history:02-13:2", year: 1945, zh: "盟军开始轰炸德国德累斯顿，这座有「易北河上的佛罗伦萨」之称的古城几乎被夷为平地。", en: "Allied bombers begin their raids on Dresden; the city once called 'Florence on the Elbe' is largely destroyed." },
+  ],
+  "02-14": [
+    { id: "history:02-14:2", year: 1990, zh: "旅行者一号在距地球约 60 亿公里处回望，拍下「暗淡蓝点」：地球只占一个像素都不到。", en: "Voyager 1 turns back from about six billion kilometres away to take the Pale Blue Dot: Earth smaller than a single pixel." },
+  ],
+  "02-15": [
+    { id: "history:02-15:2", year: 1867, zh: "约翰·施特劳斯的圆舞曲《蓝色多瑙河》在维也纳首演。", en: "Johann Strauss II's waltz The Blue Danube is first performed in Vienna." },
+  ],
+  "02-16": [
+    { id: "history:02-16:2", year: 1937, zh: "杜邦公司的华莱士·卡罗瑟斯获得尼龙专利，这种合成纤维很快走进丝袜和降落伞。", en: "Wallace Carothers of DuPont is granted a patent for nylon, soon to be found in stockings and parachutes." },
+  ],
+  "02-17": [
+    { id: "history:02-17:2", year: 1904, zh: "普契尼的歌剧《蝴蝶夫人》在米兰斯卡拉歌剧院首演，首演反响冷淡，修改后才大获成功。", en: "Puccini's opera Madama Butterfly premieres at La Scala in Milan; it fails at first and succeeds only after revision." },
+  ],
+  "02-18": [
+    { id: "history:02-18:2", year: 1564, zh: "米开朗基罗在罗马去世，享年 88 岁，临终前几天仍在雕刻。", en: "Michelangelo dies in Rome at 88, still carving sculpture days before his death." },
+  ],
+  "02-19": [
+    { id: "history:02-19:2", year: 1473, zh: "哥白尼出生于波兰托伦，他后来提出了日心说。", en: "Nicolaus Copernicus is born in Toruń, Poland; he will later put the Sun at the centre of the cosmos." },
+  ],
+  "02-20": [
+    { id: "history:02-20:2", year: 1872, zh: "纽约大都会艺术博物馆向公众开放。", en: "The Metropolitan Museum of Art opens to the public in New York." },
+  ],
+  "02-21": [
+    { id: "history:02-21:2", year: 1848, zh: "马克思和恩格斯的《共产党宣言》在伦敦出版。", en: "Marx and Engels's Communist Manifesto is published in London." },
+  ],
+  "02-22": [
+    { id: "history:02-22:2", year: 1857, zh: "德国物理学家赫兹出生于汉堡，他首次证实了电磁波的存在，频率单位「赫兹」即以他命名。", en: "Physicist Heinrich Hertz is born in Hamburg; he will prove that electromagnetic waves exist, and the unit of frequency bears his name." },
+  ],
+  "02-23": [
+    { id: "history:02-23:2", year: 1685, zh: "作曲家亨德尔出生于德国哈勒，后来在伦敦写出清唱剧《弥赛亚》。", en: "George Frideric Handel is born in Halle, Germany; he will write the oratorio Messiah in London." },
+  ],
+  "02-24": [
+    { id: "history:02-24:2", year: 1786, zh: "威廉·格林出生于德国哈瑙，他和哥哥雅各布一起收集整理了《格林童话》。", en: "Wilhelm Grimm is born in Hanau, Germany; with his brother Jacob he will collect Grimms' Fairy Tales." },
+  ],
+  "02-25": [
+    { id: "history:02-25:2", year: 1841, zh: "印象派画家雷诺阿出生于法国利摩日。", en: "Impressionist painter Pierre-Auguste Renoir is born in Limoges, France." },
+  ],
+  "02-26": [
+    { id: "history:02-26:2", year: 1802, zh: "雨果出生于法国贝桑松，后来写出《巴黎圣母院》和《悲惨世界》。", en: "Victor Hugo is born in Besançon, France; he will write The Hunchback of Notre-Dame and Les Misérables." },
+  ],
+  "02-27": [
+    { id: "history:02-27:2", year: 1807, zh: "美国诗人朗费罗出生于缅因州波特兰。", en: "American poet Henry Wadsworth Longfellow is born in Portland, Maine." },
+  ],
+  "02-28": [
+    { id: "history:02-28:2", year: 1922, zh: "英国单方面宣布结束对埃及的保护，埃及获得名义上的独立。", en: "Britain unilaterally ends its protectorate over Egypt, which gains nominal independence." },
+  ],
+  "02-29": [
+    { id: "history:02-29:2", year: 1792, zh: "意大利作曲家罗西尼出生，他的生日四年才有一次；《塞维利亚的理发师》出自他手。", en: "Gioachino Rossini is born, with a birthday that comes only once every four years; he will write The Barber of Seville." },
+  ],
+  "03-01": [
+    { id: "history:03-01:2", year: 1781, zh: "《邦联条例》获得全部十三个州批准生效，成为美国第一部宪法性文件。", en: "The Articles of Confederation take effect after ratification by all thirteen states, America's first constitution." },
+  ],
+  "03-02": [
+    { id: "history:03-02:2", year: 1836, zh: "得克萨斯宣布脱离墨西哥独立，成立得克萨斯共和国。", en: "Texas declares independence from Mexico and becomes the Republic of Texas." },
+  ],
+  "03-03": [
+    { id: "history:03-03:2", year: 1847, zh: "贝尔出生于苏格兰爱丁堡，他后来获得了电话的专利。", en: "Alexander Graham Bell is born in Edinburgh, Scotland; he will later patent the telephone." },
+  ],
+  "03-04": [
+    { id: "history:03-04:2", year: 1678, zh: "作曲家维瓦尔第出生于威尼斯，他的《四季》至今仍是最常演奏的巴洛克作品之一。", en: "Antonio Vivaldi is born in Venice; his Four Seasons remains one of the most performed Baroque works." },
+  ],
+  "03-05": [
+    { id: "history:03-05:2", year: 1770, zh: "波士顿惨案：英军向波士顿民众开枪，五人死亡，殖民地与英国的关系进一步恶化。", en: "The Boston Massacre: British soldiers fire on a crowd in Boston, killing five and deepening the rift with Britain." },
+  ],
+  "03-06": [
+    { id: "history:03-06:2", year: 1899, zh: "拜耳公司注册「阿司匹林」商标，这种药至今仍是世界上用量最大的药物之一。", en: "Bayer registers the trademark Aspirin, still one of the most widely used medicines in the world." },
+  ],
+  "03-07": [
+    { id: "history:03-07:2", year: 1274, zh: "神学家托马斯·阿奎那去世，他试图让亚里士多德哲学与基督教信仰相互调和。", en: "Theologian Thomas Aquinas dies; he sought to reconcile Aristotle's philosophy with Christian faith." },
+  ],
+  "03-08": [
+    { id: "history:03-08:2", year: 1917, zh: "彼得格勒的妇女在国际妇女节走上街头，引发推翻沙皇统治的二月革命。", en: "Women in Petrograd march on International Women's Day, sparking the February Revolution that topples the tsar." },
+  ],
+  "03-09": [
+    { id: "history:03-09:2", year: 1959, zh: "芭比娃娃在纽约美国玩具展上首次亮相。", en: "The Barbie doll makes its debut at the American Toy Fair in New York." },
+  ],
+  "03-10": [
+    { id: "history:03-10:2", year: 1831, zh: "法国国王路易-菲利普下令组建法国外籍军团。", en: "King Louis-Philippe establishes the French Foreign Legion." },
+  ],
+  "03-11": [
+    { id: "history:03-11:2", year: 2011, zh: "日本东北地区发生 9.0 级大地震，引发海啸和福岛核事故。", en: "A magnitude 9.0 earthquake strikes northeastern Japan, triggering a tsunami and the Fukushima nuclear disaster." },
+  ],
+  "03-12": [
+    { id: "history:03-12:2", year: 1894, zh: "可口可乐首次装瓶出售，地点是美国密西西比州维克斯堡的一家糖果店。", en: "Coca-Cola is bottled for the first time, at a candy store in Vicksburg, Mississippi." },
+  ],
+  "03-13": [
+    { id: "history:03-13:2", year: 1733, zh: "化学家普里斯特利出生于英格兰，他后来分离出了氧气。", en: "Chemist Joseph Priestley is born in England; he will later isolate oxygen." },
+  ],
+  "03-14": [
+    { id: "history:03-14:2", year: 1883, zh: "马克思在伦敦去世，安葬于海格特公墓。", en: "Karl Marx dies in London and is buried in Highgate Cemetery." },
+  ],
+  "03-15": [
+    { id: "history:03-15:2", year: 1493, zh: "哥伦布结束第一次航行，回到西班牙帕洛斯港。", en: "Columbus returns to the Spanish port of Palos at the end of his first voyage." },
+  ],
+  "03-16": [
+    { id: "history:03-16:2", year: 1802, zh: "美国西点军校成立。", en: "The United States Military Academy at West Point is founded." },
+  ],
+  "03-17": [
+    { id: "history:03-17:2", year: 1958, zh: "美国发射先锋一号卫星，它至今仍在轨道上，是在轨时间最长的人造物体。", en: "The U.S. launches Vanguard 1; still in orbit today, it is the oldest human-made object in space." },
+  ],
+  "03-18": [
+    { id: "history:03-18:2", year: 1662, zh: "帕斯卡参与创办的公共马车线路在巴黎开通，被视为世界上最早的公共交通。", en: "A public carriage service co-founded by Blaise Pascal begins in Paris, often called the first public transit." },
+  ],
+  "03-19": [
+    { id: "history:03-19:2", year: 1918, zh: "美国国会通过《标准时间法》，正式确立时区并首次实行夏令时。", en: "The U.S. Congress passes the Standard Time Act, establishing time zones and introducing daylight saving time." },
+  ],
+  "03-20": [
+    { id: "history:03-20:2", year: 1800, zh: "伏打写信给英国皇家学会，介绍他发明的伏打电堆，这是世界上第一个电池。", en: "Alessandro Volta writes to the Royal Society describing his voltaic pile, the first electric battery." },
+  ],
+  "03-21": [
+    { id: "history:03-21:2", year: 2006, zh: "推特联合创始人杰克·多西发出第一条推文。", en: "Twitter co-founder Jack Dorsey sends the first tweet." },
+  ],
+  "03-22": [
+    { id: "history:03-22:2", year: 1832, zh: "歌德在魏玛去世，享年 82 岁，《浮士德》第二部在他去世前不久才完成。", en: "Johann Wolfgang von Goethe dies in Weimar at 82, having finished the second part of Faust shortly before." },
+  ],
+  "03-23": [
+    { id: "history:03-23:2", year: 1857, zh: "奥的斯在纽约安装了第一部商用载客电梯，摩天大楼从此成为可能。", en: "Elisha Otis installs the first commercial passenger elevator in New York, making skyscrapers possible." },
+  ],
+  "03-24": [
+    { id: "history:03-24:2", year: 1603, zh: "英国女王伊丽莎白一世去世，苏格兰国王詹姆斯六世继位，英格兰与苏格兰同戴一顶王冠。", en: "Queen Elizabeth I dies; James VI of Scotland succeeds her, uniting the crowns of England and Scotland." },
+  ],
+  "03-25": [
+    { id: "history:03-25:2", year: 1655, zh: "惠更斯发现土星最大的卫星土卫六（泰坦）。", en: "Christiaan Huygens discovers Titan, Saturn's largest moon." },
+  ],
+  "03-26": [
+    { id: "history:03-26:2", year: 1827, zh: "贝多芬在维也纳去世，据说送葬队伍有上万人。", en: "Ludwig van Beethoven dies in Vienna; tens of thousands are said to line the funeral route." },
+  ],
+  "03-27": [
+    { id: "history:03-27:2", year: 1845, zh: "伦琴出生于德国伦内普，他后来发现了 X 射线，并获得第一届诺贝尔物理学奖。", en: "Wilhelm Röntgen is born in Lennep, Germany; he will discover X-rays and win the first Nobel Prize in Physics." },
+  ],
+  "03-28": [
+    { id: "history:03-28:2", year: 1930, zh: "土耳其正式将君士坦丁堡更名为伊斯坦布尔。", en: "Turkey officially renames Constantinople as Istanbul." },
+  ],
+  "03-29": [
+    { id: "history:03-29:2", year: 1867, zh: "英国议会通过《英属北美法案》，为加拿大联邦的建立奠定法律基础。", en: "The British North America Act receives royal assent, laying the legal foundation for the Canadian Confederation." },
+  ],
+  "03-30": [
+    { id: "history:03-30:2", year: 1853, zh: "梵高出生于荷兰津德尔特，他一生只卖出过很少几幅画。", en: "Vincent van Gogh is born in Zundert, Netherlands; he will sell very few paintings in his lifetime." },
+  ],
+  "03-31": [
+    { id: "history:03-31:2", year: 1596, zh: "笛卡尔出生于法国，他留下了「我思故我在」这句话。", en: "René Descartes is born in France; he will leave the world 'I think, therefore I am.'" },
+  ],
+  "04-01": [
+    { id: "history:04-01:2", year: 1918, zh: "英国皇家空军成立，成为世界上第一支独立的空军。", en: "The Royal Air Force is formed in Britain, the world's first independent air force." },
+  ],
+  "04-02": [
+    { id: "history:04-02:2", year: 1792, zh: "美国国会通过《铸币法》，设立美国铸币局，确立美元为货币单位。", en: "The U.S. Coinage Act establishes the Mint and makes the dollar the national unit of money." },
+  ],
+  "04-03": [
+    { id: "history:04-03:2", year: 1860, zh: "美国驿马快信开始运营，骑手接力在十天左右把邮件从密苏里送到加利福尼亚。", en: "The Pony Express begins, with relay riders carrying mail from Missouri to California in about ten days." },
+  ],
+  "04-04": [
+    { id: "history:04-04:2", year: 1968, zh: "马丁·路德·金在田纳西州孟菲斯遇刺身亡，年仅 39 岁。", en: "Martin Luther King Jr. is assassinated in Memphis, Tennessee, at the age of 39." },
+  ],
+  "04-05": [
+    { id: "history:04-05:2", year: 1588, zh: "英国哲学家霍布斯出生，他在《利维坦》中探讨了国家权力的来源。", en: "Philosopher Thomas Hobbes is born in England; in Leviathan he will ask where the power of the state comes from." },
+  ],
+  "04-06": [
+    { id: "history:04-06:2", year: 1917, zh: "美国对德国宣战，加入第一次世界大战。", en: "The United States declares war on Germany and enters the First World War." },
+  ],
+  "04-07": [
+    { id: "history:04-07:2", year: 1795, zh: "法国通过法律，正式采用「米」作为长度单位，公制由此诞生。", en: "France adopts the metre by law as its unit of length, giving birth to the metric system." },
+  ],
+  "04-08": [
+    { id: "history:04-08:2", year: 1820, zh: "希腊米洛斯岛上的一位农民发现了断臂的维纳斯雕像。", en: "A farmer on the Greek island of Melos uncovers the armless statue now known as the Venus de Milo." },
+  ],
+  "04-09": [
+    { id: "history:04-09:2", year: 1682, zh: "法国探险家拉萨尔抵达密西西比河口，宣布整个流域归法国所有，命名为路易斯安那。", en: "French explorer La Salle reaches the mouth of the Mississippi and claims its basin for France, naming it Louisiana." },
+  ],
+  "04-10": [
+    { id: "history:04-10:2", year: 1971, zh: "美国乒乓球队抵达中国访问，「乒乓外交」打开了中美交往的大门。", en: "The U.S. table tennis team arrives in China; 'ping-pong diplomacy' opens the door between the two countries." },
+  ],
+  "04-11": [
+    { id: "history:04-11:2", year: 1814, zh: "拿破仑签署《枫丹白露条约》宣布退位，随后被流放到厄尔巴岛。", en: "Napoleon abdicates under the Treaty of Fontainebleau and is exiled to the island of Elba." },
+  ],
+  "04-12": [
+    { id: "history:04-12:2", year: 1981, zh: "哥伦比亚号航天飞机首次发射，这是世界上第一架可重复使用的航天器。", en: "The space shuttle Columbia makes its first launch, the first reusable spacecraft." },
+  ],
+  "04-13": [
+    { id: "history:04-13:2", year: 1743, zh: "托马斯·杰斐逊出生于弗吉尼亚，他后来起草了《独立宣言》。", en: "Thomas Jefferson is born in Virginia; he will draft the Declaration of Independence." },
+  ],
+  "04-14": [
+    { id: "history:04-14:2", year: 1865, zh: "林肯在华盛顿福特剧院观剧时遭枪击，次日清晨去世。", en: "Abraham Lincoln is shot at Ford's Theatre in Washington and dies the next morning." },
+  ],
+  "04-15": [
+    { id: "history:04-15:2", year: 1452, zh: "达·芬奇出生于意大利芬奇镇附近。", en: "Leonardo da Vinci is born near the town of Vinci, Italy." },
+  ],
+  "04-16": [
+    { id: "history:04-16:2", year: 1746, zh: "卡洛登战役在苏格兰高地爆发，这是英国本土上的最后一场激战。", en: "The Battle of Culloden is fought in the Scottish Highlands, the last pitched battle on British soil." },
+  ],
+  "04-17": [
+    { id: "history:04-17:2", year: 1895, zh: "中日签订《马关条约》，中国割让台湾，并赔款白银两亿两。", en: "China and Japan sign the Treaty of Shimonoseki; China cedes Taiwan and pays an indemnity of 200 million taels of silver." },
+  ],
+  "04-18": [
+    { id: "history:04-18:2", year: 1955, zh: "爱因斯坦在美国普林斯顿去世，享年 76 岁。", en: "Albert Einstein dies in Princeton, New Jersey, at the age of 76." },
+  ],
+  "04-19": [
+    { id: "history:04-19:2", year: 1882, zh: "达尔文在英国唐恩宅去世，后来被安葬于威斯敏斯特教堂，与牛顿相距不远。", en: "Charles Darwin dies at Down House in England; he is later buried in Westminster Abbey, near Isaac Newton." },
+  ],
+  "04-20": [
+    { id: "history:04-20:2", year: 1862, zh: "巴斯德和贝尔纳完成第一次巴氏消毒法实验，用加热的办法杀死液体中的微生物。", en: "Louis Pasteur and Claude Bernard complete the first test of pasteurisation, using heat to kill microbes in liquids." },
+  ],
+  "04-21": [
+    { id: "history:04-21:2", year: 1836, zh: "圣哈辛托战役中，得克萨斯军队在十几分钟内击溃墨西哥军队，次日俘获圣安纳将军。", en: "At the Battle of San Jacinto, Texan forces rout the Mexican army in under twenty minutes; General Santa Anna is captured the next day." },
+  ],
+  "04-22": [
+    { id: "history:04-22:2", year: 1724, zh: "哲学家康德出生于柯尼斯堡，他一生几乎没有离开过这座城市。", en: "Philosopher Immanuel Kant is born in Königsberg, a city he will barely leave in his lifetime." },
+  ],
+  "04-23": [
+    { id: "history:04-23:2", year: 2005, zh: "YouTube 上传了第一段视频《我在动物园》，只有 19 秒。", en: "The first YouTube video, Me at the zoo, is uploaded. It is 19 seconds long." },
+  ],
+  "04-24": [
+    { id: "history:04-24:2", year: 1970, zh: "中国第一颗人造卫星东方红一号发射成功，在太空中播放《东方红》乐曲。", en: "China launches its first satellite, Dong Fang Hong 1, which broadcasts the song 'The East Is Red' from orbit." },
+  ],
+  "04-25": [
+    { id: "history:04-25:2", year: 1859, zh: "苏伊士运河在塞得港破土动工，十年后通航。", en: "Ground is broken for the Suez Canal at Port Said; it will open ten years later." },
+  ],
+  "04-26": [
+    { id: "history:04-26:2", year: 1564, zh: "莎士比亚在斯特拉特福受洗，他的确切生日没有留下记录。", en: "William Shakespeare is baptised in Stratford-upon-Avon; his exact birth date is not recorded." },
+  ],
+  "04-27": [
+    { id: "history:04-27:2", year: 1667, zh: "弥尔顿签约出售《失乐园》的版权，首付只有 5 英镑。", en: "John Milton signs away the copyright of Paradise Lost for an initial payment of just £5." },
+  ],
+  "04-28": [
+    { id: "history:04-28:2", year: 1789, zh: "「邦蒂号」上发生叛变，船长布莱和 18 名船员被放到一条小艇上漂流。", en: "Mutiny breaks out on HMS Bounty; Captain Bligh and 18 men are set adrift in a small boat." },
+  ],
+  "04-29": [
+    { id: "history:04-29:2", year: 1913, zh: "吉迪恩·桑德巴克获得现代拉链的专利。", en: "Gideon Sundback is granted a patent for the modern zipper." },
+  ],
+  "04-30": [
+    { id: "history:04-30:2", year: 1803, zh: "美国与法国签订路易斯安那购地条约，美国国土面积几乎翻了一番。", en: "The United States and France sign the Louisiana Purchase treaty, nearly doubling the size of the U.S." },
+  ],
+  "05-01": [
+    { id: "history:05-01:2", year: 1851, zh: "伦敦万国工业博览会在水晶宫开幕，这是世界上第一届世博会。", en: "The Great Exhibition opens in London's Crystal Palace, the first world's fair." },
+  ],
+  "05-02": [
+    { id: "history:05-02:2", year: 1945, zh: "柏林守军向苏军投降，欧洲战场的战事接近尾声。", en: "The Berlin garrison surrenders to the Soviet army, as the war in Europe nears its end." },
+  ],
+  "05-03": [
+    { id: "history:05-03:2", year: 1469, zh: "马基雅维利出生于佛罗伦萨，后来写出《君主论》。", en: "Niccolò Machiavelli is born in Florence; he will write The Prince." },
+  ],
+  "05-04": [
+    { id: "history:05-04:2", year: 1904, zh: "查尔斯·罗尔斯与亨利·莱斯在曼彻斯特会面，劳斯莱斯的故事由此开始。", en: "Charles Rolls meets Henry Royce in Manchester, beginning the story of Rolls-Royce." },
+  ],
+  "05-05": [
+    { id: "history:05-05:2", year: 1821, zh: "拿破仑在大西洋上的圣赫勒拿岛去世，享年 51 岁。", en: "Napoleon dies in exile on the Atlantic island of Saint Helena, aged 51." },
+  ],
+  "05-06": [
+    { id: "history:05-06:2", year: 1840, zh: "世界上第一枚邮票「黑便士」在英国正式启用。", en: "The Penny Black, the world's first adhesive postage stamp, becomes valid for use in Britain." },
+  ],
+  "05-07": [
+    { id: "history:05-07:2", year: 1833, zh: "作曲家勃拉姆斯出生于汉堡。", en: "Composer Johannes Brahms is born in Hamburg." },
+  ],
+  "05-08": [
+    { id: "history:05-08:2", year: 1980, zh: "世界卫生组织正式宣布天花已被消灭，这是人类消灭的第一种传染病。", en: "The World Health Organization declares smallpox eradicated, the first human disease ever wiped out." },
+  ],
+  "05-09": [
+    { id: "history:05-09:2", year: 1671, zh: "托马斯·布拉德企图从伦敦塔盗走英国王冠珠宝，失手被擒，后来竟获国王赦免。", en: "Thomas Blood tries to steal the Crown Jewels from the Tower of London; caught, he is later pardoned by the king." },
+  ],
+  "05-10": [
+    { id: "history:05-10:2", year: 1869, zh: "「金道钉」在犹他州打下，美国第一条横贯大陆铁路全线贯通。", en: "The golden spike is driven in Utah, completing the first transcontinental railroad in the United States." },
+  ],
+  "05-11": [
+    { id: "history:05-11:2", year: 330, zh: "君士坦丁大帝为新都君士坦丁堡举行落成典礼。", en: "Emperor Constantine dedicates his new capital, Constantinople." },
+  ],
+  "05-12": [
+    { id: "history:05-12:2", year: 2008, zh: "四川汶川发生 8.0 级大地震，近七万人遇难。", en: "A magnitude 8.0 earthquake strikes Wenchuan, Sichuan, killing nearly 70,000 people." },
+  ],
+  "05-13": [
+    { id: "history:05-13:2", year: 1787, zh: "英国第一舰队从朴次茅斯启航，载着囚犯驶向澳大利亚。", en: "Britain's First Fleet sets sail from Portsmouth, carrying convicts to Australia." },
+  ],
+  "05-14": [
+    { id: "history:05-14:2", year: 1796, zh: "英国医生詹纳为一名男孩接种牛痘，开创了疫苗接种。", en: "English physician Edward Jenner inoculates a boy with cowpox, pioneering vaccination." },
+  ],
+  "05-15": [
+    { id: "history:05-15:2", year: 1940, zh: "麦当劳兄弟在加州圣贝纳迪诺开出第一家餐厅。", en: "The McDonald brothers open their first restaurant in San Bernardino, California." },
+  ],
+  "05-16": [
+    { id: "history:05-16:2", year: 1960, zh: "梅曼在加州休斯研究实验室让世界上第一台激光器发出光束。", en: "Theodore Maiman fires the world's first working laser at Hughes Research Laboratories in California." },
+  ],
+  "05-17": [
+    { id: "history:05-17:2", year: 1792, zh: "24 名经纪人在华尔街一棵梧桐树下签订《梧桐树协议》，纽约证券交易所由此起步。", en: "Twenty-four brokers sign the Buttonwood Agreement under a tree on Wall Street, the start of the New York Stock Exchange." },
+  ],
+  "05-18": [
+    { id: "history:05-18:2", year: 1872, zh: "哲学家罗素出生于威尔士，后来获得诺贝尔文学奖。", en: "Philosopher Bertrand Russell is born in Wales; he will later win the Nobel Prize in Literature." },
+  ],
+  "05-19": [
+    { id: "history:05-19:2", year: 1536, zh: "英王亨利八世的第二任王后安妮·博林在伦敦塔被处决。", en: "Anne Boleyn, second wife of Henry VIII, is executed at the Tower of London." },
+  ],
+  "05-20": [
+    { id: "history:05-20:2", year: 1873, zh: "李维·斯特劳斯和雅各布·戴维斯获得铆钉加固工装裤的专利，牛仔裤由此诞生。", en: "Levi Strauss and Jacob Davis receive a patent for riveted work trousers: the birth of blue jeans." },
+  ],
+  "05-21": [
+    { id: "history:05-21:2", year: 1881, zh: "克拉拉·巴顿创立美国红十字会。", en: "Clara Barton founds the American Red Cross." },
+  ],
+  "05-22": [
+    { id: "history:05-22:2", year: 1813, zh: "作曲家瓦格纳出生于莱比锡。", en: "Composer Richard Wagner is born in Leipzig." },
+  ],
+  "05-23": [
+    { id: "history:05-23:2", year: 1785, zh: "富兰克林在一封信中描述了他发明的双焦眼镜。", en: "Benjamin Franklin describes his invention of bifocal spectacles in a letter." },
+  ],
+  "05-24": [
+    { id: "history:05-24:2", year: 1883, zh: "纽约布鲁克林大桥通车，当时是世界上最长的悬索桥。", en: "The Brooklyn Bridge opens in New York, then the longest suspension bridge in the world." },
+  ],
+  "05-25": [
+    { id: "history:05-25:2", year: 1977, zh: "电影《星球大战》在美国上映。", en: "Star Wars opens in American cinemas." },
+  ],
+  "05-26": [
+    { id: "history:05-26:2", year: 1897, zh: "布拉姆·斯托克的小说《德古拉》在伦敦出版。", en: "Bram Stoker's novel Dracula is published in London." },
+  ],
+  "05-27": [
+    { id: "history:05-27:2", year: 1703, zh: "彼得大帝在涅瓦河口建城，圣彼得堡由此诞生。", en: "Peter the Great founds Saint Petersburg at the mouth of the Neva." },
+  ],
+  "05-28": [
+    { id: "history:05-28:2", year: 1937, zh: "德国大众汽车公司成立，「大众」意即「人民的汽车」。", en: "Volkswagen is founded in Germany; its name means 'the people's car'." },
+  ],
+  "05-29": [
+    { id: "history:05-29:2", year: 1453, zh: "奥斯曼军队攻陷君士坦丁堡，延续千年的拜占庭帝国灭亡。", en: "Ottoman forces capture Constantinople, ending the thousand-year Byzantine Empire." },
+  ],
+  "05-30": [
+    { id: "history:05-30:2", year: 1431, zh: "圣女贞德在法国鲁昂被处以火刑，年仅 19 岁。", en: "Joan of Arc is burned at the stake in Rouen, France, aged 19." },
+  ],
+  "05-31": [
+    { id: "history:05-31:2", year: 1859, zh: "伦敦威斯敏斯特宫的大钟「大本钟」开始走时。", en: "The great clock of Big Ben at the Palace of Westminster begins keeping time." },
+  ],
+  "06-01": [
+    { id: "history:06-01:2", year: 1869, zh: "爱迪生获得他的第一项专利：电子投票记录器，可惜没人愿意买。", en: "Thomas Edison receives his first patent, for an electric vote recorder that no one wants to buy." },
+  ],
+  "06-02": [
+    { id: "history:06-02:2", year: 1896, zh: "马可尼在英国申请无线电报专利。", en: "Guglielmo Marconi applies for a British patent for wireless telegraphy." },
+  ],
+  "06-03": [
+    { id: "history:06-03:2", year: 1839, zh: "林则徐在虎门开始当众销毁鸦片，历时二十多天。", en: "Lin Zexu begins publicly destroying confiscated opium at Humen, a task that will take over twenty days." },
+  ],
+  "06-04": [
+    { id: "history:06-04:2", year: 1783, zh: "孟格菲兄弟在法国阿诺奈首次公开放飞热气球。", en: "The Montgolfier brothers give the first public demonstration of a hot-air balloon in Annonay, France." },
+  ],
+  "06-05": [
+    { id: "history:06-05:2", year: 1947, zh: "美国国务卿马歇尔在哈佛大学演讲，提出援助欧洲重建的「马歇尔计划」。", en: "U.S. Secretary of State George Marshall proposes the plan to rebuild Europe in a speech at Harvard." },
+  ],
+  "06-06": [
+    { id: "history:06-06:2", year: 1844, zh: "基督教青年会（YMCA）在伦敦成立。", en: "The Young Men's Christian Association (YMCA) is founded in London." },
+  ],
+  "06-07": [
+    { id: "history:06-07:2", year: 1494, zh: "西班牙和葡萄牙签订《托尔德西里亚斯条约》，沿一条经线瓜分欧洲以外的新发现土地。", en: "Spain and Portugal sign the Treaty of Tordesillas, dividing newly found lands outside Europe along a meridian." },
+  ],
+  "06-08": [
+    { id: "history:06-08:2", year: 1867, zh: "建筑师弗兰克·劳埃德·赖特出生于美国威斯康星州。", en: "Architect Frank Lloyd Wright is born in Wisconsin." },
+  ],
+  "06-09": [
+    { id: "history:06-09:2", year: 1928, zh: "金斯福德·史密斯驾机抵达澳大利亚布里斯班，完成首次跨太平洋飞行。", en: "Charles Kingsford Smith lands in Brisbane, completing the first flight across the Pacific." },
+  ],
+  "06-10": [
+    { id: "history:06-10:2", year: 1935, zh: "「匿名戒酒会」在美国俄亥俄州阿克伦成立。", en: "Alcoholics Anonymous is founded in Akron, Ohio." },
+  ],
+  "06-11": [
+    { id: "history:06-11:2", year: 1776, zh: "大陆会议任命包括杰斐逊、富兰克林在内的五人委员会起草《独立宣言》。", en: "The Continental Congress appoints a committee of five, including Jefferson and Franklin, to draft the Declaration of Independence." },
+  ],
+  "06-12": [
+    { id: "history:06-12:2", year: 1898, zh: "菲律宾宣布脱离西班牙独立。", en: "The Philippines declares independence from Spain." },
+  ],
+  "06-13": [
+    { id: "history:06-13:2", year: 1865, zh: "爱尔兰诗人叶芝出生于都柏林，后来获得诺贝尔文学奖。", en: "Irish poet W. B. Yeats is born in Dublin; he will later win the Nobel Prize in Literature." },
+  ],
+  "06-14": [
+    { id: "history:06-14:2", year: 1951, zh: "UNIVAC I 交付美国人口普查局使用，成为最早的商用电子计算机之一。", en: "UNIVAC I is dedicated at the U.S. Census Bureau, one of the first commercial electronic computers." },
+  ],
+  "06-15": [
+    { id: "history:06-15:2", year: 1844, zh: "固特异获得橡胶硫化法的专利，橡胶从此不再遇热发黏、遇冷变脆。", en: "Charles Goodyear patents vulcanised rubber, which no longer turns sticky in heat or brittle in cold." },
+  ],
+  "06-16": [
+    { id: "history:06-16:2", year: 1903, zh: "福特汽车公司在美国底特律成立。", en: "The Ford Motor Company is incorporated in Detroit." },
+  ],
+  "06-17": [
+    { id: "history:06-17:2", year: 1631, zh: "莫卧儿王后慕塔芝·玛哈尔去世，沙贾汗为她修建了泰姬陵。", en: "Mughal empress Mumtaz Mahal dies; Shah Jahan will build the Taj Mahal in her memory." },
+  ],
+  "06-18": [
+    { id: "history:06-18:2", year: 1983, zh: "萨莉·赖德乘挑战者号进入太空，成为第一位美国女航天员。", en: "Sally Ride flies aboard Challenger and becomes the first American woman in space." },
+  ],
+  "06-19": [
+    { id: "history:06-19:2", year: 1623, zh: "帕斯卡出生于法国克莱蒙费朗，他后来造出了早期的机械计算器。", en: "Blaise Pascal is born in Clermont-Ferrand, France; he will build an early mechanical calculator." },
+  ],
+  "06-20": [
+    { id: "history:06-20:2", year: 1837, zh: "18 岁的维多利亚继承英国王位，开始长达 63 年的统治。", en: "Eighteen-year-old Victoria succeeds to the British throne, beginning a reign of 63 years." },
+  ],
+  "06-21": [
+    { id: "history:06-21:2", year: 1788, zh: "新罕布什尔州成为第九个批准美国宪法的州，宪法由此生效。", en: "New Hampshire becomes the ninth state to ratify the U.S. Constitution, putting it into effect." },
+  ],
+  "06-22": [
+    { id: "history:06-22:2", year: 1633, zh: "伽利略在罗马宗教裁判所被迫放弃日心说。", en: "Galileo is forced by the Roman Inquisition to recant his view that the Earth moves around the Sun." },
+  ],
+  "06-23": [
+    { id: "history:06-23:2", year: 1912, zh: "图灵出生于伦敦，他后来奠定了计算机科学的理论基础。", en: "Alan Turing is born in London; he will lay the theoretical foundations of computer science." },
+  ],
+  "06-24": [
+    { id: "history:06-24:2", year: 1859, zh: "索尔费里诺战役爆发，目睹惨状的杜南后来倡议成立红十字会。", en: "The Battle of Solferino is fought; Henry Dunant, who witnesses its aftermath, will go on to found the Red Cross." },
+  ],
+  "06-25": [
+    { id: "history:06-25:2", year: 1876, zh: "小大角战役中，卡斯特率领的美军骑兵被拉科塔等部族联军全歼。", en: "At the Battle of the Little Bighorn, Lakota and allied warriors wipe out Custer's U.S. cavalry force." },
+  ],
+  "06-26": [
+    { id: "history:06-26:2", year: 1974, zh: "俄亥俄州一家超市第一次用扫描仪读取商品条形码，商品是一包口香糖。", en: "A supermarket in Ohio scans the first product barcode at a checkout: a pack of chewing gum." },
+  ],
+  "06-27": [
+    { id: "history:06-27:2", year: 1967, zh: "世界上第一台自动取款机在伦敦恩菲尔德的巴克莱银行投入使用。", en: "The world's first cash machine goes into service at a Barclays branch in Enfield, London." },
+  ],
+  "06-28": [
+    { id: "history:06-28:2", year: 1919, zh: "协约国与德国签订《凡尔赛和约》，第一次世界大战正式结束。", en: "The Allies and Germany sign the Treaty of Versailles, formally ending the First World War." },
+  ],
+  "06-29": [
+    { id: "history:06-29:2", year: 1900, zh: "《小王子》作者圣埃克苏佩里出生于法国里昂。", en: "Antoine de Saint-Exupéry, author of The Little Prince, is born in Lyon, France." },
+  ],
+  "06-30": [
+    { id: "history:06-30:2", year: 1859, zh: "法国杂技演员布隆丹走钢丝横跨尼亚加拉大瀑布。", en: "French acrobat Charles Blondin crosses Niagara Falls on a tightrope." },
+  ],
+  "07-01": [
+    { id: "history:07-01:2", year: 1867, zh: "加拿大联邦成立，这一天后来成为加拿大国庆日。", en: "Canadian Confederation takes effect; the day is now celebrated as Canada Day." },
+  ],
+  "07-02": [
+    { id: "history:07-02:2", year: 1937, zh: "女飞行家阿梅莉亚·埃尔哈特在环球飞行途中于太平洋上空失踪。", en: "Aviator Amelia Earhart disappears over the Pacific during her attempt to fly around the world." },
+  ],
+  "07-03": [
+    { id: "history:07-03:2", year: 1883, zh: "作家卡夫卡出生于布拉格。", en: "Writer Franz Kafka is born in Prague." },
+  ],
+  "07-04": [
+    { id: "history:07-04:2", year: 1826, zh: "《独立宣言》发表 50 周年当天，杰斐逊和约翰·亚当斯两位前总统相隔几小时先后去世。", en: "On the fiftieth anniversary of the Declaration of Independence, former presidents Jefferson and John Adams die within hours of each other." },
+  ],
+  "07-05": [
+    { id: "history:07-05:2", year: 1996, zh: "克隆羊多莉在苏格兰出生，她是第一只由成年体细胞克隆的哺乳动物。", en: "Dolly the sheep is born in Scotland, the first mammal cloned from an adult cell." },
+  ],
+  "07-06": [
+    { id: "history:07-06:2", year: 1535, zh: "托马斯·莫尔因拒绝承认亨利八世为英国教会首脑而被处决，他是《乌托邦》的作者。", en: "Thomas More, author of Utopia, is executed for refusing to accept Henry VIII as head of the English church." },
+  ],
+  "07-07": [
+    { id: "history:07-07:2", year: 1928, zh: "美国密苏里州一家面包店首次出售切片面包。", en: "Sliced bread is sold for the first time, by a bakery in Chillicothe, Missouri." },
+  ],
+  "07-08": [
+    { id: "history:07-08:2", year: 1889, zh: "《华尔街日报》在纽约创刊。", en: "The Wall Street Journal publishes its first issue in New York." },
+  ],
+  "07-09": [
+    { id: "history:07-09:2", year: 1877, zh: "第一届温布尔登网球锦标赛开赛。", en: "The first Wimbledon Championships begin." },
+  ],
+  "07-10": [
+    { id: "history:07-10:2", year: 1856, zh: "特斯拉出生于今克罗地亚境内，他后来推动了交流电的普及。", en: "Nikola Tesla is born in what is now Croatia; he will champion alternating current." },
+  ],
+  "07-11": [
+    { id: "history:07-11:2", year: 1405, zh: "郑和率领船队第一次下西洋，这一天后来定为中国航海日。", en: "Zheng He sets out on the first of his great voyages to the Western Oceans; the day is now China's Maritime Day." },
+  ],
+  "07-12": [
+    { id: "history:07-12:2", year: 1817, zh: "梭罗出生于马萨诸塞州康科德，后来写出《瓦尔登湖》。", en: "Henry David Thoreau is born in Concord, Massachusetts; he will write Walden." },
+  ],
+  "07-13": [
+    { id: "history:07-13:2", year: 1793, zh: "法国大革命领袖马拉在浴缸中被夏洛特·科黛刺杀。", en: "French revolutionary Jean-Paul Marat is stabbed to death in his bath by Charlotte Corday." },
+  ],
+  "07-14": [
+    { id: "history:07-14:2", year: 1865, zh: "英国登山家温珀一行首次登上马特洪峰，下山途中四人坠亡。", en: "Edward Whymper's party makes the first ascent of the Matterhorn; four men die on the descent." },
+  ],
+  "07-15": [
+    { id: "history:07-15:2", year: 1606, zh: "画家伦勃朗出生于荷兰莱顿。", en: "Painter Rembrandt van Rijn is born in Leiden, Netherlands." },
+  ],
+  "07-16": [
+    { id: "history:07-16:2", year: 1969, zh: "阿波罗 11 号从佛罗里达发射升空，飞向月球。", en: "Apollo 11 lifts off from Florida, bound for the Moon." },
+  ],
+  "07-17": [
+    { id: "history:07-17:2", year: 1717, zh: "亨德尔的《水上音乐》在泰晤士河上为英王乔治一世首演。", en: "Handel's Water Music is first performed for King George I on the River Thames." },
+  ],
+  "07-18": [
+    { id: "history:07-18:2", year: 1918, zh: "曼德拉出生于南非姆维佐村，他的生日后来被联合国定为「纳尔逊·曼德拉国际日」。", en: "Nelson Mandela is born in Mvezo, South Africa; the UN later makes his birthday Nelson Mandela International Day." },
+  ],
+  "07-19": [
+    { id: "history:07-19:2", year: 1848, zh: "塞尼卡福尔斯会议在纽约州召开，这是美国第一次女性权利大会。", en: "The Seneca Falls Convention opens in New York, the first women's rights convention in the United States." },
+  ],
+  "07-20": [
+    { id: "history:07-20:2", year: 1304, zh: "诗人彼特拉克出生于意大利阿雷佐，他被称为「人文主义之父」。", en: "Poet Petrarch is born in Arezzo, Italy; he will be called the father of humanism." },
+  ],
+  "07-21": [
+    { id: "history:07-21:2", year: 1899, zh: "海明威出生于美国伊利诺伊州橡树园，后来写出《老人与海》。", en: "Ernest Hemingway is born in Oak Park, Illinois; he will write The Old Man and the Sea." },
+  ],
+  "07-22": [
+    { id: "history:07-22:2", year: 1812, zh: "萨拉曼卡战役中，威灵顿率领的英葡联军击败法军。", en: "At the Battle of Salamanca, Wellington's Anglo-Portuguese army defeats the French." },
+  ],
+  "07-23": [
+    { id: "history:07-23:2", year: 1829, zh: "美国人伯特获得「打字机」专利，这是美国最早的打字机专利。", en: "William Austin Burt patents his 'typographer', the first American patent for a typewriter." },
+  ],
+  "07-24": [
+    { id: "history:07-24:2", year: 1847, zh: "摩门教先驱者进入大盐湖谷，在那里建起了盐湖城。", en: "Mormon pioneers enter the Salt Lake Valley, where they will build Salt Lake City." },
+  ],
+  "07-25": [
+    { id: "history:07-25:2", year: 1909, zh: "布莱里奥驾驶单翼机飞越英吉利海峡，用时约 37 分钟。", en: "Louis Blériot flies a monoplane across the English Channel in about 37 minutes." },
+  ],
+  "07-26": [
+    { id: "history:07-26:2", year: 1856, zh: "剧作家萧伯纳出生于都柏林。", en: "Playwright George Bernard Shaw is born in Dublin." },
+  ],
+  "07-27": [
+    { id: "history:07-27:2", year: 1866, zh: "跨大西洋海底电报电缆铺设成功，欧美之间的消息从几天缩短到几分钟。", en: "A transatlantic telegraph cable is successfully completed, cutting news between Europe and America from days to minutes." },
+  ],
+  "07-28": [
+    { id: "history:07-28:2", year: 1976, zh: "河北唐山发生 7.8 级大地震，整座城市几乎被夷为平地。", en: "A magnitude 7.8 earthquake strikes Tangshan, Hebei, levelling most of the city." },
+  ],
+  "07-29": [
+    { id: "history:07-29:2", year: 1836, zh: "巴黎凯旋门落成，距拿破仑下令修建已过去三十年。", en: "The Arc de Triomphe is inaugurated in Paris, thirty years after Napoleon ordered it built." },
+  ],
+  "07-30": [
+    { id: "history:07-30:2", year: 1818, zh: "艾米莉·勃朗特出生于英格兰约克郡，后来写出《呼啸山庄》。", en: "Emily Brontë is born in Yorkshire, England; she will write Wuthering Heights." },
+  ],
+  "07-31": [
+    { id: "history:07-31:2", year: 1790, zh: "美国颁发第一项专利，内容是一种制造钾肥的方法。", en: "The United States issues its first patent, for a method of making potash." },
+  ],
+  "08-01": [
+    { id: "history:08-01:2", year: 1774, zh: "普里斯特利加热氧化汞，分离出一种能让蜡烛烧得更旺的气体：氧气。", en: "Joseph Priestley heats mercuric oxide and isolates a gas that makes candles burn brighter: oxygen." },
+  ],
+  "08-02": [
+    { id: "history:08-02:2", year: 1922, zh: "贝尔去世。葬礼时，北美的电话服务停止一分钟以示纪念。", en: "Alexander Graham Bell dies; during his funeral, telephone service across North America falls silent for a minute." },
+  ],
+  "08-03": [
+    { id: "history:08-03:2", year: 1958, zh: "美国核潜艇「鹦鹉螺号」从冰层下穿过北极点。", en: "The nuclear submarine USS Nautilus passes beneath the ice at the North Pole." },
+  ],
+  "08-04": [
+    { id: "history:08-04:2", year: 1792, zh: "英国诗人雪莱出生于苏塞克斯。", en: "The poet Percy Bysshe Shelley is born in Sussex, England." },
+  ],
+  "08-05": [
+    { id: "history:08-05:2", year: 1930, zh: "尼尔·阿姆斯特朗出生于美国俄亥俄州，后来成为第一个踏上月球的人。", en: "Neil Armstrong is born in Ohio; he will become the first person to walk on the Moon." },
+  ],
+  "08-06": [
+    { id: "history:08-06:2", year: 1945, zh: "美国向日本广岛投下原子弹，这是人类第一次在战争中使用核武器。", en: "The United States drops an atomic bomb on Hiroshima, the first use of a nuclear weapon in war." },
+  ],
+  "08-07": [
+    { id: "history:08-07:2", year: 1947, zh: "海尔达尔乘木筏「康提基号」漂流 101 天后抵达波利尼西亚的拉罗亚环礁。", en: "Thor Heyerdahl's raft Kon-Tiki reaches Raroia atoll in Polynesia after 101 days at sea." },
+  ],
+  "08-08": [
+    { id: "history:08-08:2", year: 1876, zh: "爱迪生获得一项复印技术专利，后来发展为油印机。", en: "Thomas Edison patents a copying method that will develop into the mimeograph." },
+  ],
+  "08-09": [
+    { id: "history:08-09:2", year: 1945, zh: "美国向日本长崎投下第二颗原子弹。", en: "The United States drops a second atomic bomb, on Nagasaki." },
+  ],
+  "08-10": [
+    { id: "history:08-10:2", year: 1846, zh: "美国国会立法建立史密森学会，经费来自一位从未到过美国的英国科学家的遗赠。", en: "Congress establishes the Smithsonian Institution, funded by the bequest of a British scientist who never visited America." },
+  ],
+  "08-11": [
+    { id: "history:08-11:2", year: 1919, zh: "德国《魏玛宪法》签署，德国成为议会制共和国。", en: "The Weimar Constitution is signed, making Germany a parliamentary republic." },
+  ],
+  "08-12": [
+    { id: "history:08-12:2", year: 1990, zh: "古生物学家苏·亨德里克森在美国南达科他州发现一具保存极为完整的霸王龙化石，后来以她的名字命名为「苏」。", en: "Fossil hunter Sue Hendrickson finds one of the most complete Tyrannosaurus rex skeletons ever, in South Dakota; it is named Sue after her." },
+  ],
+  "08-13": [
+    { id: "history:08-13:2", year: 1913, zh: "英国冶金学家布里尔利炼出第一炉不锈钢。", en: "Harry Brearley casts the first true stainless steel in Sheffield, England." },
+  ],
+  "08-14": [
+    { id: "history:08-14:2", year: 1959, zh: "美国探险者六号卫星拍下第一张从地球轨道上拍摄的地球照片。", en: "The U.S. satellite Explorer 6 takes the first photograph of Earth from orbit." },
+  ],
+  "08-15": [
+    { id: "history:08-15:2", year: 1947, zh: "印度脱离英国殖民统治获得独立，尼赫鲁发表《与命运的约会》演讲。", en: "India gains independence from British rule, and Nehru gives his 'Tryst with Destiny' speech." },
+  ],
+  "08-16": [
+    { id: "history:08-16:2", year: 1896, zh: "加拿大育空地区的克朗代克河支流发现黄金，引发淘金热。", en: "Gold is discovered in a tributary of the Klondike River in Canada's Yukon, setting off a gold rush." },
+  ],
+  "08-17": [
+    { id: "history:08-17:2", year: 1807, zh: "富尔顿的蒸汽船「克莱蒙特号」从纽约启航，开始在哈德逊河上的首航。", en: "Robert Fulton's steamboat leaves New York on its first voyage up the Hudson River." },
+  ],
+  "08-18": [
+    { id: "history:08-18:2", year: 1850, zh: "法国作家巴尔扎克在巴黎去世，留下九十多部作品组成的《人间喜剧》。", en: "French novelist Honoré de Balzac dies in Paris, leaving more than ninety works of The Human Comedy." },
+  ],
+  "08-19": [
+    { id: "history:08-19:2", year: 1839, zh: "法国政府公开达盖尔银版摄影法，将其作为「献给全世界的礼物」。", en: "The French government releases the daguerreotype process as 'a gift free to the world'." },
+  ],
+  "08-20": [
+    { id: "history:08-20:2", year: 1968, zh: "华约军队入侵捷克斯洛伐克，「布拉格之春」改革被终止。", en: "Warsaw Pact troops invade Czechoslovakia, ending the reforms of the Prague Spring." },
+  ],
+  "08-21": [
+    { id: "history:08-21:2", year: 1911, zh: "《蒙娜丽莎》从卢浮宫被盗，两年后才在佛罗伦萨找回。", en: "The Mona Lisa is stolen from the Louvre; it will be recovered in Florence two years later." },
+  ],
+  "08-22": [
+    { id: "history:08-22:2", year: 1485, zh: "博斯沃思原野战役中，理查三世战死，都铎王朝开始。", en: "Richard III is killed at the Battle of Bosworth Field, and the Tudor dynasty begins." },
+  ],
+  "08-23": [
+    { id: "history:08-23:2", year: 1305, zh: "苏格兰民族英雄威廉·华莱士在伦敦被处决。", en: "Scottish patriot William Wallace is executed in London." },
+  ],
+  "08-24": [
+    { id: "history:08-24:2", year: 2006, zh: "国际天文学联合会决定将冥王星降级为矮行星，太阳系从此只有八大行星。", en: "The International Astronomical Union reclassifies Pluto as a dwarf planet, leaving the Solar System with eight planets." },
+  ],
+  "08-25": [
+    { id: "history:08-25:2", year: 1609, zh: "伽利略在威尼斯向元老院展示他制作的望远镜。", en: "Galileo demonstrates his telescope to the Venetian Senate." },
+  ],
+  "08-26": [
+    { id: "history:08-26:2", year: 1768, zh: "库克船长乘「奋进号」从英国普利茅斯启航，开始第一次太平洋航行。", en: "Captain Cook sails from Plymouth aboard the Endeavour on his first Pacific voyage." },
+  ],
+  "08-27": [
+    { id: "history:08-27:2", year: 1859, zh: "德雷克在宾夕法尼亚州泰特斯维尔钻出石油，现代石油工业由此开始。", en: "Edwin Drake strikes oil at Titusville, Pennsylvania, starting the modern petroleum industry." },
+  ],
+  "08-28": [
+    { id: "history:08-28:2", year: 1749, zh: "歌德出生于法兰克福。", en: "Johann Wolfgang von Goethe is born in Frankfurt." },
+  ],
+  "08-29": [
+    { id: "history:08-29:2", year: 1842, zh: "中英签订《南京条约》，中国割让香港岛，开放五处通商口岸。", en: "China and Britain sign the Treaty of Nanking; China cedes Hong Kong Island and opens five treaty ports." },
+  ],
+  "08-30": [
+    { id: "history:08-30:2", year: 1797, zh: "玛丽·雪莱出生于伦敦，她 20 岁时出版了《弗兰肯斯坦》。", en: "Mary Shelley is born in London; she will publish Frankenstein at the age of 20." },
+  ],
+  "08-31": [
+    { id: "history:08-31:2", year: 1928, zh: "布莱希特与魏尔的《三分钱歌剧》在柏林首演。", en: "Brecht and Weill's The Threepenny Opera premieres in Berlin." },
+  ],
+  "09-01": [
+    { id: "history:09-01:2", year: 1923, zh: "日本关东大地震发生，东京和横滨遭受严重破坏。", en: "The Great Kantō earthquake devastates Tokyo and Yokohama." },
+  ],
+  "09-02": [
+    { id: "history:09-02:2", year: 1666, zh: "伦敦大火从布丁巷一家面包房燃起，烧了四天，烧毁了大半个伦敦城。", en: "The Great Fire of London breaks out in a bakery on Pudding Lane and burns for four days, destroying much of the City." },
+  ],
+  "09-03": [
+    { id: "history:09-03:2", year: 1939, zh: "英国和法国对德国宣战。", en: "Britain and France declare war on Germany." },
+  ],
+  "09-04": [
+    { id: "history:09-04:2", year: 1882, zh: "爱迪生在纽约珍珠街建成的发电站开始供电，这是世界上第一座商用中心电站。", en: "Edison's Pearl Street Station in New York begins supplying power, the first commercial central power plant." },
+  ],
+  "09-05": [
+    { id: "history:09-05:2", year: 1882, zh: "纽约举行第一次劳工节游行，约有一万名工人参加。", en: "The first Labor Day parade is held in New York, with some 10,000 workers marching." },
+  ],
+  "09-06": [
+    { id: "history:09-06:2", year: 1620, zh: "「五月花号」从英格兰普利茅斯启航，载着清教徒驶向北美。", en: "The Mayflower sets sail from Plymouth, England, carrying the Pilgrims to North America." },
+  ],
+  "09-07": [
+    { id: "history:09-07:2", year: 1940, zh: "德国空军开始对伦敦进行持续轰炸，即「伦敦大轰炸」。", en: "The German air force begins the Blitz, its sustained bombing of London." },
+  ],
+  "09-08": [
+    { id: "history:09-08:2", year: 1504, zh: "米开朗基罗的大卫像在佛罗伦萨领主广场揭幕。", en: "Michelangelo's David is unveiled in Florence's Piazza della Signoria." },
+  ],
+  "09-09": [
+    { id: "history:09-09:2", year: 1828, zh: "托尔斯泰出生于俄国图拉附近的亚斯纳亚·波利亚纳庄园。", en: "Leo Tolstoy is born on the estate of Yasnaya Polyana near Tula, Russia." },
+  ],
+  "09-10": [
+    { id: "history:09-10:2", year: 1846, zh: "伊莱亚斯·豪获得缝纫机专利。", en: "Elias Howe is granted a patent for his sewing machine." },
+  ],
+  "09-11": [
+    { id: "history:09-11:2", year: 1297, zh: "斯特灵桥战役中，威廉·华莱士率领苏格兰军队击败英格兰军队。", en: "At the Battle of Stirling Bridge, William Wallace's Scots defeat the English army." },
+  ],
+  "09-12": [
+    { id: "history:09-12:2", year: 1940, zh: "四个少年在法国拉斯科发现洞穴，里面有一万七千年前的壁画。", en: "Four teenagers in France discover the Lascaux cave and its paintings, some 17,000 years old." },
+  ],
+  "09-13": [
+    { id: "history:09-13:2", year: 1916, zh: "作家罗尔德·达尔出生于威尔士，后来写出《查理和巧克力工厂》。", en: "Writer Roald Dahl is born in Wales; he will write Charlie and the Chocolate Factory." },
+  ],
+  "09-14": [
+    { id: "history:09-14:2", year: 1752, zh: "英国改用格里高利历：前一天还是 9 月 2 日，这一天就成了 9 月 14 日。", en: "Britain adopts the Gregorian calendar: yesterday was 2 September, and today is 14 September." },
+  ],
+  "09-15": [
+    { id: "history:09-15:2", year: 1830, zh: "利物浦—曼彻斯特铁路通车，这是第一条完全依靠蒸汽机车运营的城际铁路。", en: "The Liverpool and Manchester Railway opens, the first intercity line run entirely by steam locomotives." },
+  ],
+  "09-16": [
+    { id: "history:09-16:2", year: 1908, zh: "通用汽车公司在美国成立。", en: "General Motors is founded in the United States." },
+  ],
+  "09-17": [
+    { id: "history:09-17:2", year: 1630, zh: "波士顿建城。", en: "The city of Boston is founded." },
+  ],
+  "09-18": [
+    { id: "history:09-18:2", year: 1931, zh: "日军制造柳条湖事件，九一八事变爆发，日本开始侵占中国东北。", en: "Japanese troops stage the Mukden Incident and begin the occupation of northeast China." },
+  ],
+  "09-19": [
+    { id: "history:09-19:2", year: 1991, zh: "两名登山者在阿尔卑斯山冰川中发现约五千年前的「冰人」奥茨。", en: "Two hikers find Ötzi the Iceman, about 5,000 years old, in a glacier in the Alps." },
+  ],
+  "09-20": [
+    { id: "history:09-20:2", year: 1946, zh: "第一届戛纳电影节开幕。", en: "The first Cannes Film Festival opens." },
+  ],
+  "09-21": [
+    { id: "history:09-21:2", year: 1866, zh: "科幻作家赫伯特·乔治·威尔斯出生于英国，后来写出《时间机器》。", en: "Science-fiction writer H. G. Wells is born in England; he will write The Time Machine." },
+  ],
+  "09-22": [
+    { id: "history:09-22:2", year: 1791, zh: "法拉第出生于伦敦，铁匠之子，后来发现了电磁感应。", en: "Michael Faraday, a blacksmith's son, is born in London; he will discover electromagnetic induction." },
+  ],
+  "09-23": [
+    { id: "history:09-23:2", year: 1889, zh: "任天堂在日本京都成立，最初以制作花札纸牌为业。", en: "Nintendo is founded in Kyoto, Japan, originally making hanafuda playing cards." },
+  ],
+  "09-24": [
+    { id: "history:09-24:2", year: 1896, zh: "菲茨杰拉德出生于美国明尼苏达州，后来写出《了不起的盖茨比》。", en: "F. Scott Fitzgerald is born in Minnesota; he will write The Great Gatsby." },
+  ],
+  "09-25": [
+    { id: "history:09-25:2", year: 1066, zh: "斯坦福桥战役中，英王哈罗德二世击败挪威国王哈拉尔，三周后他将战死在黑斯廷斯。", en: "At Stamford Bridge, Harold II of England defeats the Norwegian king; three weeks later he will fall at Hastings." },
+  ],
+  "09-26": [
+    { id: "history:09-26:2", year: 1580, zh: "德雷克率「金鹿号」回到英国普利茅斯，完成环球航行。", en: "Francis Drake sails the Golden Hind back into Plymouth, completing his circumnavigation." },
+  ],
+  "09-27": [
+    { id: "history:09-27:2", year: 1905, zh: "爱因斯坦提交论文，提出质能关系，后来写作 E=mc²。", en: "Einstein submits the paper introducing mass–energy equivalence, later written as E = mc²." },
+  ],
+  "09-28": [
+    { id: "history:09-28:2", year: 1895, zh: "巴斯德在巴黎附近去世。", en: "Louis Pasteur dies near Paris." },
+  ],
+  "09-29": [
+    { id: "history:09-29:2", year: 1758, zh: "英国海军将领纳尔逊出生于诺福克。", en: "Admiral Horatio Nelson is born in Norfolk, England." },
+  ],
+  "09-30": [
+    { id: "history:09-30:2", year: 1938, zh: "英、法、德、意签订《慕尼黑协定》，捷克斯洛伐克被迫割让苏台德地区。", en: "Britain, France, Germany and Italy sign the Munich Agreement, forcing Czechoslovakia to cede the Sudetenland." },
+  ],
+  "10-01": [
+    { id: "history:10-01:2", year: 1908, zh: "福特 T 型车上市，它让汽车成为普通家庭买得起的东西。", en: "Ford introduces the Model T, the car that ordinary families could afford." },
+  ],
+  "10-02": [
+    { id: "history:10-02:2", year: 1869, zh: "甘地出生于印度波尔班达尔，这一天后来被联合国定为国际非暴力日。", en: "Mahatma Gandhi is born in Porbandar, India; his birthday is now the International Day of Non-Violence." },
+  ],
+  "10-03": [
+    { id: "history:10-03:2", year: 1942, zh: "德国 V-2 火箭首次成功发射，它是后来航天运载火箭的先驱。", en: "The German V-2 rocket makes its first successful launch; it is a forerunner of the rockets that will later carry people into space." },
+  ],
+  "10-04": [
+    { id: "history:10-04:2", year: 1883, zh: "东方快车从巴黎开出第一班列车，驶向君士坦丁堡方向。", en: "The Orient Express makes its first run from Paris toward Constantinople." },
+  ],
+  "10-05": [
+    { id: "history:10-05:2", year: 1969, zh: "英国喜剧节目《蒙提·派森的飞行马戏团》在 BBC 首播。", en: "Monty Python's Flying Circus is first broadcast on the BBC." },
+  ],
+  "10-06": [
+    { id: "history:10-06:2", year: 1889, zh: "红磨坊在巴黎开业。", en: "The Moulin Rouge opens in Paris." },
+  ],
+  "10-07": [
+    { id: "history:10-07:2", year: 1849, zh: "爱伦·坡在巴尔的摩去世，年仅 40 岁，死因至今成谜。", en: "Edgar Allan Poe dies in Baltimore at the age of 40; the cause remains a mystery." },
+  ],
+  "10-08": [
+    { id: "history:10-08:2", year: 1956, zh: "唐·拉森在世界大赛中投出完全比赛，至今仍是世界大赛历史上唯一的一场。", en: "Don Larsen pitches a perfect game in the World Series, still the only one in its history." },
+  ],
+  "10-09": [
+    { id: "history:10-09:2", year: 1604, zh: "一颗超新星出现在天空，开普勒对它进行了细致观测，后来被称为「开普勒超新星」。", en: "A supernova appears in the sky; Johannes Kepler studies it so closely that it now bears his name." },
+  ],
+  "10-10": [
+    { id: "history:10-10:2", year: 1846, zh: "英国天文学家拉塞尔发现海王星最大的卫星海卫一。", en: "Astronomer William Lassell discovers Triton, the largest moon of Neptune." },
+  ],
+  "10-11": [
+    { id: "history:10-11:2", year: 1962, zh: "梵蒂冈第二次大公会议开幕，天主教会开始了一系列改革。", en: "The Second Vatican Council opens, beginning a series of reforms in the Catholic Church." },
+  ],
+  "10-12": [
+    { id: "history:10-12:2", year: 1892, zh: "美国学校的孩子们第一次集体朗诵《效忠誓词》。", en: "American schoolchildren recite the Pledge of Allegiance together for the first time." },
+  ],
+  "10-13": [
+    { id: "history:10-13:2", year: 1792, zh: "美国总统官邸白宫奠基。", en: "The cornerstone of the White House is laid in Washington." },
+  ],
+  "10-14": [
+    { id: "history:10-14:2", year: 1066, zh: "黑斯廷斯战役中，诺曼底公爵威廉击败英王哈罗德二世，诺曼人征服英格兰。", en: "At the Battle of Hastings, William of Normandy defeats Harold II, beginning the Norman Conquest of England." },
+  ],
+  "10-15": [
+    { id: "history:10-15:2", year: 2003, zh: "杨利伟乘神舟五号飞船进入太空，中国成为第三个独立将人送入太空的国家。", en: "Yang Liwei flies aboard Shenzhou 5, making China the third country to send a person into space on its own." },
+  ],
+  "10-16": [
+    { id: "history:10-16:2", year: 1846, zh: "波士顿麻省总医院首次公开演示乙醚麻醉，病人在手术中没有感到疼痛。", en: "Ether anaesthesia is demonstrated publicly for the first time at Massachusetts General Hospital; the patient feels no pain." },
+  ],
+  "10-17": [
+    { id: "history:10-17:2", year: 1931, zh: "芝加哥黑帮头目阿尔·卡彭因逃税被判有罪。", en: "Chicago gangster Al Capone is convicted of tax evasion." },
+  ],
+  "10-18": [
+    { id: "history:10-18:2", year: 1922, zh: "英国广播公司（BBC）成立。", en: "The British Broadcasting Company, the BBC, is founded." },
+  ],
+  "10-19": [
+    { id: "history:10-19:2", year: 1987, zh: "「黑色星期一」：道琼斯指数单日暴跌 22.6%，至今仍是历史最大单日跌幅。", en: "Black Monday: the Dow Jones falls 22.6% in a single day, still its largest one-day percentage drop." },
+  ],
+  "10-20": [
+    { id: "history:10-20:2", year: 1818, zh: "英美签订条约，以北纬 49 度线作为两国在西部的大部分边界。", en: "Britain and the United States agree on the 49th parallel as much of their western border." },
+  ],
+  "10-21": [
+    { id: "history:10-21:2", year: 1805, zh: "特拉法尔加海战中，纳尔逊率领英国舰队击败法西联合舰队，自己却中弹身亡。", en: "At the Battle of Trafalgar, Nelson's fleet defeats the French and Spanish, but Nelson himself is killed." },
+  ],
+  "10-22": [
+    { id: "history:10-22:2", year: 1797, zh: "法国人加尔纳兰从热气球上跳下，完成世界上第一次有记录的降落伞跳伞。", en: "André-Jacques Garnerin jumps from a balloon over Paris in the first recorded parachute descent." },
+  ],
+  "10-23": [
+    { id: "history:10-23:2", year: 2001, zh: "苹果公司推出第一代 iPod，「把一千首歌装进口袋」。", en: "Apple introduces the first iPod: '1,000 songs in your pocket'." },
+  ],
+  "10-24": [
+    { id: "history:10-24:2", year: 1945, zh: "《联合国宪章》生效，联合国正式成立，这一天后来定为联合国日。", en: "The UN Charter comes into force and the United Nations is born; the day is now United Nations Day." },
+  ],
+  "10-25": [
+    { id: "history:10-25:2", year: 1971, zh: "联合国大会通过第 2758 号决议，恢复中华人民共和国在联合国的合法席位。", en: "The UN General Assembly passes Resolution 2758, seating the People's Republic of China in the United Nations." },
+  ],
+  "10-26": [
+    { id: "history:10-26:2", year: 1881, zh: "美国亚利桑那州墓碑镇发生 O.K. 畜栏枪战，前后大约只有 30 秒。", en: "The Gunfight at the O.K. Corral takes place in Tombstone, Arizona; it lasts about thirty seconds." },
+  ],
+  "10-27": [
+    { id: "history:10-27:2", year: 1858, zh: "西奥多·罗斯福出生于纽约，泰迪熊的名字就来自他。", en: "Theodore Roosevelt is born in New York; the teddy bear is named after him." },
+  ],
+  "10-28": [
+    { id: "history:10-28:2", year: 1636, zh: "马萨诸塞湾殖民地议会投票拨款建立学院，即后来的哈佛大学。", en: "The Massachusetts Bay Colony votes to fund a college, which will become Harvard University." },
+  ],
+  "10-29": [
+    { id: "history:10-29:2", year: 1923, zh: "土耳其共和国成立，凯末尔当选为第一任总统。", en: "The Republic of Turkey is proclaimed, with Mustafa Kemal as its first president." },
+  ],
+  "10-30": [
+    { id: "history:10-30:2", year: 1938, zh: "奥森·威尔斯在广播中演出《世界大战》，一些听众误以为火星人真的入侵了。", en: "Orson Welles broadcasts The War of the Worlds on radio, and some listeners believe Martians have really landed." },
+  ],
+  "10-31": [
+    { id: "history:10-31:2", year: 1926, zh: "魔术师胡迪尼在底特律去世。", en: "Escape artist Harry Houdini dies in Detroit." },
+  ],
+  "11-01": [
+    { id: "history:11-01:2", year: 1755, zh: "里斯本大地震发生，随后的海啸和大火几乎摧毁了整座城市。", en: "The Lisbon earthquake strikes; the tsunami and fires that follow almost destroy the city." },
+  ],
+  "11-02": [
+    { id: "history:11-02:2", year: 1920, zh: "美国匹兹堡 KDKA 电台开播，第一次广播的内容是总统选举结果。", en: "Radio station KDKA in Pittsburgh begins commercial broadcasting, reporting the presidential election results." },
+  ],
+  "11-03": [
+    { id: "history:11-03:2", year: 1903, zh: "巴拿马宣布脱离哥伦比亚独立。", en: "Panama declares independence from Colombia." },
+  ],
+  "11-04": [
+    { id: "history:11-04:2", year: 1879, zh: "詹姆斯·里蒂获得收银机的专利，据说是为了防止酒吧伙计偷钱。", en: "James Ritty patents the cash register, reportedly to stop his saloon staff from pocketing money." },
+  ],
+  "11-05": [
+    { id: "history:11-05:2", year: 1872, zh: "苏珊·安东尼在纽约罗切斯特参加总统选举投票，随后因「非法投票」被捕。", en: "Susan B. Anthony votes in the presidential election in Rochester, New York, and is later arrested for 'illegal voting'." },
+  ],
+  "11-06": [
+    { id: "history:11-06:2", year: 1869, zh: "罗格斯大学与普林斯顿大学进行了美国第一场校际橄榄球比赛。", en: "Rutgers and Princeton play the first intercollegiate American football game." },
+  ],
+  "11-07": [
+    { id: "history:11-07:2", year: 1867, zh: "居里夫人出生于华沙，她后来成为第一位两次获得诺贝尔奖的人。", en: "Marie Curie is born in Warsaw; she will become the first person to win two Nobel Prizes." },
+  ],
+  "11-08": [
+    { id: "history:11-08:2", year: 1960, zh: "肯尼迪当选美国总统，43 岁的他是当选总统中最年轻的一位。", en: "John F. Kennedy is elected U.S. president; at 43 he is the youngest person ever elected to the office." },
+  ],
+  "11-09": [
+    { id: "history:11-09:2", year: 1918, zh: "德国宣布德皇威廉二世退位，德意志共和国宣告成立。", en: "Germany announces the abdication of Kaiser Wilhelm II, and a German republic is proclaimed." },
+  ],
+  "11-10": [
+    { id: "history:11-10:2", year: 1483, zh: "马丁·路德出生于德国艾斯莱本，后来掀起宗教改革。", en: "Martin Luther is born in Eisleben, Germany; he will spark the Reformation." },
+  ],
+  "11-11": [
+    { id: "history:11-11:2", year: 1821, zh: "陀思妥耶夫斯基出生于莫斯科，后来写出《罪与罚》。", en: "Fyodor Dostoevsky is born in Moscow; he will write Crime and Punishment." },
+  ],
+  "11-12": [
+    { id: "history:11-12:2", year: 1866, zh: "孙中山出生于广东香山县翠亨村。", en: "Sun Yat-sen is born in Cuiheng village, Xiangshan county, Guangdong." },
+  ],
+  "11-13": [
+    { id: "history:11-13:2", year: 1850, zh: "作家史蒂文森出生于爱丁堡，后来写出《金银岛》。", en: "Robert Louis Stevenson is born in Edinburgh; he will write Treasure Island." },
+  ],
+  "11-14": [
+    { id: "history:11-14:2", year: 1840, zh: "印象派画家莫奈出生于巴黎。", en: "Impressionist painter Claude Monet is born in Paris." },
+  ],
+  "11-15": [
+    { id: "history:11-15:2", year: 1971, zh: "英特尔推出 4004，这是第一款商用微处理器。", en: "Intel introduces the 4004, the first commercially available microprocessor." },
+  ],
+  "11-16": [
+    { id: "history:11-16:2", year: 1532, zh: "皮萨罗在卡哈马卡俘虏印加皇帝阿塔瓦尔帕。", en: "Francisco Pizarro captures the Inca emperor Atahualpa at Cajamarca." },
+  ],
+  "11-17": [
+    { id: "history:11-17:2", year: 1558, zh: "伊丽莎白一世继承英格兰王位，开启了「伊丽莎白时代」。", en: "Elizabeth I succeeds to the throne of England, beginning the Elizabethan age." },
+  ],
+  "11-18": [
+    { id: "history:11-18:2", year: 1883, zh: "美国和加拿大的铁路采用标准时区，各地不再各用各的地方时。", en: "Railways in the U.S. and Canada adopt standard time zones, ending a patchwork of local times." },
+  ],
+  "11-19": [
+    { id: "history:11-19:2", year: 1493, zh: "哥伦布第二次航行中登上波多黎各岛。", en: "On his second voyage, Columbus lands on the island of Puerto Rico." },
+  ],
+  "11-20": [
+    { id: "history:11-20:2", year: 1945, zh: "纽伦堡审判开庭，纳粹德国主要战犯接受国际军事法庭审判。", en: "The Nuremberg trials open, putting leading Nazi war criminals before an international tribunal." },
+  ],
+  "11-21": [
+    { id: "history:11-21:2", year: 1783, zh: "罗齐尔和达尔朗德乘孟格菲热气球在巴黎上空飞行，这是人类第一次自由载人飞行。", en: "Pilâtre de Rozier and the Marquis d'Arlandes fly over Paris in a Montgolfier balloon, the first free flight by humans." },
+  ],
+  "11-22": [
+    { id: "history:11-22:2", year: 1718, zh: "海盗「黑胡子」在北卡罗来纳海岸外被英国海军击毙。", en: "The pirate Blackbeard is killed off the coast of North Carolina by a Royal Navy force." },
+  ],
+  "11-23": [
+    { id: "history:11-23:2", year: 1889, zh: "旧金山一家酒吧装上了投币式留声机，这是最早的点唱机。", en: "A coin-operated phonograph is installed in a San Francisco saloon, the first jukebox." },
+  ],
+  "11-24": [
+    { id: "history:11-24:2", year: 1874, zh: "格利登获得带刺铁丝网的专利，美国西部的开放牧场从此逐渐被围了起来。", en: "Joseph Glidden patents barbed wire, which will fence in the open range of the American West." },
+  ],
+  "11-25": [
+    { id: "history:11-25:2", year: 1952, zh: "阿加莎·克里斯蒂的舞台剧《捕鼠器》在伦敦首演，此后一直上演，成为世界上连演时间最长的戏剧。", en: "Agatha Christie's play The Mousetrap opens in London, beginning the longest run of any play in the world." },
+  ],
+  "11-26": [
+    { id: "history:11-26:2", year: 1789, zh: "美国举行第一个由总统宣布的全国感恩节。", en: "The United States observes the first national Thanksgiving proclaimed by a president." },
+  ],
+  "11-27": [
+    { id: "history:11-27:2", year: 1701, zh: "瑞典天文学家摄尔修斯出生，摄氏温标就以他命名。", en: "Swedish astronomer Anders Celsius is born; the Celsius temperature scale bears his name." },
+  ],
+  "11-28": [
+    { id: "history:11-28:2", year: 1757, zh: "英国诗人、画家布莱克出生于伦敦。", en: "Poet and painter William Blake is born in London." },
+  ],
+  "11-29": [
+    { id: "history:11-29:2", year: 1929, zh: "伯德和他的机组首次驾机飞越南极点。", en: "Richard Byrd and his crew make the first flight over the South Pole." },
+  ],
+  "11-30": [
+    { id: "history:11-30:2", year: 1835, zh: "马克·吐温出生于美国密苏里州，那年哈雷彗星正好经过地球附近。", en: "Mark Twain is born in Missouri, in a year when Halley's Comet passes near Earth." },
+  ],
+  "12-01": [
+    { id: "history:12-01:2", year: 1913, zh: "福特公司在高地公园工厂启用移动式装配线，一辆 T 型车的装配时间从十几个小时缩短到约一个半小时。", en: "Ford starts its moving assembly line at Highland Park, cutting the time to build a Model T from over twelve hours to about ninety minutes." },
+  ],
+  "12-02": [
+    { id: "history:12-02:2", year: 1804, zh: "拿破仑在巴黎圣母院加冕为法国皇帝，他在教皇面前亲手把皇冠戴到自己头上。", en: "Napoleon is crowned Emperor of the French in Notre-Dame, placing the crown on his own head as the Pope looks on." },
+  ],
+  "12-03": [
+    { id: "history:12-03:2", year: 1992, zh: "一位英国工程师用电脑向同事的手机发出「Merry Christmas」，这是世界上第一条短信。", en: "A British engineer sends 'Merry Christmas' from a computer to a colleague's phone: the world's first text message." },
+  ],
+  "12-04": [
+    { id: "history:12-04:2", year: 1791, zh: "英国《观察家报》创刊，是世界上历史最悠久的星期日报纸。", en: "The Observer is first published in Britain; it is the world's oldest Sunday newspaper." },
+  ],
+  "12-05": [
+    { id: "history:12-05:2", year: 1791, zh: "莫扎特在维也纳去世，年仅 35 岁，《安魂曲》没能写完。", en: "Mozart dies in Vienna at 35, leaving his Requiem unfinished." },
+  ],
+  "12-06": [
+    { id: "history:12-06:2", year: 1240, zh: "蒙古军队攻陷基辅。", en: "Mongol forces capture and sack Kyiv." },
+  ],
+  "12-07": [
+    { id: "history:12-07:2", year: 1787, zh: "特拉华州第一个批准美国宪法，因此被称为「第一州」。", en: "Delaware becomes the first state to ratify the U.S. Constitution, earning the name 'the First State'." },
+  ],
+  "12-08": [
+    { id: "history:12-08:2", year: 1980, zh: "约翰·列侬在纽约寓所外遭枪杀，年仅 40 岁。", en: "John Lennon is shot dead outside his apartment building in New York, aged 40." },
+  ],
+  "12-09": [
+    { id: "history:12-09:2", year: 1608, zh: "英国诗人弥尔顿出生于伦敦，后来在双目失明后口述完成《失乐园》。", en: "John Milton is born in London; blind in later life, he will dictate Paradise Lost." },
+  ],
+  "12-10": [
+    { id: "history:12-10:2", year: 1815, zh: "艾达·洛夫莱斯出生于伦敦，她为分析机写下的算法被视为最早的计算机程序。", en: "Ada Lovelace is born in London; her algorithm for the Analytical Engine is regarded as the first computer program." },
+  ],
+  "12-11": [
+    { id: "history:12-11:2", year: 1936, zh: "英王爱德华八世为与辛普森夫人结婚而宣布退位。", en: "King Edward VIII abdicates in order to marry Wallis Simpson." },
+  ],
+  "12-12": [
+    { id: "history:12-12:2", year: 1821, zh: "法国作家福楼拜出生于鲁昂，后来写出《包法利夫人》。", en: "French writer Gustave Flaubert is born in Rouen; he will write Madame Bovary." },
+  ],
+  "12-13": [
+    { id: "history:12-13:2", year: 1937, zh: "侵华日军攻占南京，随后制造了南京大屠杀。这一天后来定为南京大屠杀死难者国家公祭日。", en: "Japanese troops capture Nanjing and begin the Nanjing Massacre; the date is now China's national day of remembrance for its victims." },
+  ],
+  "12-14": [
+    { id: "history:12-14:2", year: 1799, zh: "乔治·华盛顿在弗吉尼亚弗农山庄去世。", en: "George Washington dies at Mount Vernon, Virginia." },
+  ],
+  "12-15": [
+    { id: "history:12-15:2", year: 1939, zh: "电影《乱世佳人》在亚特兰大首映。", en: "Gone with the Wind premieres in Atlanta." },
+  ],
+  "12-16": [
+    { id: "history:12-16:2", year: 1775, zh: "简·奥斯汀出生于英格兰汉普郡斯蒂文顿。", en: "Jane Austen is born in Steventon, Hampshire, England." },
+  ],
+  "12-17": [
+    { id: "history:12-17:2", year: 1790, zh: "墨西哥城中央广场出土阿兹特克太阳石。", en: "The Aztec Sun Stone is unearthed in the main square of Mexico City." },
+  ],
+  "12-18": [
+    { id: "history:12-18:2", year: 1978, zh: "中共十一届三中全会在北京开幕，会议确定了改革开放的方针。", en: "The Third Plenum of the 11th Central Committee opens in Beijing, setting China on the course of reform and opening up." },
+  ],
+  "12-19": [
+    { id: "history:12-19:2", year: 1972, zh: "阿波罗 17 号返回地球，这是迄今为止人类最后一次登月任务。", en: "Apollo 17 splashes down, ending the last crewed mission to the Moon to date." },
+  ],
+  "12-20": [
+    { id: "history:12-20:2", year: 1946, zh: "电影《生活多美好》在纽约首映。", en: "It's a Wonderful Life premieres in New York." },
+  ],
+  "12-21": [
+    { id: "history:12-21:2", year: 1968, zh: "阿波罗 8 号发射，三名宇航员成为第一批绕月飞行的人类。", en: "Apollo 8 launches; its three astronauts will be the first humans to orbit the Moon." },
+  ],
+  "12-22": [
+    { id: "history:12-22:2", year: 1808, zh: "贝多芬的第五和第六交响曲在维也纳的同一场音乐会上首演。", en: "Beethoven's Fifth and Sixth Symphonies premiere at the same concert in Vienna." },
+  ],
+  "12-23": [
+    { id: "history:12-23:2", year: 1823, zh: "诗歌《圣诞前夜》在纽约一家报纸上匿名发表，塑造了今天圣诞老人的形象。", en: "The poem 'A Visit from St. Nicholas' is published anonymously in a New York paper, shaping the modern Santa Claus." },
+  ],
+  "12-24": [
+    { id: "history:12-24:2", year: 1968, zh: "阿波罗 8 号宇航员在环月轨道上拍下《地出》：地球从月平线上升起。", en: "Apollo 8 astronauts photograph Earthrise: the Earth rising over the lunar horizon." },
+  ],
+  "12-25": [
+    { id: "history:12-25:2", year: 800, zh: "查理曼在罗马圣彼得大教堂由教皇加冕为皇帝。", en: "Charlemagne is crowned emperor by the Pope in St Peter's Basilica, Rome." },
+  ],
+  "12-26": [
+    { id: "history:12-26:2", year: 1776, zh: "华盛顿率军渡过冰冷的特拉华河，在特伦顿突袭得手。", en: "Washington's army crosses the icy Delaware River and wins a surprise victory at Trenton." },
+  ],
+  "12-27": [
+    { id: "history:12-27:2", year: 1571, zh: "开普勒出生于德国魏尔，后来发现了行星运动三定律。", en: "Johannes Kepler is born in Weil der Stadt, Germany; he will discover the three laws of planetary motion." },
+  ],
+  "12-28": [
+    { id: "history:12-28:2", year: 1612, zh: "伽利略在观测木星时记下了海王星的位置，却把它当成了一颗恒星。", en: "Galileo records the position of Neptune while observing Jupiter, but takes it for a fixed star." },
+  ],
+  "12-29": [
+    { id: "history:12-29:2", year: 1170, zh: "坎特伯雷大主教贝克特在大教堂内被刺杀。", en: "Archbishop Thomas Becket is murdered inside Canterbury Cathedral." },
+  ],
+  "12-30": [
+    { id: "history:12-30:2", year: 1865, zh: "吉卜林出生于印度孟买，后来写出《丛林之书》。", en: "Rudyard Kipling is born in Bombay, India; he will write The Jungle Book." },
+  ],
+  "12-31": [
+    { id: "history:12-31:2", year: 1600, zh: "英国东印度公司获得伊丽莎白一世颁发的特许状成立。", en: "The English East India Company is chartered by Elizabeth I." },
+  ],
+};
+
 /* ---------- Thoughts (bilingual pairs) ---------- */
 const THOUGHTS = [
   { id: "thought:001", zh: "你以为你在回忆，其实你每回忆一次，就重写了一次记忆。", en: "You think you are remembering. Each time you recall something, you rewrite the memory a little." },

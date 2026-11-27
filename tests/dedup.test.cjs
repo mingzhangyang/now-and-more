@@ -168,13 +168,21 @@ test("history is capped at three actual draws per local day, including reload an
   const day = "20261125";
   h.ready();
   const draw = random => { setRandom(random); assert.equal(h.drawCard(), true); queue.shift()(); return h.current; };
-  assert.equal(draw(0.29).cat, "history");
+  const firstCard = draw(0.29);
+  assert.equal(firstCard.cat, "history");
   assert.equal(draw(0).cat, "world");
-  assert.equal(draw(0.2).cat, "history");
+  const second = draw(0.2);
+  assert.equal(second.cat, "history");
   assert.equal(draw(0).cat, "world");
   const third = draw(0.2);
   assert.equal(third.cat, "history");
-  assert.equal(third.today, true);
+  // Each history encounter of the day shows a different event for the
+  // date; once the date's events are spent, the random-day deck takes over.
+  assert.equal(firstCard.today, true);
+  assert.equal(second.today, true);
+  assert.notEqual(firstCard.entry, second.entry);
+  assert.equal(third.today, false);
+  assert.notEqual(third.key, "11-25");
   assert.equal(h.state.historyAvailable(day), false);
   const before = storage.getItem(key);
   h.setLang("en");

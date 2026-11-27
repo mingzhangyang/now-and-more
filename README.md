@@ -14,7 +14,7 @@ A single-page clock. At the centre, a precise real clock that never moves (certa
 - **六个随机池 / Six random pools**（权重）：
   - 与此同时 Meanwhile (30)：18 座城市此刻的真实当地时间，外加现场计算的日出、日落与昼长（含极昼/极夜），还有一张实时计算的月相卡。
   - 一首诗 A Poem (25)：中文公版诗与英文公版诗，随机语言模式出对应语种。
-  - 历史上的今天 On This Day (15)：按日期索引的历史事件（双语）；当天没有条目时随机抽一条并标注。
+  - 历史上的今天 On This Day (15)：按日期索引的历史事件（双语），每个日期有 `HISTORY` 与 `HISTORY_MORE` 两条以上；当天第 n 次抽到就显示该日期的第 n 条（起点按年份轮换），当天的条目用完后随机抽另一天并标注。/ Date-keyed bilingual events, at least two per date (`HISTORY` plus `HISTORY_MORE`); the nth encounter of the day shows the date's nth event (starting point rotated by year), and once they are used up a random other day is drawn and labelled.
   - 一个念头 A Thought (15)：双语认知短句。
   - 纯偶然 Pure Chance (10)：当场生成的随机整数、骰子、硬币序列、抽牌、随机颜色。
   - 你的从前 Your Past (5)：回望提示，只提问，不编造你的记忆。
