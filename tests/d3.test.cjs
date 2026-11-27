@@ -93,7 +93,9 @@ test("migrate v1 using frozen IDs even if the live pool is reordered, preserve D
   const storage=store({[D.LEGACY_KEY]:old});
   const original=storage.getItem(D.LEGACY_KEY);
   const d=D.createDeckState(storage,()=>0.999,{legacyIds:legacy});
-  const pool=catalog["poem:zh"].slice().reverse();
+  // A reordered live pool of the migrated ids. Ids appended later join the
+  // round by design (covered above), so keep them out of this ordering check.
+  const pool=catalog["poem:zh"].filter(id=>legacy["poem:zh"].includes(id)).reverse();
   const expected=[legacy["poem:zh"][4],legacy["poem:zh"][2],legacy["poem:zh"][0]];
   assert.deepEqual(expected.map(()=>draw(d,"poem:zh",pool)),expected);
   assert.equal(d.state.d.world,undefined);
