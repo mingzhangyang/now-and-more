@@ -3119,19 +3119,27 @@ function drawGlobeAt(ctx, cx, cy, r, g, theme) {
     dark: theme.dark, accent: theme.accent,
   });
 }
-/* Paint every globe canvas inside `root` at device resolution. */
+/* Paint every globe canvas inside `root` at device resolution, from the
+   inputs stored on the canvas (data-lat/lon/when) and the current theme.
+   Called when a world card renders and again when the effective theme
+   changes; a repaint never draws a new card. Never throws: a globe that
+   cannot be painted (no 2D context, canvas pressure, missing globe.js)
+   is hidden and the city, time and facts stand on their own. */
 function paintGlobes(root) {
-  if (typeof NAM_GLOBE === "undefined" || !root || !root.querySelectorAll) return;
-  const theme = globeThemeFrom(capturePalette());
+  if (!root || !root.querySelectorAll) return;
   root.querySelectorAll("canvas.globe").forEach((cv) => {
-    const css = cv.clientWidth || 76;
-    const dpr = Math.min(3, window.devicePixelRatio || 1);
-    cv.width = cv.height = Math.round(css * dpr);
-    const ctx = cv.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     try {
+      if (typeof NAM_GLOBE === "undefined") throw new Error("globe.js missing");
+      const css = cv.clientWidth || 76;
+      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      cv.width = cv.height = Math.round(css * dpr);
+      const ctx = cv.getContext("2d");
+      if (!ctx) throw new Error("no 2D context");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawGlobeAt(ctx, css / 2, css / 2, css / 2 - 1,
-        { lat: +cv.dataset.lat, lon: +cv.dataset.lon, when: +cv.dataset.when }, theme);
+        { lat: +cv.dataset.lat, lon: +cv.dataset.lon, when: +cv.dataset.when },
+        globeThemeFrom(capturePalette()));
+      cv.hidden = false;
     } catch (e) {
       cv.hidden = true; // the card reads fine without it
     }
@@ -3857,7 +3865,17 @@ function applyTheme() {
   $("theme-auto").classList.toggle("active", theme === "auto");
   $("theme-light").classList.toggle("active", theme === "light");
   $("theme-dark").classList.toggle("active", theme === "dark");
+  // The globe is painted with theme colours; repaint the one on stage.
+  paintGlobes($("card-body"));
 }
+
+// Auto mode follows the system scheme without a reload: repaint then too.
+try {
+  const schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const onScheme = () => { if (theme === "auto") paintGlobes($("card-body")); };
+  if (schemeQuery.addEventListener) schemeQuery.addEventListener("change", onScheme);
+  else if (schemeQuery.addListener) schemeQuery.addListener(onScheme);
+} catch (e) { /* no matchMedia: Auto still works, only the repaint waits */ }
 
 function setTheme(next) {
   if (next === theme) return;
