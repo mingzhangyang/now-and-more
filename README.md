@@ -88,6 +88,7 @@ npx wrangler pages deploy . --project-name now-and-more
 │   ├── dedup.js      # 牌局状态、迁移与事务化抽卡 / deck state & transactional draws
 │   ├── gossip.js     # 热点列表的浏览器侧处理 / client-side news handling
 │   ├── sky-engine-adapter.js  # 版本化 Sky Engine 加载与场景缓存 / pinned SDK loader
+│   ├── globe.js      # 与此同时的小地球（Natural Earth 陆地 + 逐像素绘制）/ the Meanwhile globe
 │   └── app.js        # 时钟引擎、样式切换、随机轮转、产品星空规则 / engine
 ├── vendor/sky-engine/0.2.0/  # 正式发布的 SDK 与星表（勿手改）/ published SDK, do not edit
 ├── docs/sky-engine.md
