@@ -3229,7 +3229,15 @@ function renderSelection(sel, surface) {
 
   if (sel.cat === "quotes") {
     const q = lang === "zh" ? sel.quoteZh : sel.quoteEn;
-    body = `<span class="poem-line">${q.text}</span><span class="poem-author">— ${q.author}</span>`;
+    // Chinese attributions take the two-em dash (——) with no space, and
+    // works already sit in 《》. English uses an em dash and a space, with
+    // a book, play or film title in italics; short works such as poems
+    // and essays stay inside `author` in straight single quotes, as the
+    // site's English does (curly quotes fall back to full-width CJK glyphs).
+    const credit = lang === "zh"
+      ? `——${q.author}`
+      : `— ${q.author}${q.work ? `, <i>${q.work}</i>` : ""}`;
+    body = `<span class="poem-line">${q.text}</span><span class="poem-author">${credit}</span>`;
   }
 
   if (sel.cat === "classics") {
