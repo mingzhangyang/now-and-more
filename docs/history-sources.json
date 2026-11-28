@@ -6,34 +6,38 @@
     "pending": "No durable item-level evidence recorded yet; may have been screened previously.",
     "corrected": "Text was revised in prior audit; status does not imply all claims independently verified.",
     "uncertain": "At least one claim or source detail requires further checking.",
-    "verified": "All material claims checked against recorded sources.",
+    "verified": "Date and every material claim supported by at least one accessible source with evidenceStatus 'direct'; tertiary-only support is allowed but noted by sourceType.",
     "revision_required": "Evidence supports a change not yet committed."
   },
-  "notes": "Initial migration: previous conversation citations without recoverable URLs are not treated as durable sources. Empty sources require backfill. Source links may support only part of a record.",
+  "notes": "Initial migration: previous conversation citations without recoverable URLs are not treated as durable sources. Empty sources require backfill. Source links may support only part of a record. Audit pass 2026-11-28: all 8 uncertain records resolved and every previously listed source re-fetched; see docs/history-audit-handoff.md.",
   "records": {
     "history:01-01:2": {
       "year": 1912,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
-          "publisher": "Philippine Supreme Court E-Library",
-          "url": "https://elibrary.judiciary.gov.ph/thebookshelf/showdocs/7/51789",
-          "claim": "Candidate Philippine republic context; access restricted.",
-          "accessStatus": "restricted",
-          "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "unconfirmed",
-          "provenance": "prior_conversation_access_report"
-        },
-        {
-          "publisher": "Philippine Information Agency",
-          "url": "https://pia.gov.ph/press-release/nation-commemorates-127th-anniversary-of-the-first-philippine-republic/",
-          "claim": "Philippine republic context; not direct ROC founding evidence.",
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Provisional_Government_of_the_Republic_of_China_(1912)",
+          "claim": "Provisional government established by Sun Yat-sen in Nanjing; Sun first provisional president.",
+          "sourceType": "tertiary",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Sun_Yat-sen",
+          "claim": "Sun in office as provisional president from 1 January 1912.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "notes": "Removed two Philippine-republic links: they concerned the dropped 'Asia's first republic' claim and gave no evidence for this record.",
+      "checkedAt": "2026-11-28"
     },
     "history:01-02:2": {
       "year": 1492,
@@ -72,13 +76,20 @@
     },
     "history:01-09:2": {
       "year": 1793,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
           "publisher": "FAA",
-          "url": "https://www.faa.gov/blog/clearedfortakeoff/first-flight-america"
+          "url": "https://www.faa.gov/blog/clearedfortakeoff/first-flight-america",
+          "claim": "Jan. 9, 1793, untethered hydrogen balloon from Walnut Street Prison yard, Philadelphia; Washington in the crowd.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "checkedAt": "2026-11-28"
     },
     "history:01-10:2": {
       "year": 1920,
@@ -87,18 +98,30 @@
     },
     "history:01-11:2": {
       "year": 1787,
-      "status": "pending",
+      "status": "verified",
       "sources": [
         {
           "publisher": "NASA",
           "url": "https://science.nasa.gov/uranus/moons/titania/",
-          "claim": "Titania discovery; Oberon source still needed.",
+          "claim": "Titania discovered Jan. 11, 1787 by William Herschel.",
+          "sourceType": "official",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "NASA",
+          "url": "https://science.nasa.gov/uranus/moons/oberon/",
+          "claim": "Oberon discovered Jan. 11, 1787 by William Herschel.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "checkedAt": "2026-11-28"
     },
     "history:01-12:2": {
       "year": 1876,
@@ -157,9 +180,31 @@
     },
     "history:01-23:2": {
       "year": 1556,
-      "status": "uncertain",
-      "sources": [],
-      "notes": "Exact date still needs direct evidence."
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/1556_Shaanxi_earthquake",
+          "claim": "23 January 1556 (Julian; 2 February Gregorian), Huaxian; 830,000 is the reduction in registered population, direct deaths ~100,000 per CEA.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "维基百科",
+          "url": "https://zh.wikipedia.org/zh-cn/%E5%98%89%E9%9D%96%E5%A4%A7%E5%9C%B0%E9%9C%87",
+          "claim": "《明史》“官吏、军民压死八十三万有奇”；现代估计实际死亡在45万以内。",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Rewritten: 830,000 attributed to the Ming History rather than stated as a fact, 'deadliest in recorded history' dropped, date marked as Julian.",
+      "checkedAt": "2026-11-28"
     },
     "history:01-24:2": {
       "year": 1984,
@@ -168,18 +213,31 @@
     },
     "history:01-25:2": {
       "year": 1924,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/1924_Winter_Olympics",
+          "claim": "Opened 25 January 1924 in Chamonix; IOC granted first Winter Games status at its session of 6 May 1926.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
         {
           "publisher": "IOC",
           "url": "https://www.olympics.com/ioc/news/100-years-of-the-olympic-winter-games-celebrating-mountain-magic-while-looking-to-the-future",
           "claim": "Winter Games centenary.",
-          "accessStatus": "accessible",
+          "sourceType": "official",
+          "accessStatus": "unreachable",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "unconfirmed",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "notes": "olympics.com could not be fetched from the audit environment (connection reset).",
+      "checkedAt": "2026-11-28"
     },
     "history:01-26:2": {
       "year": 1950,
@@ -228,18 +286,31 @@
     },
     "history:02-04:2": {
       "year": 1789,
-      "status": "pending",
+      "status": "uncertain",
       "sources": [
         {
           "publisher": "US National Archives",
           "url": "https://www.archives.gov/electoral-college/1789",
-          "claim": "All 69 electoral votes; election date needs separate evidence.",
+          "claim": "Washington received all 69 electoral votes.",
+          "sourceType": "official",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
           "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/1788%E2%80%9389_United_States_presidential_election",
+          "claim": "Electors cast votes on the first Wednesday in February (February 4); Washington elected unanimously.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "notes": "Feb 4 is when electors voted; votes were counted April 6. 'Only president ever elected unanimously' still needs a direct source.",
+      "checkedAt": "2026-11-28"
     },
     "history:02-05:2": {
       "year": 1919,
@@ -288,27 +359,30 @@
     },
     "history:02-14:2": {
       "year": 1990,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
           "publisher": "NASA",
           "url": "https://www.nasa.gov/history/45-years-ago-voyager-1-begins-its-epic-journey-to-the-outer-planets-and-beyond/",
-          "claim": "Voyager mission history.",
+          "claim": "Pale blue dot image; Voyager mission history.",
+          "sourceType": "official",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
           "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "provenance": "direct_fetch"
         },
         {
           "publisher": "NASA Earth Observatory",
           "url": "https://science.nasa.gov/earth/earth-observatory/a-voyager-far-from-home-79091/",
-          "claim": "Pale Blue Dot image context.",
+          "claim": "Pale Blue Dot acquired February 14, 1990 at 6.4 billion km; Earth 0.12 pixel.",
+          "sourceType": "official",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "checkedAt": "2026-11-28"
     },
     "history:02-15:2": {
       "year": 1867,
@@ -317,14 +391,31 @@
     },
     "history:02-16:2": {
       "year": 1937,
-      "status": "uncertain",
+      "status": "verified",
       "sources": [
         {
-          "publisher": "US patent 2130523",
-          "url": "https://patents.google.com/patent/US2130523A/en"
+          "publisher": "Google Patents",
+          "url": "https://patents.google.com/patent/US2071250A/en",
+          "claim": "US 2,071,250 'Linear condensation polymers', W. H. Carothers, granted 1937-02-16.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "Google Patents",
+          "url": "https://patents.google.com/patent/US2071253A/en",
+          "claim": "US 2,071,253 'Linear condensation polymers', W. H. Carothers, granted 1937-02-16.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
       ],
-      "notes": "Check patent number against exact grant date before accepting source."
+      "notes": "Replaced US 2,130,523 (granted 1938-09-20, wrong date). Rewritten from 'a patent for synthetic fibers' to the actual patent title.",
+      "checkedAt": "2026-11-28"
     },
     "history:02-17:2": {
       "year": 1904,
@@ -447,10 +538,32 @@
       "sources": []
     },
     "history:03-12:2": {
-      "year": 1894,
-      "status": "uncertain",
-      "sources": [],
-      "notes": "Exact first bottling date disputed."
+      "year": 1925,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Sun_Yat-sen",
+          "claim": "Died 12 March 1925, Beijing, aged 58.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "维基百科",
+          "url": "https://zh.wikipedia.org/zh-cn/%E6%A4%8D%E6%A0%91%E8%8A%82",
+          "claim": "1979年2月全国人大常委会决定3月12日为植树节。",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Replaced event: the 1894 first Coca-Cola bottling has no firm day (Wikipedia says 'summer of 1894'). Salt March is already HISTORY['03-12'].",
+      "checkedAt": "2026-11-28"
     },
     "history:03-13:2": {
       "year": 1733,
@@ -474,9 +587,21 @@
     },
     "history:03-17:2": {
       "year": 1958,
-      "status": "pending",
-      "sources": [],
-      "notes": "Prior Explorer 1 citation rejected: wrong satellite. Vanguard 1 source still needed."
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Vanguard_1",
+          "claim": "Launched 17 March 1958; oldest artificial object still in orbit.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "English wording narrowed from 'in space' to 'still in orbit'. Prior Explorer 1 citation rejected: wrong satellite.",
+      "checkedAt": "2026-11-28"
     },
     "history:03-18:2": {
       "year": 1662,
@@ -485,13 +610,20 @@
     },
     "history:03-19:2": {
       "year": 1918,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
           "publisher": "US Government Publishing Office",
-          "url": "https://www.govinfo.gov/content/pkg/STATUTE-40/pdf/STATUTE-40-Pg451.pdf"
+          "url": "https://www.govinfo.gov/content/pkg/STATUTE-40/pdf/STATUTE-40-Pg451.pdf",
+          "claim": "40 Stat. 450, ch. 24: standard time zones and one-hour advance from last Sunday in March; 'Approved, March 19, 1918.'",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "checkedAt": "2026-11-28"
     },
     "history:03-20:2": {
       "year": 1800,
@@ -520,45 +652,94 @@
     },
     "history:03-25:2": {
       "year": 1655,
-      "status": "pending",
+      "status": "verified",
       "sources": [
         {
           "publisher": "NASA",
           "url": "https://science.nasa.gov/saturn/moons/titan/exploration/",
-          "claim": "Titan exploration history.",
+          "claim": "Huygens discovered Titan, Saturn's largest moon, on March 25, 1655.",
+          "sourceType": "official",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "checkedAt": "2026-11-28"
     },
     "history:03-26:2": {
       "year": 1827,
-      "status": "uncertain",
-      "sources": [],
-      "notes": "Funeral attendance needs evidence."
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Death_of_Ludwig_van_Beethoven",
+          "claim": "Died 26 March 1827 in Vienna; funeral 29 March; many thousands lined the streets.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Rewritten: the English said 'tens of thousands' while the Chinese said 'over ten thousand'; both now say 'many thousands', as the source does.",
+      "checkedAt": "2026-11-28"
     },
     "history:03-27:2": {
       "year": 1845,
-      "status": "uncertain",
+      "status": "verified",
       "sources": [
         {
+          "publisher": "Nobel Prize",
+          "url": "https://www.nobelprize.org/prizes/physics/1901/rontgen/facts/",
+          "claim": "Born 27 March 1845, Lennep, Prussia (now Remscheid, Germany); Nobel Prize in Physics 1901.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
           "publisher": "University of Würzburg",
-          "url": "https://www.physik.uni-wuerzburg.de/en/about-us/history-of-the-faculty/nobel-prize-winners/wilhelm-conrad-roentgen-1901/"
+          "url": "https://www.physik.uni-wuerzburg.de/en/about-us/history-of-the-faculty/nobel-prize-winners/wilhelm-conrad-roentgen-1901/",
+          "claim": "Birth and Nobel award.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
         },
         {
           "publisher": "Max Planck Institute",
-          "url": "https://www.mpe.mpg.de/467727/W_C_Roentgen"
+          "url": "https://www.mpe.mpg.de/467727/W_C_Roentgen",
+          "claim": "Birth and Nobel award.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
         }
       ],
-      "notes": "Sources confirm birth and Nobel award; historical Prussian jurisdiction needs separate evidence."
+      "notes": "Added '(now Remscheid)' as given by nobelprize.org.",
+      "checkedAt": "2026-11-28"
     },
     "history:03-28:2": {
-      "year": 1930,
-      "status": "uncertain",
-      "sources": [],
-      "notes": "Exact administrative naming date not established."
+      "year": 1910,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Henri_Fabre",
+          "claim": "Took off from the Étang de Berre on 28 March 1910; inventor of the first successful seaplane.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Replaced event: no source ties the Istanbul name change to 28 March 1930 (Wikipedia only says 'beginning in 1930').",
+      "checkedAt": "2026-11-28"
     },
     "history:03-29:2": {
       "year": 1867,
@@ -567,9 +748,21 @@
     },
     "history:03-30:2": {
       "year": 1853,
-      "status": "uncertain",
-      "sources": [],
-      "notes": "Birth date and replacement wording need direct museum citation."
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Vincent_van_Gogh",
+          "claim": "Born 30 March 1853, Zundert, North Brabant; fame came after death.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "vangoghmuseum.nl, vangoghletters.org and rkd.nl returned bot-protection pages; a museum citation would still be an upgrade.",
+      "checkedAt": "2026-11-28"
     },
     "history:03-31:2": {
       "year": 1596,
@@ -612,10 +805,22 @@
       "sources": []
     },
     "history:04-08:2": {
-      "year": 1820,
-      "status": "uncertain",
-      "sources": [],
-      "notes": "Exact discovery date not established."
+      "year": 1904,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Entente_Cordiale",
+          "claim": "Agreements signed 8 April 1904 between the UK and France; significant improvement in relations after colonial disputes.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Replaced event: the Louvre gives only '1820' for the Venus de Milo; 8 April comes from a single narrative account. Picasso's death is already HISTORY['04-08'].",
+      "checkedAt": "2026-11-28"
     },
     "history:04-09:2": {
       "year": 1682,
@@ -719,33 +924,39 @@
     },
     "history:04-29:2": {
       "year": 1913,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
-          "publisher": "US patent 1060378",
-          "url": "https://patents.google.com/patent/US1060378A/en"
-        },
-        {
-          "publisher": "US patent 1219881",
-          "url": "https://patents.google.com/patent/US1219881A/en"
+          "publisher": "Google Patents",
+          "url": "https://patents.google.com/patent/US1060378A/en",
+          "claim": "US 1,060,378 'Separable fastener', Gideon Sundback, granted 1913-04-29.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "notes": "Removed US 1,219,881 (filed 1914, granted 1917): not this event.",
+      "checkedAt": "2026-11-28"
     },
     "history:04-30:2": {
       "year": 1803,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
           "publisher": "US National Archives",
           "url": "https://www.archives.gov/milestone-documents/louisiana-purchase-treaty",
-          "claim": "Treaty text and April 30 date; actual signing date disputed.",
+          "claim": "Treaty dated/signed April 30, 1803; the US doubled its size.",
+          "sourceType": "official",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
       ],
-      "notes": "Actual signing date disputed; seek independent source distinguishing document date from signing."
+      "notes": "Some historians date the actual signing to May 2; the record says only that the treaty is dated April 30.",
+      "checkedAt": "2026-11-28"
     },
     "history:05-01:2": {
       "year": 1851,
@@ -844,18 +1055,20 @@
     },
     "history:05-20:2": {
       "year": 1873,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
           "publisher": "US National Archives",
           "url": "https://prologue.blogs.archives.gov/2010/05/20/forever-in-blue-jeansand-in-court/",
-          "claim": "Patent history.",
+          "claim": "May 20, 1873, Jacob W. Davis patent 139,121 for metal rivets at pocket openings; partner Levi Strauss.",
+          "sourceType": "official",
           "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "partial",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "checkedAt": "2026-11-28"
     },
     "history:05-21:2": {
       "year": 1881,
@@ -1644,27 +1857,31 @@
     },
     "history:10-25:2": {
       "year": 1971,
-      "status": "corrected",
+      "status": "verified",
       "sources": [
         {
           "publisher": "United Nations",
           "url": "https://www.un.org/zh/ga/26/res/ares2758.html",
-          "claim": "Chinese resolution text; access restricted.",
-          "accessStatus": "restricted",
+          "claim": "A/RES/2758(XXVI) 全文：恢复中华人民共和国的一切权利，承认其政府代表为唯一合法代表。",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "unconfirmed",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         },
         {
           "publisher": "United Nations",
           "url": "https://digitallibrary.un.org/record/498905/files/S_10378-EN.pdf",
-          "claim": "Candidate English document; content not confirmed.",
-          "accessStatus": "restricted",
+          "claim": "S/10378: resolution 2758 (XXVI) adopted at the 1976th plenary meeting on 25 October 1971, 76-35-17.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
           "accessCheckedAt": "2026-11-28",
-          "evidenceStatus": "unconfirmed",
-          "provenance": "prior_conversation_access_report"
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
         }
-      ]
+      ],
+      "notes": "Both UN links were marked restricted; both fetched successfully this time.",
+      "checkedAt": "2026-11-28"
     },
     "history:10-26:2": {
       "year": 1881,
@@ -2001,5 +2218,11 @@
       "status": "pending",
       "sources": []
     }
+  },
+  "sourceFieldDefinitions": {
+    "sourceType": "primary (patent, statute, resolution, original record), official (agency or institution page), secondary (scholarly or press), tertiary (encyclopedia).",
+    "accessStatus": "accessible | restricted (login, paywall or bot wall) | unreachable (network failure from the audit environment).",
+    "evidenceStatus": "direct (states the date and the core claim) | partial (supports only part) | unconfirmed (not read).",
+    "provenance": "direct_fetch (page read during the audit on accessCheckedAt) | prior_conversation_access_report (reported in an earlier chat, not re-read)."
   }
 }

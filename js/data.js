@@ -1413,7 +1413,7 @@ const HISTORY_MORE = {
     { id: "history:01-22:2", year: 1788, zh: "英国诗人拜伦出生于伦敦，他后来成为浪漫主义运动的代表人物。", en: "The poet Lord Byron is born in London; he will become a leading figure of the Romantic movement." },
   ],
   "01-23": [
-    { id: "history:01-23:2", year: 1556, zh: "明朝陕西发生大地震，据估计约83万人遇难，是有记录以来死亡人数最多的地震。", en: "An earthquake strikes Shaanxi during China's Ming dynasty, killing an estimated 830,000 people, making it the deadliest earthquake in recorded history." },
+    { id: "history:01-23:2", year: 1556, zh: "陕西华县一带发生大地震（按儒略历）。《明史》载“压死八十三万有奇”，现代研究认为直接遇难人数要少得多。", en: "A great earthquake strikes Huaxian, Shaanxi (Julian calendar date). The Ming History records over 830,000 dead; modern studies put direct deaths far lower." },
   ],
   "01-24": [
     { id: "history:01-24:2", year: 1984, zh: "苹果公司的第一台 Macintosh 电脑开始发售，推动鼠标和图形界面在个人电脑上的普及。", en: "Apple's first Macintosh goes on sale, helping popularize the mouse and graphical interface on personal computers." },
@@ -1485,7 +1485,7 @@ const HISTORY_MORE = {
     { id: "history:02-15:2", year: 1867, zh: "约翰·施特劳斯的圆舞曲《蓝色多瑙河》在维也纳首演。", en: "Johann Strauss II's waltz The Blue Danube is first performed in Vienna." },
   ],
   "02-16": [
-    { id: "history:02-16:2", year: 1937, zh: "杜邦公司的华莱士·卡罗瑟斯获得合成纤维相关专利，他的研究后来促成尼龙的商业化。", en: "Wallace Carothers of DuPont is granted a patent for synthetic fibers; his research will lead to the commercialization of nylon." },
+    { id: "history:02-16:2", year: 1937, zh: "杜邦公司的华莱士·卡罗瑟斯获得多项“线性缩聚物”美国专利，这项聚酰胺研究后来促成了尼龙的商业化。", en: "Wallace Carothers of DuPont is granted US patents on linear condensation polymers; this polyamide research later led to commercial nylon." },
   ],
   "02-17": [
     { id: "history:02-17:2", year: 1904, zh: "普契尼的歌剧《蝴蝶夫人》在米兰斯卡拉歌剧院首演，首演反响冷淡，修改后才大获成功。", en: "Puccini's opera Madama Butterfly premieres at La Scala in Milan; it fails at first and succeeds only after revision." },
@@ -1560,7 +1560,7 @@ const HISTORY_MORE = {
     { id: "history:03-11:2", year: 2011, zh: "日本东北地区发生 9.0 级大地震，引发海啸和福岛核事故。", en: "A magnitude 9.0 earthquake strikes northeastern Japan, triggering a tsunami and the Fukushima nuclear disaster." },
   ],
   "03-12": [
-    { id: "history:03-12:2", year: 1894, zh: "可口可乐首次装瓶出售，地点是美国密西西比州维克斯堡的一家糖果店。", en: "Coca-Cola is bottled for the first time, at a candy store in Vicksburg, Mississippi." },
+    { id: "history:03-12:2", year: 1925, zh: "孙中山在北京病逝，终年58岁。1979年，中国将这一天定为植树节。", en: "Sun Yat-sen dies in Beijing, aged 58. In 1979 China made the date its national Tree Planting Day." },
   ],
   "03-13": [
     { id: "history:03-13:2", year: 1733, zh: "化学家普里斯特利出生于英格兰，他后来分离出了氧气。", en: "Chemist Joseph Priestley is born in England; he will later isolate oxygen." },
@@ -1575,7 +1575,7 @@ const HISTORY_MORE = {
     { id: "history:03-16:2", year: 1802, zh: "美国西点军校成立。", en: "The United States Military Academy at West Point is founded." },
   ],
   "03-17": [
-    { id: "history:03-17:2", year: 1958, zh: "美国发射先锋一号卫星，它至今仍在轨道上，是在轨时间最长的人造物体。", en: "The U.S. launches Vanguard 1; still in orbit today, it is the oldest human-made object in space." },
+    { id: "history:03-17:2", year: 1958, zh: "美国发射先锋一号卫星，它至今仍在轨道上，是在轨时间最长的人造物体。", en: "The U.S. launches Vanguard 1; still in orbit today, it is the oldest human-made object still in orbit." },
   ],
   "03-18": [
     { id: "history:03-18:2", year: 1662, zh: "帕斯卡参与创办的公共马车线路在巴黎开通，被视为世界上最早的公共交通。", en: "A public carriage service co-founded by Blaise Pascal begins in Paris, often called the first public transit." },
@@ -1602,13 +1602,13 @@ const HISTORY_MORE = {
     { id: "history:03-25:2", year: 1655, zh: "惠更斯发现土星最大的卫星土卫六（泰坦）。", en: "Christiaan Huygens discovers Titan, Saturn's largest moon." },
   ],
   "03-26": [
-    { id: "history:03-26:2", year: 1827, zh: "贝多芬在维也纳去世，据说送葬队伍有上万人。", en: "Ludwig van Beethoven dies in Vienna; tens of thousands are said to line the funeral route." },
+    { id: "history:03-26:2", year: 1827, zh: "贝多芬在维也纳去世。三天后出殡，数以千计的市民沿街送行。", en: "Ludwig van Beethoven dies in Vienna; at his funeral three days later, many thousands line the streets." },
   ],
   "03-27": [
-    { id: "history:03-27:2", year: 1845, zh: "威廉·伦琴出生于普鲁士伦内普（今德国），他后来发现X射线，并获得首届诺贝尔物理学奖。", en: "Wilhelm Röntgen is born in Lennep, Prussia (now Germany); he will discover X-rays and receive the first Nobel Prize in Physics." },
+    { id: "history:03-27:2", year: 1845, zh: "威廉·伦琴出生于普鲁士伦内普（今德国雷姆沙伊德），他后来发现X射线，并获得首届诺贝尔物理学奖。", en: "Wilhelm Röntgen is born in Lennep, Prussia (now Remscheid, Germany); he will discover X-rays and receive the first Nobel Prize in Physics." },
   ],
   "03-28": [
-    { id: "history:03-28:2", year: 1930, zh: "土耳其正式将君士坦丁堡更名为伊斯坦布尔。", en: "Turkey officially renames Constantinople as Istanbul." },
+    { id: "history:03-28:2", year: 1910, zh: "法国人亨利·法布尔驾驶自制的水上飞机从贝尔潟湖水面起飞，这是水上飞机首次成功飞行。", en: "Henri Fabre takes off from the Étang de Berre in France in his Hydravion, the first successful seaplane." },
   ],
   "03-29": [
     { id: "history:03-29:2", year: 1867, zh: "《英属北美法案》获得英国王室御准，为加拿大联邦的建立奠定法律基础。", en: "The British North America Act receives royal assent, laying the legal foundation for the Canadian Confederation." },
@@ -1641,7 +1641,7 @@ const HISTORY_MORE = {
     { id: "history:04-07:2", year: 1795, zh: "法国通过法律，正式采用「米」作为长度单位，公制由此诞生。", en: "France adopts the metre by law as its unit of length, giving birth to the metric system." },
   ],
   "04-08": [
-    { id: "history:04-08:2", year: 1820, zh: "希腊米洛斯岛上的一位农民发现了断臂的维纳斯雕像。", en: "A farmer on the Greek island of Melos uncovers the armless statue now known as the Venus de Milo." },
+    { id: "history:04-08:2", year: 1904, zh: "英国与法国签订《英法协约》，了结多项殖民地争端，两国关系由此显著改善。", en: "Britain and France sign the Entente Cordiale, settling colonial disputes and markedly improving Anglo-French relations." },
   ],
   "04-09": [
     { id: "history:04-09:2", year: 1682, zh: "法国探险家拉萨尔抵达密西西比河口，宣布整个流域归法国所有，命名为路易斯安那。", en: "French explorer La Salle reaches the mouth of the Mississippi and claims its basin for France, naming it Louisiana." },
