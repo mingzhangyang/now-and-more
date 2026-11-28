@@ -14,7 +14,26 @@
     "history:01-01:2": {
       "year": 1912,
       "status": "corrected",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "Philippine Supreme Court E-Library",
+          "url": "https://elibrary.judiciary.gov.ph/thebookshelf/showdocs/7/51789",
+          "claim": "Candidate Philippine republic context; access restricted.",
+          "accessStatus": "restricted",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "unconfirmed",
+          "provenance": "prior_conversation_access_report"
+        },
+        {
+          "publisher": "Philippine Information Agency",
+          "url": "https://pia.gov.ph/press-release/nation-commemorates-127th-anniversary-of-the-first-philippine-republic/",
+          "claim": "Philippine republic context; not direct ROC founding evidence.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:01-02:2": {
       "year": 1492,
@@ -69,7 +88,17 @@
     "history:01-11:2": {
       "year": 1787,
       "status": "pending",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "NASA",
+          "url": "https://science.nasa.gov/uranus/moons/titania/",
+          "claim": "Titania discovery; Oberon source still needed.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:01-12:2": {
       "year": 1876,
@@ -140,7 +169,17 @@
     "history:01-25:2": {
       "year": 1924,
       "status": "corrected",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "IOC",
+          "url": "https://www.olympics.com/ioc/news/100-years-of-the-olympic-winter-games-celebrating-mountain-magic-while-looking-to-the-future",
+          "claim": "Winter Games centenary.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:01-26:2": {
       "year": 1950,
@@ -190,7 +229,17 @@
     "history:02-04:2": {
       "year": 1789,
       "status": "pending",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "US National Archives",
+          "url": "https://www.archives.gov/electoral-college/1789",
+          "claim": "All 69 electoral votes; election date needs separate evidence.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:02-05:2": {
       "year": 1919,
@@ -240,7 +289,26 @@
     "history:02-14:2": {
       "year": 1990,
       "status": "corrected",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "NASA",
+          "url": "https://www.nasa.gov/history/45-years-ago-voyager-1-begins-its-epic-journey-to-the-outer-planets-and-beyond/",
+          "claim": "Voyager mission history.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        },
+        {
+          "publisher": "NASA Earth Observatory",
+          "url": "https://science.nasa.gov/earth/earth-observatory/a-voyager-far-from-home-79091/",
+          "claim": "Pale Blue Dot image context.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:02-15:2": {
       "year": 1867,
@@ -407,7 +475,8 @@
     "history:03-17:2": {
       "year": 1958,
       "status": "pending",
-      "sources": []
+      "sources": [],
+      "notes": "Prior Explorer 1 citation rejected: wrong satellite. Vanguard 1 source still needed."
     },
     "history:03-18:2": {
       "year": 1662,
@@ -452,7 +521,17 @@
     "history:03-25:2": {
       "year": 1655,
       "status": "pending",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "NASA",
+          "url": "https://science.nasa.gov/saturn/moons/titan/exploration/",
+          "claim": "Titan exploration history.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:03-26:2": {
       "year": 1827,
@@ -655,7 +734,18 @@
     "history:04-30:2": {
       "year": 1803,
       "status": "corrected",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "US National Archives",
+          "url": "https://www.archives.gov/milestone-documents/louisiana-purchase-treaty",
+          "claim": "Treaty text and April 30 date; actual signing date disputed.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ],
+      "notes": "Actual signing date disputed; seek independent source distinguishing document date from signing."
     },
     "history:05-01:2": {
       "year": 1851,
@@ -755,7 +845,17 @@
     "history:05-20:2": {
       "year": 1873,
       "status": "corrected",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "US National Archives",
+          "url": "https://prologue.blogs.archives.gov/2010/05/20/forever-in-blue-jeansand-in-court/",
+          "claim": "Patent history.",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:05-21:2": {
       "year": 1881,
@@ -1545,7 +1645,26 @@
     "history:10-25:2": {
       "year": 1971,
       "status": "corrected",
-      "sources": []
+      "sources": [
+        {
+          "publisher": "United Nations",
+          "url": "https://www.un.org/zh/ga/26/res/ares2758.html",
+          "claim": "Chinese resolution text; access restricted.",
+          "accessStatus": "restricted",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "unconfirmed",
+          "provenance": "prior_conversation_access_report"
+        },
+        {
+          "publisher": "United Nations",
+          "url": "https://digitallibrary.un.org/record/498905/files/S_10378-EN.pdf",
+          "claim": "Candidate English document; content not confirmed.",
+          "accessStatus": "restricted",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "unconfirmed",
+          "provenance": "prior_conversation_access_report"
+        }
+      ]
     },
     "history:10-26:2": {
       "year": 1881,
