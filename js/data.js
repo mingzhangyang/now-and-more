@@ -1362,7 +1362,7 @@ const HISTORY_MORE = {
     { id: "history:01-05:2", year: 1914, zh: "福特公司宣布将工人日薪提高到 5 美元，几乎是当时行业水平的两倍。", en: "Ford announces a $5 daily wage for its workers, roughly double the going rate in the industry." },
   ],
   "01-06": [
-    { id: "history:01-06:2", year: 1884, zh: "遗传学奠基人孟德尔在布尔诺去世。他的豌豆实验要到 1900 年才被重新发现。", en: "Gregor Mendel, founder of genetics, dies in Brno. His pea experiments will not be rediscovered until 1900." },
+    { id: "history:01-06:2", year: 1884, zh: "遗传学奠基人门德尔在布尔诺逝世。他的豌豆杂交研究长期未获广泛重视，直到1900年才被重新发现并受到关注。", en: "Gregor Mendel, a founder of genetics, dies in Brno. His pea experiments receive little widespread attention until their rediscovery in 1900." },
   ],
   "01-07": [
     { id: "history:01-07:2", year: 1927, zh: "伦敦与纽约之间开通首个商用跨大西洋无线电话服务，三分钟通话收费 75 美元。", en: "Commercial transatlantic radiotelephone service opens between London and New York, at $75 for three minutes." },
@@ -1386,7 +1386,7 @@ const HISTORY_MORE = {
     { id: "history:01-13:2", year: 1910, zh: "纽约大都会歌剧院的演出通过无线电向公众播出，男高音卡鲁索的歌声成为最早的公共广播之一。", en: "A performance at New York's Metropolitan Opera, featuring tenor Enrico Caruso, is among the first public radio broadcasts." },
   ],
   "01-14": [
-    { id: "history:01-14:2", year: 1784, zh: "美国邦联国会批准《巴黎条约》，美国独立战争在法律上正式画上句号。", en: "The U.S. Congress of the Confederation ratifies the Treaty of Paris, formally closing the American Revolutionary War." },
+    { id: "history:01-14:2", year: 1784, zh: "美国邦联国会批准结束美国独立战争的《巴黎条约》，该条约于同年5月12日正式生效。", en: "The U.S. Congress of the Confederation ratifies the Treaty of Paris ending the American Revolutionary War; the treaty enters into force on May 12." },
   ],
   "01-15": [
     { id: "history:01-15:2", year: 1759, zh: "大英博物馆在伦敦对公众开放，免费向「所有勤学好奇之人」开放。", en: "The British Museum opens to the public in London, free to 'all studious and curious persons'." },
@@ -1413,7 +1413,7 @@ const HISTORY_MORE = {
     { id: "history:01-22:2", year: 1788, zh: "英国诗人拜伦出生于伦敦，他后来成为浪漫主义运动的代表人物。", en: "The poet Lord Byron is born in London; he will become a leading figure of the Romantic movement." },
   ],
   "01-23": [
-    { id: "history:01-23:2", year: 1556, zh: "明朝嘉靖年间，陕西华县发生大地震，死者逾八十万，是有记载以来死亡人数最多的地震。", en: "An earthquake strikes Shaanxi, China, under the Ming dynasty, killing over 800,000 people: the deadliest earthquake on record." },
+    { id: "history:01-23:2", year: 1556, zh: "明朝陕西发生大地震，据估计约83万人遇难，是有记录以来死亡人数最多的地震。", en: "An earthquake strikes Shaanxi during China's Ming dynasty, killing an estimated 830,000 people, making it the deadliest earthquake in recorded history." },
   ],
   "01-24": [
     { id: "history:01-24:2", year: 1984, zh: "苹果公司的第一台 Macintosh 电脑开始发售，推动鼠标和图形界面在个人电脑上的普及。", en: "Apple's first Macintosh goes on sale, helping popularize the mouse and graphical interface on personal computers." },
@@ -1479,7 +1479,7 @@ const HISTORY_MORE = {
     { id: "history:02-13:2", year: 1945, zh: "盟军开始轰炸德国德累斯顿，这座有「易北河上的佛罗伦萨」之称的古城几乎被夷为平地。", en: "Allied bombers begin their raids on Dresden; the city once called 'Florence on the Elbe' is largely destroyed." },
   ],
   "02-14": [
-    { id: "history:02-14:2", year: 1990, zh: "旅行者一号在距地球约 60 亿公里处回望，拍下「暗淡蓝点」：地球只占一个像素都不到。", en: "Voyager 1 turns back from about six billion kilometres away to take the Pale Blue Dot: Earth smaller than a single pixel." },
+    { id: "history:02-14:2", year: 1990, zh: "旅行者一号将相机转向地球，从约60亿公里外拍下著名的「暗淡蓝点」，照片中的地球不足一个像素大小。", en: "Voyager 1 points its camera toward Earth from about six billion kilometres away, capturing the Pale Blue Dot: Earth smaller than a single pixel." },
   ],
   "02-15": [
     { id: "history:02-15:2", year: 1867, zh: "约翰·施特劳斯的圆舞曲《蓝色多瑙河》在维也纳首演。", en: "Johann Strauss II's waltz The Blue Danube is first performed in Vienna." },
@@ -1506,7 +1506,7 @@ const HISTORY_MORE = {
     { id: "history:02-22:2", year: 1857, zh: "德国物理学家赫兹出生于汉堡，他首次证实了电磁波的存在，频率单位「赫兹」即以他命名。", en: "Physicist Heinrich Hertz is born in Hamburg; he will prove that electromagnetic waves exist, and the unit of frequency bears his name." },
   ],
   "02-23": [
-    { id: "history:02-23:2", year: 1685, zh: "作曲家亨德尔出生于德国哈勒，后来在伦敦写出清唱剧《弥赛亚》。", en: "George Frideric Handel is born in Halle, Germany; he will write the oratorio Messiah in London." },
+    { id: "history:02-23:2", year: 1685, zh: "作曲家亨德尔出生于哈雷（今德国），他后来在伦敦创作清唱剧《弥赛亚》。", en: "George Frideric Handel is born in Halle (now Germany); he will later compose the oratorio Messiah in London." },
   ],
   "02-24": [
     { id: "history:02-24:2", year: 1786, zh: "威廉·格林出生于德国哈瑙，他和哥哥雅各布一起收集整理了《格林童话》。", en: "Wilhelm Grimm is born in Hanau, Germany; with his brother Jacob he will collect Grimms' Fairy Tales." },
@@ -1548,7 +1548,7 @@ const HISTORY_MORE = {
     { id: "history:03-07:2", year: 1274, zh: "神学家托马斯·阿奎那去世，他试图让亚里士多德哲学与基督教信仰相互调和。", en: "Theologian Thomas Aquinas dies; he sought to reconcile Aristotle's philosophy with Christian faith." },
   ],
   "03-08": [
-    { id: "history:03-08:2", year: 1917, zh: "彼得格勒的妇女在国际妇女节走上街头，引发推翻沙皇统治的二月革命。", en: "Women in Petrograd march on International Women's Day, sparking the February Revolution that topples the tsar." },
+    { id: "history:03-08:2", year: 1917, zh: "彼得格勒妇女在国际妇女节举行罢工和游行（俄历2月23日，公历3月8日），揭开推翻沙皇统治的二月革命序幕。", en: "Women in Petrograd strike and march on International Women's Day (February 23 Old Style, March 8 Gregorian), sparking the February Revolution that topples the tsar." },
   ],
   "03-09": [
     { id: "history:03-09:2", year: 1959, zh: "芭比娃娃在纽约美国玩具展上首次亮相。", en: "The Barbie doll makes its debut at the American Toy Fair in New York." },
@@ -1566,7 +1566,7 @@ const HISTORY_MORE = {
     { id: "history:03-13:2", year: 1733, zh: "化学家普里斯特利出生于英格兰，他后来分离出了氧气。", en: "Chemist Joseph Priestley is born in England; he will later isolate oxygen." },
   ],
   "03-14": [
-    { id: "history:03-14:2", year: 1883, zh: "马克思在伦敦去世，安葬于海格特公墓。", en: "Karl Marx dies in London and is buried in Highgate Cemetery." },
+    { id: "history:03-14:2", year: 1883, zh: "马克思在伦敦逝世，3月17日安葬于海格特公墓。", en: "Karl Marx dies in London and is buried at Highgate Cemetery on March 17." },
   ],
   "03-15": [
     { id: "history:03-15:2", year: 1493, zh: "哥伦布结束第一次航行，回到西班牙帕洛斯港。", en: "Columbus returns to the Spanish port of Palos at the end of his first voyage." },
