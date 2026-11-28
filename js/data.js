@@ -1353,7 +1353,7 @@ const HISTORY_MORE = {
     { id: "history:01-02:2", year: 1492, zh: "格拉纳达向天主教双王投降，伊比利亚半岛上最后一个穆斯林王国就此终结。", en: "Granada surrenders to Ferdinand and Isabella, ending the last Muslim kingdom on the Iberian Peninsula." },
   ],
   "01-03": [
-    { id: "history:01-03:2", year: 1892, zh: "托尔金出生于南非布隆方丹，他后来写出了《霍比特人》和《魔戒》。", en: "J. R. R. Tolkien is born in Bloemfontein, South Africa; he will go on to write The Hobbit and The Lord of the Rings." },
+    { id: "history:01-03:2", year: 1892, zh: "托尔金出生于奥兰治自由邦的布隆方丹（今南非），后来写出《霍比特人》和《魔戒》。", en: "J. R. R. Tolkien is born in Bloemfontein, Orange Free State (now South Africa); he will write The Hobbit and The Lord of the Rings." },
   ],
   "01-04": [
     { id: "history:01-04:2", year: 1958, zh: "人类第一颗人造卫星斯普特尼克一号在绕地球飞行三个月后坠入大气层烧毁。", en: "Sputnik 1, the first artificial satellite, falls back into the atmosphere and burns up after three months in orbit." },
@@ -1374,7 +1374,7 @@ const HISTORY_MORE = {
     { id: "history:01-09:2", year: 1793, zh: "法国人布朗夏尔在费城乘充氢气球升空，完成美国首次载人自由气球飞行，华盛顿亲临观看。", en: "Jean-Pierre Blanchard makes the first untethered manned balloon flight in the United States, using a hydrogen-filled balloon in Philadelphia as George Washington watches." },
   ],
   "01-10": [
-    { id: "history:01-10:2", year: 1920, zh: "《凡尔赛和约》生效，国际联盟正式成立，这是第一个以维护世界和平为宗旨的国际组织。", en: "The Treaty of Versailles takes effect and the League of Nations comes into being, the first international body devoted to keeping world peace." },
+    { id: "history:01-10:2", year: 1920, zh: "《凡尔赛和约》生效，国际联盟成立，这是首个以促进国际合作与和平安全为宗旨的政府间组织。", en: "The Treaty of Versailles takes effect and the League of Nations is established, the first intergovernmental organization devoted to international cooperation, peace and security." },
   ],
   "01-11": [
     { id: "history:01-11:2", year: 1787, zh: "威廉·赫歇尔发现天王星的两颗卫星，后来被命名为泰坦尼亚和奥伯龙。", en: "William Herschel discovers two moons of Uranus, later named Titania and Oberon." },
@@ -1416,7 +1416,7 @@ const HISTORY_MORE = {
     { id: "history:01-23:2", year: 1556, zh: "明朝嘉靖年间，陕西华县发生大地震，死者逾八十万，是有记载以来死亡人数最多的地震。", en: "An earthquake strikes Shaanxi, China, under the Ming dynasty, killing over 800,000 people: the deadliest earthquake on record." },
   ],
   "01-24": [
-    { id: "history:01-24:2", year: 1984, zh: "苹果公司的第一台 Macintosh 电脑开始发售，让图形界面和鼠标走进普通人家。", en: "Apple's first Macintosh goes on sale, bringing the graphical interface and the mouse into ordinary homes." },
+    { id: "history:01-24:2", year: 1984, zh: "苹果公司的第一台 Macintosh 电脑开始发售，推动鼠标和图形界面在个人电脑上的普及。", en: "Apple's first Macintosh goes on sale, helping popularize the mouse and graphical interface on personal computers." },
   ],
   "01-25": [
     { id: "history:01-25:2", year: 1924, zh: "第一届冬季奥运会在法国夏蒙尼开幕。", en: "The first Winter Olympic Games open in Chamonix, France." },
@@ -1434,7 +1434,7 @@ const HISTORY_MORE = {
     { id: "history:01-29:2", year: 1845, zh: "爱伦·坡的诗《乌鸦》在纽约《晚镜报》上发表，几乎一夜成名。", en: "Edgar Allan Poe's poem The Raven appears in the New York Evening Mirror and makes him famous almost overnight." },
   ],
   "01-30": [
-    { id: "history:01-30:2", year: 1649, zh: "英国国王查理一世在伦敦白厅外被斩首，英国随即进入短暂的共和时期。", en: "King Charles I of England is beheaded outside Whitehall in London, and England briefly becomes a republic." },
+    { id: "history:01-30:2", year: 1649, zh: "英格兰国王查理一世在伦敦白厅外被处决，英格兰随后建立共和国，直至1660年王政复辟。", en: "King Charles I of England is executed outside Whitehall in London; England subsequently becomes a republic until the restoration of the monarchy in 1660." },
   ],
   "01-31": [
     { id: "history:01-31:2", year: 1797, zh: "奥地利作曲家舒伯特出生于维也纳，他在 31 年的短暂一生中写下六百多首艺术歌曲。", en: "Franz Schubert is born in Vienna; in a life of only 31 years he will write more than 600 songs." },
@@ -1677,7 +1677,7 @@ const HISTORY_MORE = {
     { id: "history:04-19:2", year: 1882, zh: "达尔文在英国唐恩宅去世，后来被安葬于威斯敏斯特教堂，与牛顿相距不远。", en: "Charles Darwin dies at Down House in England; he is later buried in Westminster Abbey, near Isaac Newton." },
   ],
   "04-20": [
-    { id: "history:04-20:2", year: 1862, zh: "巴斯德和贝尔纳完成第一次巴氏消毒法实验，用加热的办法杀死液体中的微生物。", en: "Louis Pasteur and Claude Bernard complete the first test of pasteurisation, using heat to kill microbes in liquids." },
+    { id: "history:04-20:2", year: 1862, zh: "巴斯德和贝尔纳进行早期巴氏杀菌实验，利用加热减少液体中的微生物。", en: "Louis Pasteur and Claude Bernard conduct an early pasteurisation experiment, using heat to reduce microbial populations in liquids." },
   ],
   "04-21": [
     { id: "history:04-21:2", year: 1836, zh: "圣哈辛托战役中，得克萨斯军队在十几分钟内击溃墨西哥军队，次日俘获圣安纳将军。", en: "At the Battle of San Jacinto, Texan forces rout the Mexican army in under twenty minutes; General Santa Anna is captured the next day." },
@@ -1698,7 +1698,7 @@ const HISTORY_MORE = {
     { id: "history:04-26:2", year: 1564, zh: "莎士比亚在斯特拉特福受洗，他的确切生日没有留下记录。", en: "William Shakespeare is baptised in Stratford-upon-Avon; his exact birth date is not recorded." },
   ],
   "04-27": [
-    { id: "history:04-27:2", year: 1667, zh: "弥尔顿签约出售《失乐园》的版权，首付只有 5 英镑。", en: "John Milton signs away the copyright of Paradise Lost for an initial payment of just £5." },
+    { id: "history:04-27:2", year: 1667, zh: "弥尔顿签约出售《失乐园》的版权，首付5英镑，另有附条件的后续付款。", en: "John Milton signs a contract for the copyright of Paradise Lost, with £5 upfront and further conditional payments." },
   ],
   "04-28": [
     { id: "history:04-28:2", year: 1789, zh: "「邦蒂号」上发生叛变，船长布莱和 18 名船员被放到一条小艇上漂流。", en: "Mutiny breaks out on HMS Bounty; Captain Bligh and 18 men are set adrift in a small boat." },
@@ -1743,7 +1743,7 @@ const HISTORY_MORE = {
     { id: "history:05-11:2", year: 330, zh: "君士坦丁大帝为新都君士坦丁堡举行落成典礼。", en: "Emperor Constantine dedicates his new capital, Constantinople." },
   ],
   "05-12": [
-    { id: "history:05-12:2", year: 2008, zh: "四川汶川发生 8.0 级大地震，近七万人遇难。", en: "A magnitude 8.0 earthquake strikes Wenchuan, Sichuan, killing nearly 70,000 people." },
+    { id: "history:05-12:2", year: 2008, zh: "四川汶川发生大地震（中国地震局测定面波震级8.0，美国地质调查局测定矩震级7.9），近七万人遇难。", en: "A major earthquake strikes Wenchuan, Sichuan (surface-wave magnitude 8.0 according to CEA; moment magnitude 7.9 according to USGS), killing nearly 70,000 people." },
   ],
   "05-13": [
     { id: "history:05-13:2", year: 1787, zh: "英国第一舰队从朴次茅斯启航，载着囚犯驶向澳大利亚。", en: "Britain's First Fleet sets sail from Portsmouth, carrying convicts to Australia." },
@@ -1758,7 +1758,7 @@ const HISTORY_MORE = {
     { id: "history:05-16:2", year: 1960, zh: "梅曼在加州休斯研究实验室让世界上第一台激光器发出光束。", en: "Theodore Maiman fires the world's first working laser at Hughes Research Laboratories in California." },
   ],
   "05-17": [
-    { id: "history:05-17:2", year: 1792, zh: "24 名经纪人在华尔街一棵梧桐树下签订《梧桐树协议》，纽约证券交易所由此起步。", en: "Twenty-four brokers sign the Buttonwood Agreement under a tree on Wall Street, the start of the New York Stock Exchange." },
+    { id: "history:05-17:2", year: 1792, zh: "24名经纪人在纽约签订《梧桐树协议》，为纽约证券交易所的建立奠定基础。", en: "Twenty-four brokers in New York sign the Buttonwood Agreement, laying the foundation for the New York Stock Exchange." },
   ],
   "05-18": [
     { id: "history:05-18:2", year: 1872, zh: "哲学家罗素出生于威尔士，后来获得诺贝尔文学奖。", en: "Philosopher Bertrand Russell is born in Wales; he will later win the Nobel Prize in Literature." },
@@ -1803,7 +1803,7 @@ const HISTORY_MORE = {
     { id: "history:05-31:2", year: 1859, zh: "伦敦威斯敏斯特宫的大钟「大本钟」开始走时。", en: "The great clock of Big Ben at the Palace of Westminster begins keeping time." },
   ],
   "06-01": [
-    { id: "history:06-01:2", year: 1869, zh: "爱迪生获得他的第一项专利：电子投票记录器，可惜没人愿意买。", en: "Thomas Edison receives his first patent, for an electric vote recorder that no one wants to buy." },
+    { id: "history:06-01:2", year: 1869, zh: "爱迪生获得第一项专利：电动投票记录器，但这项发明最终未被立法机构采用。", en: "Thomas Edison receives his first patent, for an electric vote recorder that ultimately fails to gain adoption by legislatures." },
   ],
   "06-02": [
     { id: "history:06-02:2", year: 1896, zh: "马可尼在英国申请无线电报专利。", en: "Guglielmo Marconi applies for a British patent for wireless telegraphy." },
@@ -1827,7 +1827,7 @@ const HISTORY_MORE = {
     { id: "history:06-08:2", year: 1867, zh: "建筑师弗兰克·劳埃德·赖特出生于美国威斯康星州。", en: "Architect Frank Lloyd Wright is born in Wisconsin." },
   ],
   "06-09": [
-    { id: "history:06-09:2", year: 1928, zh: "金斯福德·史密斯驾机抵达澳大利亚布里斯班，完成首次跨太平洋飞行。", en: "Charles Kingsford Smith lands in Brisbane, completing the first flight across the Pacific." },
+    { id: "history:06-09:2", year: 1928, zh: "金斯福德·史密斯及其机组共四人抵达澳大利亚布里斯班，完成首次跨太平洋飞行。", en: "Charles Kingsford Smith and his three fellow crew members land in Brisbane, completing the first transpacific flight." },
   ],
   "06-10": [
     { id: "history:06-10:2", year: 1935, zh: "「匿名戒酒会」在美国俄亥俄州阿克伦成立。", en: "Alcoholics Anonymous is founded in Akron, Ohio." },
@@ -1863,7 +1863,7 @@ const HISTORY_MORE = {
     { id: "history:06-20:2", year: 1837, zh: "18 岁的维多利亚继承英国王位，开始长达 63 年的统治。", en: "Eighteen-year-old Victoria succeeds to the British throne, beginning a reign of 63 years." },
   ],
   "06-21": [
-    { id: "history:06-21:2", year: 1788, zh: "新罕布什尔州成为第九个批准美国宪法的州，宪法由此生效。", en: "New Hampshire becomes the ninth state to ratify the U.S. Constitution, putting it into effect." },
+    { id: "history:06-21:2", year: 1788, zh: "新罕布什尔州成为第九个批准美国宪法的州，达到宪法生效所需的批准门槛。", en: "New Hampshire becomes the ninth state to ratify the U.S. Constitution, meeting the threshold required for its establishment among the ratifying states." },
   ],
   "06-22": [
     { id: "history:06-22:2", year: 1633, zh: "伽利略在罗马宗教裁判所被迫放弃日心说。", en: "Galileo is forced by the Roman Inquisition to recant his view that the Earth moves around the Sun." },
@@ -2022,7 +2022,7 @@ const HISTORY_MORE = {
     { id: "history:08-12:2", year: 1990, zh: "古生物学家苏·亨德里克森在美国南达科他州发现一具保存极为完整的霸王龙化石，后来以她的名字命名为「苏」。", en: "Fossil hunter Sue Hendrickson finds one of the most complete Tyrannosaurus rex skeletons ever, in South Dakota; it is named Sue after her." },
   ],
   "08-13": [
-    { id: "history:08-13:2", year: 1913, zh: "英国冶金学家布里尔利炼出第一炉不锈钢。", en: "Harry Brearley casts the first true stainless steel in Sheffield, England." },
+    { id: "history:08-13:2", year: 1913, zh: "英国冶金学家哈里·布雷尔利在谢菲尔德炼出早期不锈钢，为其工业应用奠定基础。", en: "Harry Brearley produces an early stainless steel in Sheffield, England, helping lay the foundation for its industrial use." },
   ],
   "08-14": [
     { id: "history:08-14:2", year: 1959, zh: "美国探险者六号卫星拍下第一张从地球轨道上拍摄的地球照片。", en: "The U.S. satellite Explorer 6 takes the first photograph of Earth from orbit." },
@@ -2040,7 +2040,7 @@ const HISTORY_MORE = {
     { id: "history:08-18:2", year: 1850, zh: "法国作家巴尔扎克在巴黎去世，留下九十多部作品组成的《人间喜剧》。", en: "French novelist Honoré de Balzac dies in Paris, leaving more than ninety works of The Human Comedy." },
   ],
   "08-19": [
-    { id: "history:08-19:2", year: 1839, zh: "法国政府公开达盖尔银版摄影法，将其作为「献给全世界的礼物」。", en: "The French government releases the daguerreotype process as 'a gift free to the world'." },
+    { id: "history:08-19:2", year: 1839, zh: "法国政府公开达盖尔银版摄影法，供公众免费使用，但英国因专利保护而例外。", en: "The French government publicly releases the daguerreotype process for free use, except in Britain, where patent protection applies." },
   ],
   "08-20": [
     { id: "history:08-20:2", year: 1968, zh: "华约军队入侵捷克斯洛伐克，「布拉格之春」改革被终止。", en: "Warsaw Pact troops invade Czechoslovakia, ending the reforms of the Prague Spring." },
@@ -2109,7 +2109,7 @@ const HISTORY_MORE = {
     { id: "history:09-10:2", year: 1846, zh: "伊莱亚斯·豪获得缝纫机专利。", en: "Elias Howe is granted a patent for his sewing machine." },
   ],
   "09-11": [
-    { id: "history:09-11:2", year: 1297, zh: "斯特灵桥战役中，威廉·华莱士率领苏格兰军队击败英格兰军队。", en: "At the Battle of Stirling Bridge, William Wallace's Scots defeat the English army." },
+    { id: "history:09-11:2", year: 1297, zh: "斯特灵桥战役中，威廉·华莱士和安德鲁·莫雷率领苏格兰军队击败英格兰军队。", en: "At the Battle of Stirling Bridge, Scottish forces led by William Wallace and Andrew Moray defeat the English army." },
   ],
   "09-12": [
     { id: "history:09-12:2", year: 1940, zh: "四个少年在法国拉斯科发现洞穴，里面有一万七千年前的壁画。", en: "Four teenagers in France discover the Lascaux cave and its paintings, some 17,000 years old." },
@@ -2133,7 +2133,7 @@ const HISTORY_MORE = {
     { id: "history:09-18:2", year: 1931, zh: "日军制造柳条湖事件，九一八事变爆发，日本开始侵占中国东北。", en: "Japanese troops stage the Mukden Incident and begin the occupation of northeast China." },
   ],
   "09-19": [
-    { id: "history:09-19:2", year: 1991, zh: "两名登山者在阿尔卑斯山冰川中发现约五千年前的「冰人」奥茨。", en: "Two hikers find Ötzi the Iceman, about 5,000 years old, in a glacier in the Alps." },
+    { id: "history:09-19:2", year: 1991, zh: "两名登山者在阿尔卑斯山的冰雪中发现距今约5300年的「冰人」奥茨。", en: "Two hikers discover Ötzi the Iceman, about 5,300 years old, in the ice and snow of the Alps." },
   ],
   "09-20": [
     { id: "history:09-20:2", year: 1946, zh: "第一届戛纳电影节开幕。", en: "The first Cannes Film Festival opens." },
@@ -2241,7 +2241,7 @@ const HISTORY_MORE = {
     { id: "history:10-24:2", year: 1945, zh: "《联合国宪章》生效，联合国正式成立，这一天后来定为联合国日。", en: "The UN Charter comes into force and the United Nations is born; the day is now United Nations Day." },
   ],
   "10-25": [
-    { id: "history:10-25:2", year: 1971, zh: "联合国大会通过第 2758 号决议，恢复中华人民共和国在联合国的合法席位。", en: "The UN General Assembly passes Resolution 2758, seating the People's Republic of China in the United Nations." },
+    { id: "history:10-25:2", year: 1971, zh: "联合国大会通过第2758号决议，恢复中华人民共和国在联合国的权利，并确认其政府代表为中国在联合国的唯一合法代表。", en: "The UN General Assembly adopts Resolution 2758, restoring the rights of the People's Republic of China and recognizing its government representatives as the only legitimate representatives of China to the United Nations." },
   ],
   "10-26": [
     { id: "history:10-26:2", year: 1881, zh: "美国亚利桑那州墓碑镇发生 O.K. 畜栏枪战，前后大约只有 30 秒。", en: "The Gunfight at the O.K. Corral takes place in Tombstone, Arizona; it lasts about thirty seconds." },
@@ -2277,7 +2277,7 @@ const HISTORY_MORE = {
     { id: "history:11-05:2", year: 1872, zh: "苏珊·安东尼在纽约罗切斯特参加总统选举投票，随后因「非法投票」被捕。", en: "Susan B. Anthony votes in the presidential election in Rochester, New York, and is later arrested for 'illegal voting'." },
   ],
   "11-06": [
-    { id: "history:11-06:2", year: 1869, zh: "罗格斯大学与普林斯顿大学进行了美国第一场校际橄榄球比赛。", en: "Rutgers and Princeton play the first intercollegiate American football game." },
+    { id: "history:11-06:2", year: 1869, zh: "罗格斯大学与普林斯顿大学举行首场美国大学间橄榄球比赛，当时规则更接近现代足球。", en: "Rutgers and Princeton play the first intercollegiate American football game, under rules closer to modern soccer." },
   ],
   "11-07": [
     { id: "history:11-07:2", year: 1867, zh: "居里夫人出生于华沙，她后来成为第一位两次获得诺贝尔奖的人。", en: "Marie Curie is born in Warsaw; she will become the first person to win two Nobel Prizes." },
@@ -2358,7 +2358,7 @@ const HISTORY_MORE = {
     { id: "history:12-02:2", year: 1804, zh: "拿破仑在巴黎圣母院加冕为法国皇帝，他在教皇面前亲手把皇冠戴到自己头上。", en: "Napoleon is crowned Emperor of the French in Notre-Dame, placing the crown on his own head as the Pope looks on." },
   ],
   "12-03": [
-    { id: "history:12-03:2", year: 1992, zh: "一位英国工程师用电脑向同事的手机发出「Merry Christmas」，这是世界上第一条短信。", en: "A British engineer sends 'Merry Christmas' from a computer to a colleague's phone: the world's first text message." },
+    { id: "history:12-03:2", year: 1992, zh: "一位英国工程师用电脑向同事的手机发出「Merry Christmas」，这是世界上第一条SMS短信。", en: "A British engineer sends 'Merry Christmas' from a computer to a colleague's phone: the world's first SMS message." },
   ],
   "12-04": [
     { id: "history:12-04:2", year: 1791, zh: "英国《观察家报》创刊，是世界上历史最悠久的星期日报纸。", en: "The Observer is first published in Britain; it is the world's oldest Sunday newspaper." },
@@ -2427,7 +2427,7 @@ const HISTORY_MORE = {
     { id: "history:12-25:2", year: 800, zh: "查理曼在罗马圣彼得大教堂由教皇加冕为皇帝。", en: "Charlemagne is crowned emperor by the Pope in St Peter's Basilica, Rome." },
   ],
   "12-26": [
-    { id: "history:12-26:2", year: 1776, zh: "华盛顿率军渡过冰冷的特拉华河，在特伦顿突袭得手。", en: "Washington's army crosses the icy Delaware River and wins a surprise victory at Trenton." },
+    { id: "history:12-26:2", year: 1776, zh: "华盛顿率军于25日夜间至26日凌晨渡过特拉华河，随后在特伦顿取得突袭胜利。", en: "Washington's army crosses the Delaware River overnight on December 25–26 and wins a surprise victory at Trenton." },
   ],
   "12-27": [
     { id: "history:12-27:2", year: 1571, zh: "开普勒出生于德国魏尔，后来发现了行星运动三定律。", en: "Johannes Kepler is born in Weil der Stadt, Germany; he will discover the three laws of planetary motion." },
