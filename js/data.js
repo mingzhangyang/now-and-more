@@ -1401,7 +1401,7 @@ const HISTORY_MORE = {
     { id: "history:01-18:2", year: 1871, zh: "德意志帝国在凡尔赛宫镜厅宣告成立，普鲁士国王威廉一世被宣布为德意志皇帝。", en: "The German Empire is proclaimed in the Hall of Mirrors at Versailles, with Wilhelm I of Prussia as emperor." },
   ],
   "01-19": [
-    { id: "history:01-19:2", year: 1736, zh: "詹姆斯·瓦特出生于苏格兰格里诺克，他改良的蒸汽机推动了工业革命。", en: "James Watt is born in Greenock, Scotland; his improved steam engine will help drive the Industrial Revolution." },
+    { id: "history:01-19:2", year: 1736, zh: "瓦特出生于苏格兰格里诺克（旧历1月19日，公历1月30日），他改良的蒸汽机后来推动了工业革命。", en: "James Watt is born in Greenock, Scotland (January 19 Old Style, January 30 Gregorian); his improved steam engine will help drive the Industrial Revolution." },
   ],
   "01-20": [
     { id: "history:01-20:2", year: 1265, zh: "西蒙·德·孟福尔召集的议会在威斯敏斯特开幕，首次邀请城镇代表参加，被视为英国下议院的雏形。", en: "Simon de Montfort's parliament meets at Westminster, the first to summon town representatives: an early ancestor of the House of Commons." },
@@ -1419,7 +1419,7 @@ const HISTORY_MORE = {
     { id: "history:01-24:2", year: 1984, zh: "苹果公司的第一台 Macintosh 电脑开始发售，推动鼠标和图形界面在个人电脑上的普及。", en: "Apple's first Macintosh goes on sale, helping popularize the mouse and graphical interface on personal computers." },
   ],
   "01-25": [
-    { id: "history:01-25:2", year: 1924, zh: "第一届冬季奥运会在法国夏蒙尼开幕。", en: "The first Winter Olympic Games open in Chamonix, France." },
+    { id: "history:01-25:2", year: 1924, zh: "法国霞慕尼国际冬季运动周开幕，这项赛事于1926年被国际奥委会正式追认为第一届冬奥会。", en: "International Winter Sports Week opens in Chamonix, France; in 1926 the IOC recognizes it as the first Winter Olympic Games." },
   ],
   "01-26": [
     { id: "history:01-26:2", year: 1950, zh: "《印度宪法》生效，印度成为共和国，这一天后来定为印度共和国日。", en: "India's constitution takes effect and the country becomes a republic; the day is now celebrated as Republic Day." },
@@ -1593,7 +1593,7 @@ const HISTORY_MORE = {
     { id: "history:03-22:2", year: 1832, zh: "歌德在魏玛去世，享年 82 岁，《浮士德》第二部在他去世前不久才完成。", en: "Johann Wolfgang von Goethe dies in Weimar at 82, having finished the second part of Faust shortly before." },
   ],
   "03-23": [
-    { id: "history:03-23:2", year: 1857, zh: "奥的斯在纽约安装了第一部商用载客电梯，摩天大楼从此成为可能。", en: "Elisha Otis installs the first commercial passenger elevator in New York, making skyscrapers possible." },
+    { id: "history:03-23:2", year: 1857, zh: "纽约一家安装了奥蒂斯客运电梯的百货商店正式开业，成为现代客运电梯发展史上的重要里程碑。", en: "A New York department store equipped with an Otis passenger elevator opens, marking a milestone in the development of modern passenger elevators." },
   ],
   "03-24": [
     { id: "history:03-24:2", year: 1603, zh: "英国女王伊丽莎白一世去世，苏格兰国王詹姆斯六世继位，英格兰与苏格兰同戴一顶王冠。", en: "Queen Elizabeth I dies; James VI of Scotland succeeds her, uniting the crowns of England and Scotland." },
@@ -1989,7 +1989,7 @@ const HISTORY_MORE = {
     { id: "history:08-01:2", year: 1774, zh: "普里斯特利加热氧化汞，分离出一种能让蜡烛烧得更旺的气体：氧气。", en: "Joseph Priestley heats mercuric oxide and isolates a gas that makes candles burn brighter: oxygen." },
   ],
   "08-02": [
-    { id: "history:08-02:2", year: 1922, zh: "贝尔去世。葬礼时，北美的电话服务停止一分钟以示纪念。", en: "Alexander Graham Bell dies; during his funeral, telephone service across North America falls silent for a minute." },
+    { id: "history:08-02:2", year: 1922, zh: "电话发明家贝尔逝世。8月4日葬礼期间，美国和加拿大的电话系统暂停服务一分钟，以示悼念。", en: "Alexander Graham Bell dies. During his funeral on August 4, telephone service in the United States and Canada falls silent for one minute in tribute." },
   ],
   "08-03": [
     { id: "history:08-03:2", year: 1958, zh: "美国核潜艇「鹦鹉螺号」从冰层下穿过北极点。", en: "The nuclear submarine USS Nautilus passes beneath the ice at the North Pole." },
@@ -2094,7 +2094,7 @@ const HISTORY_MORE = {
     { id: "history:09-05:2", year: 1882, zh: "纽约举行第一次劳工节游行，约有一万名工人参加。", en: "The first Labor Day parade is held in New York, with some 10,000 workers marching." },
   ],
   "09-06": [
-    { id: "history:09-06:2", year: 1620, zh: "「五月花号」从英格兰普利茅斯启航，载着清教徒驶向北美。", en: "The Mayflower sets sail from Plymouth, England, carrying the Pilgrims to North America." },
+    { id: "history:09-06:2", year: 1620, zh: "五月花号从英国普利茅斯启航（旧历9月6日，公历9月16日），载着移民前往北美。", en: "The Mayflower sails from Plymouth, England (September 6 Old Style, September 16 Gregorian), carrying settlers to North America." },
   ],
   "09-07": [
     { id: "history:09-07:2", year: 1940, zh: "德国空军开始对伦敦进行持续轰炸，即「伦敦大轰炸」。", en: "The German air force begins the Blitz, its sustained bombing of London." },
@@ -2157,7 +2157,7 @@ const HISTORY_MORE = {
     { id: "history:09-26:2", year: 1580, zh: "德雷克率「金鹿号」回到英国普利茅斯，完成环球航行。", en: "Francis Drake sails the Golden Hind back into Plymouth, completing his circumnavigation." },
   ],
   "09-27": [
-    { id: "history:09-27:2", year: 1905, zh: "爱因斯坦提交论文，提出质能关系，后来写作 E=mc²。", en: "Einstein submits the paper introducing mass–energy equivalence, later written as E = mc²." },
+    { id: "history:09-27:2", year: 1905, zh: "《物理学年鉴》收到爱因斯坦阐述质能关系的论文，这一关系后来以 E = mc² 闻名。", en: "Annalen der Physik receives Einstein's paper on mass–energy equivalence, a relationship later expressed as E = mc²." },
   ],
   "09-28": [
     { id: "history:09-28:2", year: 1895, zh: "巴斯德在巴黎附近去世。", en: "Louis Pasteur dies near Paris." },
@@ -2193,7 +2193,7 @@ const HISTORY_MORE = {
     { id: "history:10-08:2", year: 1956, zh: "唐·拉森在世界大赛中投出完全比赛，至今仍是世界大赛历史上唯一的一场。", en: "Don Larsen pitches a perfect game in the World Series, still the only one in its history." },
   ],
   "10-09": [
-    { id: "history:10-09:2", year: 1604, zh: "一颗超新星出现在天空，开普勒对它进行了细致观测，后来被称为「开普勒超新星」。", en: "A supernova appears in the sky; Johannes Kepler studies it so closely that it now bears his name." },
+    { id: "history:10-09:2", year: 1604, zh: "天文学家首次观测到后来被称为开普勒超新星的天体，开普勒本人于10月17日开始观测。", en: "Astronomers first observe the object later known as Kepler's supernova; Kepler himself begins observing it on October 17." },
   ],
   "10-10": [
     { id: "history:10-10:2", year: 1846, zh: "英国天文学家拉塞尔发现海王星最大的卫星海卫一。", en: "Astronomer William Lassell discovers Triton, the largest moon of Neptune." },
