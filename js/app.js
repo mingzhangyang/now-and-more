@@ -136,6 +136,17 @@ function declination(l) { return Math.asin(Math.sin(OBLIQUITY) * Math.sin(l)); }
 function siderealTime(d, lw) { return RAD * (280.16 + 360.9856235 * d) - lw; }
 function solarTransitJ(ds, m, l) { return J2000 + ds + 0.0053 * Math.sin(m) - 0.0069 * Math.sin(2 * l); }
 
+/* The point on Earth where the Sun is overhead at `date`, in degrees
+   (lon east-positive, −180…180). Same compact model as sunTimes, so the
+   globe's day/night line agrees with the sunrise and sunset on the card. */
+function subsolarPoint(date) {
+  const d = toDays(date);
+  const l = eclipticLongitude(solarMeanAnomaly(d));
+  const ra = Math.atan2(Math.sin(l) * Math.cos(OBLIQUITY), Math.cos(l));
+  const lon = (ra - siderealTime(d, 0)) / RAD;
+  return { lat: declination(l) / RAD, lon: ((lon % 360) + 540) % 360 - 180 };
+}
+
 /* Returns { sunrise: Date|null, sunset: Date|null, dayMinutes, polar: null|'day'|'night' } */
 function sunTimes(date, lat, lon) {
   const lw = RAD * -lon;
@@ -3090,6 +3101,43 @@ function makeSelection(cat, now = new Date()) {
   }
 }
 
+/* ---------- The Meanwhile globe ----------
+   NAM_GLOBE (js/globe.js) paints; these helpers pick the theme and size.
+   Dark theme = light ink. */
+function globeThemeFrom(pal) {
+  const m = /#([0-9a-f]{6})/i.exec(pal.ink || "");
+  let dark = false;
+  if (m) {
+    const n = parseInt(m[1], 16);
+    dark = ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 > 128;
+  }
+  return { dark, accent: pal.accent };
+}
+function drawGlobeAt(ctx, cx, cy, r, g, theme) {
+  NAM_GLOBE.draw(ctx, cx, cy, r, {
+    lat: g.lat, lon: g.lon, sun: subsolarPoint(new Date(g.when)),
+    dark: theme.dark, accent: theme.accent,
+  });
+}
+/* Paint every globe canvas inside `root` at device resolution. */
+function paintGlobes(root) {
+  if (typeof NAM_GLOBE === "undefined" || !root || !root.querySelectorAll) return;
+  const theme = globeThemeFrom(capturePalette());
+  root.querySelectorAll("canvas.globe").forEach((cv) => {
+    const css = cv.clientWidth || 76;
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = cv.height = Math.round(css * dpr);
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    try {
+      drawGlobeAt(ctx, css / 2, css / 2, css / 2 - 1,
+        { lat: +cv.dataset.lat, lon: +cv.dataset.lon, when: +cv.dataset.when }, theme);
+    } catch (e) {
+      cv.hidden = true; // the card reads fine without it
+    }
+  });
+}
+
 function esc(str) {
   return String(str == null ? "" : str)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -3203,7 +3251,9 @@ function renderSelection(sel, surface) {
       `<span>${s.world.sunrise} <b>${hmInZone(st.sunrise, city.tz)}</b></span>` +
       `<span>${s.world.sunset} <b>${hmInZone(st.sunset, city.tz)}</b></span>` +
       `<span>${s.world.dayLength} <b>${formatDuration(st.dayMinutes)}</b></span>`;
-    body = `<span class="big">${name}</span><div class="fact-row">${facts}</div>`;
+    const where = lang === "zh" ? `${name}在地球上的位置，阴影是此刻的夜半球` : `Where ${name} is on Earth; the shaded half is night right now`;
+    body = `<div class="world-grid"><div><span class="big">${name}</span><div class="fact-row">${facts}</div></div>` +
+      `<canvas class="globe" role="img" aria-label="${esc(where)}" data-lat="${city.lat}" data-lon="${city.lon}" data-when="${now.getTime()}"></canvas></div>`;
   }
 
   if (sel.cat === "sky") {
@@ -3445,6 +3495,7 @@ function renderSelection(sel, surface) {
     : s.categories[sel.cat];
   surface.meta.textContent = meta;
   surface.body.innerHTML = body;
+  if (sel.cat === "world") paintGlobes(surface.body);
 
   // Static full passages and generated horoscope explanations get the same
   // quiet reading door, outside the body so keepsakes stay faithful to
@@ -4218,6 +4269,12 @@ function extractCardBlocks(rootEl) {
     const el = node;
     const cls = el.classList;
     if (el.tagName === "BR") { flush(); return; }
+    if (el.tagName === "CANVAS" && cls.contains("globe")) {
+      // Repainted at keepsake resolution from the same inputs. It leads the
+      // block list so the layout can set it top-right and wrap text beside it.
+      blocks.unshift({ type: "globe", lat: +el.dataset.lat, lon: +el.dataset.lon, when: +el.dataset.when });
+      return;
+    }
     if (el.tagName === "CANVAS" && cls.contains("sky-canvas")) {
       // A painted sky: the keepsake repaints it from the scene (see
       // the sky branch of the layout), so it becomes a visual block.
@@ -4332,6 +4389,7 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
   let y = 0;
   let truncated = false;
   const gap = Math.round(12 * scale);
+  let insetUntil = 0, insetW = 0; // a globe floats top-right; text beside it narrows
   outer:
   for (let bi = 0; bi < blocks.length; bi++) {
     const b = blocks[bi];
@@ -4341,6 +4399,14 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
       if (y + size > maxHeight) { truncated = true; break; }
       items.push({ type: "swatch", color: b.color, yOff: y, size });
       y += size + Math.round(10 * scale);
+      continue;
+    }
+    if (b.type === "globe") {
+      const size = Math.round(150 * scale);
+      items.push({ type: "globe", yOff: y, size, lat: b.lat, lon: b.lon, when: b.when });
+      insetUntil = y + size;
+      insetW = size + Math.round(24 * scale);
+      y -= gap; // takes no height of its own
       continue;
     }
     if (b.type === "sky") {
@@ -4355,7 +4421,7 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
     ctx.font = font;
     const size = Math.max(10, Math.round(spec.size * scale));
     const lineH = Math.round(spec.size * scale * spec.lh);
-    for (const ln of wrapText(ctx, b.text, maxWidth)) {
+    for (const ln of wrapText(ctx, b.text, y < insetUntil ? maxWidth - insetW : maxWidth)) {
       if (y + lineH > maxHeight) { truncated = true; break outer; }
       // A standalone attribution (quotes, classics) sits flush right, as on the card.
       items.push({ type: "text", text: ln, font, color: spec.color, yOff: y, lineH, size, right: b.kind === "author" });
@@ -4372,7 +4438,7 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
       last.text = txt + "…";
     }
   }
-  return { items, height: y, truncated };
+  return { items, height: Math.max(y, insetUntil), truncated };
 }
 
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -4505,6 +4571,13 @@ function renderKeepsakeCanvas(snap, pal) {
   }
 
   for (const it of layout.items) {
+    if (it.type === "globe") {
+      if (typeof NAM_GLOBE !== "undefined") {
+        const r = it.size / 2;
+        try { drawGlobeAt(ctx, textX + textW - r, bodyTop + it.yOff + r, r, it, globeThemeFrom(pal)); } catch (e) { /* keepsake without globe */ }
+      }
+      continue;
+    }
     if (it.type === "sky") {
       if (snap.skyCanvas && (it.form === "chart" || it.form === "moon")) {
         const side = Math.min(textW, it.h);

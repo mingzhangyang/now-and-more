@@ -21,6 +21,7 @@ var APP_SHELL = [
   "/js/astro.js?v=70",
   "/js/almanac-rules.js?v=70",
   "/js/lunar.js?v=70",
+  "/js/globe.js?v=70",
   "/js/app.js?v=70",
   "/vendor/sky-engine/0.2.0/sky-engine.mjs",
   "/vendor/sky-engine/0.2.0/stars.json",
