@@ -3237,7 +3237,10 @@ function renderSelection(sel, surface) {
     const credit = lang === "zh"
       ? `——${q.author}`
       : `— ${q.author}${q.work ? `, <i>${q.work}</i>` : ""}`;
-    body = `<span class="poem-line">${q.text}</span><span class="poem-author">${credit}</span>`;
+    // A short saying is set larger, like a pull quote, so it fills the
+    // card's reserved height instead of floating in it.
+    const short = q.text.length <= (lang === "zh" ? 20 : 48);
+    body = `<span class="poem-line${short ? " quote-short" : ""}">${q.text}</span><span class="poem-author">${credit}</span>`;
   }
 
   if (sel.cat === "classics") {
@@ -4310,7 +4313,8 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
     const lineH = Math.round(spec.size * scale * spec.lh);
     for (const ln of wrapText(ctx, b.text, maxWidth)) {
       if (y + lineH > maxHeight) { truncated = true; break outer; }
-      items.push({ type: "text", text: ln, font, color: spec.color, yOff: y, lineH, size });
+      // A standalone attribution (quotes, classics) sits flush right, as on the card.
+      items.push({ type: "text", text: ln, font, color: spec.color, yOff: y, lineH, size, right: b.kind === "author" });
       y += lineH;
     }
   }
@@ -4474,7 +4478,9 @@ function renderKeepsakeCanvas(snap, pal) {
     } else {
       ctx.font = it.font;
       ctx.fillStyle = pal[it.color];
-      ctx.fillText(it.text, textX, bodyTop + it.yOff + (it.lineH - it.size) / 2 + it.size * 0.8);
+      ctx.textAlign = it.right ? "right" : "left";
+      ctx.fillText(it.text, it.right ? textX + textW : textX, bodyTop + it.yOff + (it.lineH - it.size) / 2 + it.size * 0.8);
+      ctx.textAlign = "left";
     }
   }
 
