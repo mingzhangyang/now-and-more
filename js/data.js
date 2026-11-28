@@ -27,6 +27,7 @@ const I18N = {
       quotes: "名言警句",
       classics: "国学经典",
       almanac: "黄历",
+      pentad: "七十二候",
       postcard: "今日明信片",
       astro: "星座占星",
       proverbs: "英文谚语",
@@ -85,6 +86,11 @@ const I18N = {
       heads: "正",
       tails: "反",
       suits: { S: "黑桃", H: "红桃", D: "方块", C: "梅花" },
+    },
+    pentad: {
+      order: ["初候", "二候", "三候"],
+      began: "始于",
+      next: "下一候",
     },
     almanac: {
       yi: "宜",
@@ -194,6 +200,7 @@ const I18N = {
       quotes: "Quotes",
       classics: "Classics",
       almanac: "Almanac",
+      pentad: "Micro-seasons",
       postcard: "Today's Postcard",
       astro: "Astrology",
       proverbs: "A Proverb",
@@ -252,6 +259,11 @@ const I18N = {
       heads: "H",
       tails: "T",
       suits: { S: "Spades", H: "Hearts", D: "Diamonds", C: "Clubs" },
+    },
+    pentad: {
+      order: ["first pentad", "second pentad", "third pentad"],
+      began: "Began",
+      next: "Next",
     },
     almanac: {
       yi: "Good for",
@@ -384,6 +396,99 @@ const CITIES = [
   { id: "world:040", tz: "America/Anchorage", lat: 61.22, lon: -149.90, zh: "安克雷奇", en: "Anchorage" },
   { id: "world:041", tz: "Pacific/Honolulu", lat: 21.31, lon: -157.86, zh: "檀香山", en: "Honolulu" },
   { id: "world:042", tz: "Australia/Melbourne", lat: -37.81, lon: 144.96, zh: "墨尔本", en: "Melbourne" },
+  { id: "world:043", tz: "Asia/Shanghai", lat: 31.23, lon: 121.47, zh: "上海", en: "Shanghai" },
+  { id: "world:044", tz: "Asia/Shanghai", lat: 29.65, lon: 91.17, zh: "拉萨", en: "Lhasa" },
+  { id: "world:045", tz: "Asia/Shanghai", lat: 43.83, lon: 87.62, zh: "乌鲁木齐", en: "Ürümqi" },
+  { id: "world:046", tz: "Asia/Shanghai", lat: 45.80, lon: 126.53, zh: "哈尔滨", en: "Harbin" },
+  { id: "world:047", tz: "Asia/Shanghai", lat: 23.13, lon: 113.26, zh: "广州", en: "Guangzhou" },
+  { id: "world:048", tz: "Asia/Shanghai", lat: 30.57, lon: 104.07, zh: "成都", en: "Chengdu" },
+  { id: "world:049", tz: "Asia/Shanghai", lat: 39.47, lon: 75.99, zh: "喀什", en: "Kashgar" },
+  { id: "world:050", tz: "Asia/Ulaanbaatar", lat: 47.89, lon: 106.91, zh: "乌兰巴托", en: "Ulaanbaatar" },
+  { id: "world:051", tz: "Asia/Tokyo", lat: 43.06, lon: 141.35, zh: "札幌", en: "Sapporo" },
+  { id: "world:052", tz: "Asia/Manila", lat: 14.60, lon: 120.98, zh: "马尼拉", en: "Manila" },
+  { id: "world:053", tz: "Asia/Ho_Chi_Minh", lat: 21.03, lon: 105.85, zh: "河内", en: "Hanoi" },
+  { id: "world:054", tz: "Asia/Ho_Chi_Minh", lat: 10.82, lon: 106.63, zh: "胡志明市", en: "Ho Chi Minh City" },
+  { id: "world:055", tz: "Asia/Kuala_Lumpur", lat: 3.14, lon: 101.69, zh: "吉隆坡", en: "Kuala Lumpur" },
+  { id: "world:056", tz: "Asia/Yangon", lat: 16.84, lon: 96.17, zh: "仰光", en: "Yangon" },
+  { id: "world:057", tz: "Asia/Kathmandu", lat: 27.72, lon: 85.32, zh: "加德满都", en: "Kathmandu" },
+  { id: "world:058", tz: "Asia/Dhaka", lat: 23.81, lon: 90.41, zh: "达卡", en: "Dhaka" },
+  { id: "world:059", tz: "Asia/Colombo", lat: 6.93, lon: 79.86, zh: "科伦坡", en: "Colombo" },
+  { id: "world:060", tz: "Asia/Kolkata", lat: 19.08, lon: 72.88, zh: "孟买", en: "Mumbai" },
+  { id: "world:061", tz: "Asia/Kabul", lat: 34.53, lon: 69.17, zh: "喀布尔", en: "Kabul" },
+  { id: "world:062", tz: "Asia/Tashkent", lat: 41.30, lon: 69.24, zh: "塔什干", en: "Tashkent" },
+  { id: "world:063", tz: "Asia/Almaty", lat: 43.24, lon: 76.89, zh: "阿拉木图", en: "Almaty" },
+  { id: "world:064", tz: "Asia/Samarkand", lat: 39.65, lon: 66.96, zh: "撒马尔罕", en: "Samarkand" },
+  { id: "world:065", tz: "Asia/Riyadh", lat: 24.71, lon: 46.68, zh: "利雅得", en: "Riyadh" },
+  { id: "world:066", tz: "Asia/Baghdad", lat: 33.31, lon: 44.36, zh: "巴格达", en: "Baghdad" },
+  { id: "world:067", tz: "Asia/Beirut", lat: 33.89, lon: 35.50, zh: "贝鲁特", en: "Beirut" },
+  { id: "world:068", tz: "Asia/Tbilisi", lat: 41.72, lon: 44.79, zh: "第比利斯", en: "Tbilisi" },
+  { id: "world:069", tz: "Asia/Yerevan", lat: 40.18, lon: 44.51, zh: "埃里温", en: "Yerevan" },
+  { id: "world:070", tz: "Asia/Qatar", lat: 25.29, lon: 51.53, zh: "多哈", en: "Doha" },
+  { id: "world:071", tz: "Asia/Muscat", lat: 23.59, lon: 58.41, zh: "马斯喀特", en: "Muscat" },
+  { id: "world:072", tz: "Asia/Novosibirsk", lat: 55.01, lon: 82.93, zh: "新西伯利亚", en: "Novosibirsk" },
+  { id: "world:073", tz: "Asia/Vladivostok", lat: 43.12, lon: 131.89, zh: "符拉迪沃斯托克", en: "Vladivostok" },
+  { id: "world:074", tz: "Asia/Yakutsk", lat: 62.03, lon: 129.73, zh: "雅库茨克", en: "Yakutsk" },
+  { id: "world:075", tz: "Europe/Lisbon", lat: 38.72, lon: -9.14, zh: "里斯本", en: "Lisbon" },
+  { id: "world:076", tz: "Europe/Dublin", lat: 53.35, lon: -6.26, zh: "都柏林", en: "Dublin" },
+  { id: "world:077", tz: "Europe/London", lat: 55.95, lon: -3.19, zh: "爱丁堡", en: "Edinburgh" },
+  { id: "world:078", tz: "Europe/Amsterdam", lat: 52.37, lon: 4.90, zh: "阿姆斯特丹", en: "Amsterdam" },
+  { id: "world:079", tz: "Europe/Brussels", lat: 50.85, lon: 4.35, zh: "布鲁塞尔", en: "Brussels" },
+  { id: "world:080", tz: "Europe/Vienna", lat: 48.21, lon: 16.37, zh: "维也纳", en: "Vienna" },
+  { id: "world:081", tz: "Europe/Prague", lat: 50.08, lon: 14.44, zh: "布拉格", en: "Prague" },
+  { id: "world:082", tz: "Europe/Warsaw", lat: 52.23, lon: 21.01, zh: "华沙", en: "Warsaw" },
+  { id: "world:083", tz: "Europe/Budapest", lat: 47.50, lon: 19.04, zh: "布达佩斯", en: "Budapest" },
+  { id: "world:084", tz: "Europe/Copenhagen", lat: 55.68, lon: 12.57, zh: "哥本哈根", en: "Copenhagen" },
+  { id: "world:085", tz: "Europe/Oslo", lat: 59.91, lon: 10.75, zh: "奥斯陆", en: "Oslo" },
+  { id: "world:086", tz: "Europe/Helsinki", lat: 60.17, lon: 24.94, zh: "赫尔辛基", en: "Helsinki" },
+  { id: "world:087", tz: "Europe/Oslo", lat: 69.65, lon: 18.96, zh: "特罗姆瑟", en: "Tromsø" },
+  { id: "world:088", tz: "Arctic/Longyearbyen", lat: 78.22, lon: 15.65, zh: "朗伊尔城", en: "Longyearbyen" },
+  { id: "world:089", tz: "Europe/Kiev", lat: 50.45, lon: 30.52, zh: "基辅", en: "Kyiv" },
+  { id: "world:090", tz: "Europe/Moscow", lat: 59.93, lon: 30.36, zh: "圣彼得堡", en: "Saint Petersburg" },
+  { id: "world:091", tz: "Europe/Madrid", lat: 41.39, lon: 2.17, zh: "巴塞罗那", en: "Barcelona" },
+  { id: "world:092", tz: "Europe/Rome", lat: 45.44, lon: 12.32, zh: "威尼斯", en: "Venice" },
+  { id: "world:093", tz: "Europe/Zurich", lat: 47.38, lon: 8.54, zh: "苏黎世", en: "Zurich" },
+  { id: "world:094", tz: "Europe/Moscow", lat: 68.97, lon: 33.08, zh: "摩尔曼斯克", en: "Murmansk" },
+  { id: "world:095", tz: "Africa/Addis_Ababa", lat: 9.03, lon: 38.74, zh: "亚的斯亚贝巴", en: "Addis Ababa" },
+  { id: "world:096", tz: "Africa/Accra", lat: 5.60, lon: -0.19, zh: "阿克拉", en: "Accra" },
+  { id: "world:097", tz: "Africa/Dakar", lat: 14.72, lon: -17.47, zh: "达喀尔", en: "Dakar" },
+  { id: "world:098", tz: "Africa/Kinshasa", lat: -4.44, lon: 15.27, zh: "金沙萨", en: "Kinshasa" },
+  { id: "world:099", tz: "Africa/Johannesburg", lat: -33.92, lon: 18.42, zh: "开普敦", en: "Cape Town" },
+  { id: "world:100", tz: "Africa/Casablanca", lat: 31.63, lon: -7.99, zh: "马拉喀什", en: "Marrakesh" },
+  { id: "world:101", tz: "Africa/Tunis", lat: 36.81, lon: 10.18, zh: "突尼斯", en: "Tunis" },
+  { id: "world:102", tz: "Africa/Dar_es_Salaam", lat: -6.79, lon: 39.21, zh: "达累斯萨拉姆", en: "Dar es Salaam" },
+  { id: "world:103", tz: "Indian/Antananarivo", lat: -18.88, lon: 47.51, zh: "塔那那利佛", en: "Antananarivo" },
+  { id: "world:104", tz: "Africa/Khartoum", lat: 15.50, lon: 32.56, zh: "喀土穆", en: "Khartoum" },
+  { id: "world:105", tz: "Africa/Bamako", lat: 16.77, lon: -3.01, zh: "廷巴克图", en: "Timbuktu" },
+  { id: "world:106", tz: "America/Vancouver", lat: 49.28, lon: -123.12, zh: "温哥华", en: "Vancouver" },
+  { id: "world:107", tz: "America/Toronto", lat: 45.50, lon: -73.57, zh: "蒙特利尔", en: "Montreal" },
+  { id: "world:108", tz: "America/Los_Angeles", lat: 37.77, lon: -122.42, zh: "旧金山", en: "San Francisco" },
+  { id: "world:109", tz: "America/Phoenix", lat: 33.45, lon: -112.07, zh: "菲尼克斯", en: "Phoenix" },
+  { id: "world:110", tz: "America/Chicago", lat: 29.95, lon: -90.07, zh: "新奥尔良", en: "New Orleans" },
+  { id: "world:111", tz: "America/New_York", lat: 25.76, lon: -80.19, zh: "迈阿密", en: "Miami" },
+  { id: "world:112", tz: "America/Havana", lat: 23.11, lon: -82.37, zh: "哈瓦那", en: "Havana" },
+  { id: "world:113", tz: "America/Panama", lat: 8.98, lon: -79.52, zh: "巴拿马城", en: "Panama City" },
+  { id: "world:114", tz: "America/Bogota", lat: 4.71, lon: -74.07, zh: "波哥大", en: "Bogotá" },
+  { id: "world:115", tz: "America/Guayaquil", lat: -0.18, lon: -78.47, zh: "基多", en: "Quito" },
+  { id: "world:116", tz: "America/Caracas", lat: 10.48, lon: -66.90, zh: "加拉加斯", en: "Caracas" },
+  { id: "world:117", tz: "America/Sao_Paulo", lat: -22.91, lon: -43.17, zh: "里约热内卢", en: "Rio de Janeiro" },
+  { id: "world:118", tz: "America/Manaus", lat: -3.12, lon: -60.02, zh: "马瑙斯", en: "Manaus" },
+  { id: "world:119", tz: "America/Santiago", lat: -33.45, lon: -70.67, zh: "圣地亚哥", en: "Santiago" },
+  { id: "world:120", tz: "America/La_Paz", lat: -16.49, lon: -68.12, zh: "拉巴斯", en: "La Paz" },
+  { id: "world:121", tz: "America/Montevideo", lat: -34.90, lon: -56.16, zh: "蒙得维的亚", en: "Montevideo" },
+  { id: "world:122", tz: "America/Argentina/Ushuaia", lat: -54.80, lon: -68.30, zh: "乌斯怀亚", en: "Ushuaia" },
+  { id: "world:123", tz: "America/St_Johns", lat: 47.56, lon: -52.71, zh: "圣约翰斯", en: "St. John's" },
+  { id: "world:124", tz: "America/Anchorage", lat: 71.29, lon: -156.79, zh: "乌特恰维克", en: "Utqiaġvik" },
+  { id: "world:125", tz: "America/Jamaica", lat: 17.97, lon: -76.79, zh: "金斯敦", en: "Kingston" },
+  { id: "world:126", tz: "Australia/Perth", lat: -31.95, lon: 115.86, zh: "珀斯", en: "Perth" },
+  { id: "world:127", tz: "Australia/Darwin", lat: -12.46, lon: 130.84, zh: "达尔文", en: "Darwin" },
+  { id: "world:128", tz: "Australia/Adelaide", lat: -34.93, lon: 138.60, zh: "阿德莱德", en: "Adelaide" },
+  { id: "world:129", tz: "Pacific/Auckland", lat: -41.29, lon: 174.78, zh: "惠灵顿", en: "Wellington" },
+  { id: "world:130", tz: "Pacific/Fiji", lat: -18.14, lon: 178.44, zh: "苏瓦", en: "Suva" },
+  { id: "world:131", tz: "Pacific/Apia", lat: -13.83, lon: -171.76, zh: "阿皮亚", en: "Apia" },
+  { id: "world:132", tz: "Pacific/Kiritimati", lat: 1.87, lon: -157.36, zh: "基里蒂马蒂岛", en: "Kiritimati" },
+  { id: "world:133", tz: "Pacific/Tahiti", lat: -17.54, lon: -149.57, zh: "帕皮提", en: "Papeete" },
+  { id: "world:134", tz: "Pacific/Port_Moresby", lat: -9.44, lon: 147.18, zh: "莫尔斯比港", en: "Port Moresby" },
+  { id: "world:135", tz: "Antarctica/McMurdo", lat: -77.85, lon: 166.67, zh: "麦克默多站", en: "McMurdo Station" },
 ];
 
 /* Signature asterisms for the night-sky card.
@@ -514,6 +619,118 @@ const POEMS_ZH = [
   { id: "poem:zh:109", title: "春望词（其一）", author: "薛涛", lines: ["花开不同赏，花落不同悲。", "欲问相思处，花开花落时。"] },
   { id: "poem:zh:110", title: "寒食", author: "韩翃", lines: ["春城无处不飞花，寒食东风御柳斜。", "日暮汉宫传蜡烛，轻烟散入五侯家。"] },
   { id: "poem:zh:111", title: "塞下曲（其三）", author: "卢纶", lines: ["月黑雁飞高，单于夜遁逃。", "欲将轻骑逐，大雪满弓刀。"] },
+  { id: "poem:zh:112", title: "关雎（节选）", author: "诗经", lines: ["关关雎鸠，在河之洲。", "窈窕淑女，君子好逑。"] },
+  { id: "poem:zh:113", title: "蒹葭（节选）", author: "诗经", lines: ["蒹葭苍苍，白露为霜。", "所谓伊人，在水一方。"] },
+  { id: "poem:zh:114", title: "桃夭（节选）", author: "诗经", lines: ["桃之夭夭，灼灼其华。", "之子于归，宜其室家。"] },
+  { id: "poem:zh:115", title: "采薇（节选）", author: "诗经", lines: ["昔我往矣，杨柳依依。", "今我来思，雨雪霏霏。"] },
+  { id: "poem:zh:116", title: "子衿（节选）", author: "诗经", lines: ["青青子衿，悠悠我心。", "纵我不往，子宁不嗣音？"] },
+  { id: "poem:zh:117", title: "木瓜（节选）", author: "诗经", lines: ["投我以木瓜，报之以琼琚。", "匪报也，永以为好也。"] },
+  { id: "poem:zh:118", title: "长歌行（节选）", author: "汉乐府", lines: ["百川东到海，何时复西归？", "少壮不努力，老大徒伤悲。"] },
+  { id: "poem:zh:119", title: "迢迢牵牛星（节选）", author: "古诗十九首", lines: ["河汉清且浅，相去复几许？", "盈盈一水间，脉脉不得语。"] },
+  { id: "poem:zh:120", title: "龟虽寿（节选）", author: "曹操", lines: ["老骥伏枥，志在千里。", "烈士暮年，壮心不已。"] },
+  { id: "poem:zh:121", title: "短歌行（节选）", author: "曹操", lines: ["对酒当歌，人生几何！", "譬如朝露，去日苦多。"] },
+  { id: "poem:zh:122", title: "观沧海（节选）", author: "曹操", lines: ["日月之行，若出其中；", "星汉灿烂，若出其里。"] },
+  { id: "poem:zh:123", title: "七步诗", author: "曹植", lines: ["煮豆燃豆萁，豆在釜中泣。", "本是同根生，相煎何太急？"] },
+  { id: "poem:zh:124", title: "饮酒（其五）（节选）", author: "陶渊明", lines: ["采菊东篱下，悠然见南山。", "山气日夕佳，飞鸟相与还。"] },
+  { id: "poem:zh:125", title: "归园田居（其一）（节选）", author: "陶渊明", lines: ["羁鸟恋旧林，池鱼思故渊。", "开荒南野际，守拙归园田。"] },
+  { id: "poem:zh:126", title: "杂诗（其一）（节选）", author: "陶渊明", lines: ["盛年不重来，一日难再晨。", "及时当勉励，岁月不待人。"] },
+  { id: "poem:zh:127", title: "敕勒歌", author: "北朝民歌", lines: ["敕勒川，阴山下。天似穹庐，笼盖四野。", "天苍苍，野茫茫，风吹草低见牛羊。"] },
+  { id: "poem:zh:128", title: "木兰诗（节选）", author: "北朝民歌", lines: ["雄兔脚扑朔，雌兔眼迷离；", "双兔傍地走，安能辨我是雄雌？"] },
+  { id: "poem:zh:129", title: "入若耶溪（节选）", author: "王籍", lines: ["阴霞生远岫，阳景逐回流。", "蝉噪林逾静，鸟鸣山更幽。"] },
+  { id: "poem:zh:130", title: "宣州谢朓楼饯别校书叔云（节选）", author: "李白", lines: ["抽刀断水水更流，举杯消愁愁更愁。", "人生在世不称意，明朝散发弄扁舟。"] },
+  { id: "poem:zh:131", title: "渡荆门送别（节选）", author: "李白", lines: ["山随平野尽，江入大荒流。", "月下飞天镜，云生结海楼。"] },
+  { id: "poem:zh:132", title: "关山月（节选）", author: "李白", lines: ["明月出天山，苍茫云海间。", "长风几万里，吹度玉门关。"] },
+  { id: "poem:zh:133", title: "秋浦歌（其十五）", author: "李白", lines: ["白发三千丈，缘愁似个长。", "不知明镜里，何处得秋霜。"] },
+  { id: "poem:zh:134", title: "峨眉山月歌", author: "李白", lines: ["峨眉山月半轮秋，影入平羌江水流。", "夜发清溪向三峡，思君不见下渝州。"] },
+  { id: "poem:zh:135", title: "客中作", author: "李白", lines: ["兰陵美酒郁金香，玉碗盛来琥珀光。", "但使主人能醉客，不知何处是他乡。"] },
+  { id: "poem:zh:136", title: "春夜洛城闻笛", author: "李白", lines: ["谁家玉笛暗飞声，散入春风满洛城。", "此夜曲中闻折柳，何人不起故园情。"] },
+  { id: "poem:zh:137", title: "夜宿山寺", author: "李白", lines: ["危楼高百尺，手可摘星辰。", "不敢高声语，恐惊天上人。"] },
+  { id: "poem:zh:138", title: "古朗月行（节选）", author: "李白", lines: ["小时不识月，呼作白玉盘。", "又疑瑶台镜，飞在青云端。"] },
+  { id: "poem:zh:139", title: "送友人（节选）", author: "李白", lines: ["浮云游子意，落日故人情。", "挥手自兹去，萧萧班马鸣。"] },
+  { id: "poem:zh:140", title: "望岳（节选）", author: "杜甫", lines: ["荡胸生曾云，决眦入归鸟。", "会当凌绝顶，一览众山小。"] },
+  { id: "poem:zh:141", title: "旅夜书怀（节选）", author: "杜甫", lines: ["星垂平野阔，月涌大江流。", "名岂文章著，官应老病休。"] },
+  { id: "poem:zh:142", title: "春日忆李白（节选）", author: "杜甫", lines: ["白也诗无敌，飘然思不群。", "清新庾开府，俊逸鲍参军。"] },
+  { id: "poem:zh:143", title: "蜀相（节选）", author: "杜甫", lines: ["三顾频烦天下计，两朝开济老臣心。", "出师未捷身先死，长使英雄泪满襟。"] },
+  { id: "poem:zh:144", title: "客至（节选）", author: "杜甫", lines: ["舍南舍北皆春水，但见群鸥日日来。", "花径不曾缘客扫，蓬门今始为君开。"] },
+  { id: "poem:zh:145", title: "戏为六绝句（其二）", author: "杜甫", lines: ["王杨卢骆当时体，轻薄为文哂未休。", "尔曹身与名俱灭，不废江河万古流。"] },
+  { id: "poem:zh:146", title: "杂诗（其二）", author: "王维", lines: ["君自故乡来，应知故乡事。", "来日绮窗前，寒梅著花未？"] },
+  { id: "poem:zh:147", title: "汉江临泛（节选）", author: "王维", lines: ["楚塞三湘接，荆门九派通。", "江流天地外，山色有无中。"] },
+  { id: "poem:zh:148", title: "辛夷坞", author: "王维", lines: ["木末芙蓉花，山中发红萼。", "涧户寂无人，纷纷开且落。"] },
+  { id: "poem:zh:149", title: "与诸子登岘山（节选）", author: "孟浩然", lines: ["人事有代谢，往来成古今。", "江山留胜迹，我辈复登临。"] },
+  { id: "poem:zh:150", title: "凉州词", author: "王之涣", lines: ["黄河远上白云间，一片孤城万仞山。", "羌笛何须怨杨柳，春风不度玉门关。"] },
+  { id: "poem:zh:151", title: "采莲曲", author: "王昌龄", lines: ["荷叶罗裙一色裁，芙蓉向脸两边开。", "乱入池中看不见，闻歌始觉有人来。"] },
+  { id: "poem:zh:152", title: "除夜作", author: "高适", lines: ["旅馆寒灯独不眠，客心何事转凄然。", "故乡今夜思千里，霜鬓明朝又一年。"] },
+  { id: "poem:zh:153", title: "碛中作", author: "岑参", lines: ["走马西来欲到天，辞家见月两回圆。", "今夜不知何处宿，平沙万里绝人烟。"] },
+  { id: "poem:zh:154", title: "渔歌子", author: "张志和", lines: ["西塞山前白鹭飞，桃花流水鳜鱼肥。", "青箬笠，绿蓑衣，斜风细雨不须归。"] },
+  { id: "poem:zh:155", title: "酬乐天扬州初逢席上见赠（节选）", author: "刘禹锡", lines: ["沉舟侧畔千帆过，病树前头万木春。", "今日听君歌一曲，暂凭杯酒长精神。"] },
+  { id: "poem:zh:156", title: "浪淘沙（其一）", author: "刘禹锡", lines: ["九曲黄河万里沙，浪淘风簸自天涯。", "如今直上银河去，同到牵牛织女家。"] },
+  { id: "poem:zh:157", title: "忆江南（其一）", author: "白居易", lines: ["江南好，风景旧曾谙。", "日出江花红胜火，春来江水绿如蓝。能不忆江南？"] },
+  { id: "poem:zh:158", title: "池上", author: "白居易", lines: ["小娃撑小艇，偷采白莲回。", "不解藏踪迹，浮萍一道开。"] },
+  { id: "poem:zh:159", title: "长恨歌（节选）", author: "白居易", lines: ["在天愿作比翼鸟，在地愿为连理枝。", "天长地久有时尽，此恨绵绵无绝期。"] },
+  { id: "poem:zh:160", title: "琵琶行（节选）", author: "白居易", lines: ["大弦嘈嘈如急雨，小弦切切如私语。", "嘈嘈切切错杂弹，大珠小珠落玉盘。"] },
+  { id: "poem:zh:161", title: "嫦娥", author: "李商隐", lines: ["云母屏风烛影深，长河渐落晓星沉。", "嫦娥应悔偷灵药，碧海青天夜夜心。"] },
+  { id: "poem:zh:162", title: "赠别（其二）", author: "杜牧", lines: ["多情却似总无情，唯觉樽前笑不成。", "蜡烛有心还惜别，替人垂泪到天明。"] },
+  { id: "poem:zh:163", title: "蜂", author: "罗隐", lines: ["不论平地与山尖，无限风光尽被占。", "采得百花成蜜后，为谁辛苦为谁甜？"] },
+  { id: "poem:zh:164", title: "春怨", author: "金昌绪", lines: ["打起黄莺儿，莫教枝上啼。", "啼时惊妾梦，不得到辽西。"] },
+  { id: "poem:zh:165", title: "题都城南庄", author: "崔护", lines: ["去年今日此门中，人面桃花相映红。", "人面不知何处去，桃花依旧笑春风。"] },
+  { id: "poem:zh:166", title: "次北固山下（节选）", author: "王湾", lines: ["潮平两岸阔，风正一帆悬。", "海日生残夜，江春入旧年。"] },
+  { id: "poem:zh:167", title: "题破山寺后禅院（节选）", author: "常建", lines: ["曲径通幽处，禅房花木深。", "山光悦鸟性，潭影空人心。"] },
+  { id: "poem:zh:168", title: "小儿垂钓", author: "胡令能", lines: ["蓬头稚子学垂纶，侧坐莓苔草映身。", "路人借问遥招手，怕得鱼惊不应人。"] },
+  { id: "poem:zh:169", title: "蝉", author: "虞世南", lines: ["垂緌饮清露，流响出疏桐。", "居高声自远，非是藉秋风。"] },
+  { id: "poem:zh:170", title: "风", author: "李峤", lines: ["解落三秋叶，能开二月花。", "过江千尺浪，入竹万竿斜。"] },
+  { id: "poem:zh:171", title: "金缕衣", author: "杜秋娘", lines: ["劝君莫惜金缕衣，劝君惜取少年时。", "花开堪折直须折，莫待无花空折枝。"] },
+  { id: "poem:zh:172", title: "月夜", author: "刘方平", lines: ["更深月色半人家，北斗阑干南斗斜。", "今夜偏知春气暖，虫声新透绿窗纱。"] },
+  { id: "poem:zh:173", title: "虞美人（节选）", author: "李煜", lines: ["雕栏玉砌应犹在，只是朱颜改。", "问君能有几多愁？恰似一江春水向东流。"] },
+  { id: "poem:zh:174", title: "相见欢（节选）", author: "李煜", lines: ["无言独上西楼，月如钩。寂寞梧桐深院锁清秋。", "剪不断，理还乱，是离愁。别是一般滋味在心头。"] },
+  { id: "poem:zh:175", title: "水调歌头（节选）", author: "苏轼", lines: ["人有悲欢离合，月有阴晴圆缺，此事古难全。", "但愿人长久，千里共婵娟。"] },
+  { id: "poem:zh:176", title: "念奴娇·赤壁怀古（节选）", author: "苏轼", lines: ["大江东去，浪淘尽，千古风流人物。", "故垒西边，人道是，三国周郎赤壁。"] },
+  { id: "poem:zh:177", title: "定风波（节选）", author: "苏轼", lines: ["莫听穿林打叶声，何妨吟啸且徐行。", "竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。"] },
+  { id: "poem:zh:178", title: "惠崇春江晚景", author: "苏轼", lines: ["竹外桃花三两枝，春江水暖鸭先知。", "蒌蒿满地芦芽短，正是河豚欲上时。"] },
+  { id: "poem:zh:179", title: "赠刘景文", author: "苏轼", lines: ["荷尽已无擎雨盖，菊残犹有傲霜枝。", "一年好景君须记，最是橙黄橘绿时。"] },
+  { id: "poem:zh:180", title: "江城子·乙卯正月二十日夜记梦（节选）", author: "苏轼", lines: ["十年生死两茫茫，不思量，自难忘。", "千里孤坟，无处话凄凉。"] },
+  { id: "poem:zh:181", title: "和子由渑池怀旧（节选）", author: "苏轼", lines: ["人生到处知何似，应似飞鸿踏雪泥。", "泥上偶然留指爪，鸿飞那复计东西。"] },
+  { id: "poem:zh:182", title: "如梦令", author: "李清照", lines: ["常记溪亭日暮，沉醉不知归路。兴尽晚回舟，误入藕花深处。", "争渡，争渡，惊起一滩鸥鹭。"] },
+  { id: "poem:zh:183", title: "声声慢（节选）", author: "李清照", lines: ["寻寻觅觅，冷冷清清，凄凄惨惨戚戚。", "乍暖还寒时候，最难将息。"] },
+  { id: "poem:zh:184", title: "一剪梅（节选）", author: "李清照", lines: ["花自飘零水自流。一种相思，两处闲愁。", "此情无计可消除，才下眉头，却上心头。"] },
+  { id: "poem:zh:185", title: "醉花阴（节选）", author: "李清照", lines: ["东篱把酒黄昏后，有暗香盈袖。", "莫道不销魂，帘卷西风，人比黄花瘦。"] },
+  { id: "poem:zh:186", title: "青玉案·元夕（节选）", author: "辛弃疾", lines: ["众里寻他千百度，蓦然回首，", "那人却在，灯火阑珊处。"] },
+  { id: "poem:zh:187", title: "西江月·夜行黄沙道中（节选）", author: "辛弃疾", lines: ["明月别枝惊鹊，清风半夜鸣蝉。", "稻花香里说丰年，听取蛙声一片。"] },
+  { id: "poem:zh:188", title: "丑奴儿·书博山道中壁（节选）", author: "辛弃疾", lines: ["少年不识愁滋味，爱上层楼。", "爱上层楼，为赋新词强说愁。"] },
+  { id: "poem:zh:189", title: "破阵子·为陈同甫赋壮词以寄之（节选）", author: "辛弃疾", lines: ["醉里挑灯看剑，梦回吹角连营。", "八百里分麾下炙，五十弦翻塞外声。"] },
+  { id: "poem:zh:190", title: "雨霖铃（节选）", author: "柳永", lines: ["多情自古伤离别，更那堪，冷落清秋节！", "今宵酒醒何处？杨柳岸，晓风残月。"] },
+  { id: "poem:zh:191", title: "蝶恋花（节选）", author: "柳永", lines: ["拟把疏狂图一醉，对酒当歌，强乐还无味。", "衣带渐宽终不悔，为伊消得人憔悴。"] },
+  { id: "poem:zh:192", title: "浣溪沙（节选）", author: "晏殊", lines: ["无可奈何花落去，似曾相识燕归来。", "小园香径独徘徊。"] },
+  { id: "poem:zh:193", title: "蝶恋花（节选）", author: "晏殊", lines: ["明月不谙离恨苦，斜光到晓穿朱户。", "昨夜西风凋碧树，独上高楼，望尽天涯路。"] },
+  { id: "poem:zh:194", title: "渔家傲·秋思（节选）", author: "范仲淹", lines: ["浊酒一杯家万里，燕然未勒归无计。", "羌管悠悠霜满地，人不寐，将军白发征夫泪。"] },
+  { id: "poem:zh:195", title: "苏幕遮（节选）", author: "范仲淹", lines: ["碧云天，黄叶地，秋色连波，波上寒烟翠。", "山映斜阳天接水，芳草无情，更在斜阳外。"] },
+  { id: "poem:zh:196", title: "鹊桥仙（节选）", author: "秦观", lines: ["柔情似水，佳期如梦，忍顾鹊桥归路。", "两情若是久长时，又岂在朝朝暮暮。"] },
+  { id: "poem:zh:197", title: "梅花", author: "王安石", lines: ["墙角数枝梅，凌寒独自开。", "遥知不是雪，为有暗香来。"] },
+  { id: "poem:zh:198", title: "书湖阴先生壁（节选）", author: "王安石", lines: ["茅檐长扫净无苔，花木成畦手自栽。", "一水护田将绿绕，两山排闼送青来。"] },
+  { id: "poem:zh:199", title: "小池", author: "杨万里", lines: ["泉眼无声惜细流，树阴照水爱晴柔。", "小荷才露尖尖角，早有蜻蜓立上头。"] },
+  { id: "poem:zh:200", title: "晓出净慈寺送林子方", author: "杨万里", lines: ["毕竟西湖六月中，风光不与四时同。", "接天莲叶无穷碧，映日荷花别样红。"] },
+  { id: "poem:zh:201", title: "观书有感（其一）", author: "朱熹", lines: ["半亩方塘一鉴开，天光云影共徘徊。", "问渠那得清如许？为有源头活水来。"] },
+  { id: "poem:zh:202", title: "春日", author: "朱熹", lines: ["胜日寻芳泗水滨，无边光景一时新。", "等闲识得东风面，万紫千红总是春。"] },
+  { id: "poem:zh:203", title: "游园不值", author: "叶绍翁", lines: ["应怜屐齿印苍苔，小扣柴扉久不开。", "春色满园关不住，一枝红杏出墙来。"] },
+  { id: "poem:zh:204", title: "冬夜读书示子聿", author: "陆游", lines: ["古人学问无遗力，少壮工夫老始成。", "纸上得来终觉浅，绝知此事要躬行。"] },
+  { id: "poem:zh:205", title: "卜算子·咏梅（节选）", author: "陆游", lines: ["无意苦争春，一任群芳妒。", "零落成泥碾作尘，只有香如故。"] },
+  { id: "poem:zh:206", title: "题临安邸", author: "林升", lines: ["山外青山楼外楼，西湖歌舞几时休？", "暖风熏得游人醉，直把杭州作汴州。"] },
+  { id: "poem:zh:207", title: "过零丁洋（节选）", author: "文天祥", lines: ["惶恐滩头说惶恐，零丁洋里叹零丁。", "人生自古谁无死？留取丹心照汗青。"] },
+  { id: "poem:zh:208", title: "三衢道中", author: "曾几", lines: ["梅子黄时日日晴，小溪泛尽却山行。", "绿阴不减来时路，添得黄鹂四五声。"] },
+  { id: "poem:zh:209", title: "村晚", author: "雷震", lines: ["草满池塘水满陂，山衔落日浸寒漪。", "牧童归去横牛背，短笛无腔信口吹。"] },
+  { id: "poem:zh:210", title: "乡村四月", author: "翁卷", lines: ["绿遍山原白满川，子规声里雨如烟。", "乡村四月闲人少，才了蚕桑又插田。"] },
+  { id: "poem:zh:211", title: "四时田园杂兴（其二十五）", author: "范成大", lines: ["梅子金黄杏子肥，麦花雪白菜花稀。", "日长篱落无人过，惟有蜻蜓蛱蝶飞。"] },
+  { id: "poem:zh:212", title: "约客", author: "赵师秀", lines: ["黄梅时节家家雨，青草池塘处处蛙。", "有约不来过夜半，闲敲棋子落灯花。"] },
+  { id: "poem:zh:213", title: "雪梅（其一）", author: "卢梅坡", lines: ["梅雪争春未肯降，骚人阁笔费评章。", "梅须逊雪三分白，雪却输梅一段香。"] },
+  { id: "poem:zh:214", title: "天净沙·秋思", author: "马致远", lines: ["枯藤老树昏鸦，小桥流水人家，古道西风瘦马。", "夕阳西下，断肠人在天涯。"] },
+  { id: "poem:zh:215", title: "墨梅", author: "王冕", lines: ["我家洗砚池头树，朵朵花开淡墨痕。", "不要人夸好颜色，只留清气满乾坤。"] },
+  { id: "poem:zh:216", title: "山坡羊·潼关怀古（节选）", author: "张养浩", lines: ["伤心秦汉经行处，宫阙万间都做了土。", "兴，百姓苦；亡，百姓苦。"] },
+  { id: "poem:zh:217", title: "临江仙（节选）", author: "杨慎", lines: ["滚滚长江东逝水，浪花淘尽英雄。", "是非成败转头空。青山依旧在，几度夕阳红。"] },
+  { id: "poem:zh:218", title: "木兰花·拟古决绝词柬友（节选）", author: "纳兰性德", lines: ["人生若只如初见，何事秋风悲画扇。", "等闲变却故人心，却道故人心易变。"] },
+  { id: "poem:zh:219", title: "长相思", author: "纳兰性德", lines: ["山一程，水一程，身向榆关那畔行，夜深千帐灯。", "风一更，雪一更，聒碎乡心梦不成，故园无此声。"] },
+  { id: "poem:zh:220", title: "苔", author: "袁枚", lines: ["白日不到处，青春恰自来。", "苔花如米小，也学牡丹开。"] },
+  { id: "poem:zh:221", title: "所见", author: "袁枚", lines: ["牧童骑黄牛，歌声振林樾。", "意欲捕鸣蝉，忽然闭口立。"] },
+  { id: "poem:zh:222", title: "村居", author: "高鼎", lines: ["草长莺飞二月天，拂堤杨柳醉春烟。", "儿童散学归来早，忙趁东风放纸鸢。"] },
+  { id: "poem:zh:223", title: "论诗（其二）", author: "赵翼", lines: ["李杜诗篇万口传，至今已觉不新鲜。", "江山代有才人出，各领风骚数百年。"] },
 ];
 
 /* ---------- Poems: English (public domain) ---------- */
@@ -567,6 +784,191 @@ const POEMS_EN = [
   { id: "poem:en:047", title: "Elegy Written in a Country Churchyard", author: "Thomas Gray", lines: ["The curfew tolls the knell of parting day,", "The lowing herd wind slowly o'er the lea,", "The plowman homeward plods his weary way,", "And leaves the world to darkness and to me."] },
   { id: "poem:en:048", title: "Loveliest of Trees", author: "A. E. Housman", lines: ["Loveliest of trees, the cherry now", "Is hung with bloom along the bough,", "And stands about the woodland ride", "Wearing white for Eastertide."] },
   { id: "poem:en:049", title: "There Will Come Soft Rains", author: "Sara Teasdale", lines: ["There will come soft rains and the smell of the ground,", "And swallows circling with their shimmering sound;", "And frogs in the pools singing at night,", "And wild plum trees in tremulous white."] },
+  { id: "poem:en:050", title: "Sonnet 1", author: "William Shakespeare", lines: ["From fairest creatures we desire increase,", "That thereby beauty's rose might never die,", "But as the riper should by time decease,", "His tender heir might bear his memory."] },
+  { id: "poem:en:051", title: "Sonnet 12", author: "William Shakespeare", lines: ["When I do count the clock that tells the time,", "And see the brave day sunk in hideous night;", "When I behold the violet past prime,", "And sable curls all silver'd o'er with white;"] },
+  { id: "poem:en:052", title: "Sonnet 30", author: "William Shakespeare", lines: ["When to the sessions of sweet silent thought", "I summon up remembrance of things past,", "I sigh the lack of many a thing I sought,", "And with old woes new wail my dear time's waste."] },
+  { id: "poem:en:053", title: "Sonnet 33", author: "William Shakespeare", lines: ["Full many a glorious morning have I seen", "Flatter the mountain-tops with sovereign eye,", "Kissing with golden face the meadows green,", "Gilding pale streams with heavenly alchemy;"] },
+  { id: "poem:en:054", title: "Sonnet 60", author: "William Shakespeare", lines: ["Like as the waves make towards the pebbled shore,", "So do our minutes hasten to their end;", "Each changing place with that which goes before,", "In sequent toil all forwards do contend."] },
+  { id: "poem:en:055", title: "Sonnet 71", author: "William Shakespeare", lines: ["No longer mourn for me when I am dead", "Than you shall hear the surly sullen bell", "Give warning to the world that I am fled", "From this vile world, with vilest worms to dwell."] },
+  { id: "poem:en:056", title: "Sonnet 73", author: "William Shakespeare", lines: ["That time of year thou mayst in me behold", "When yellow leaves, or none, or few, do hang", "Upon those boughs which shake against the cold,", "Bare ruin'd choirs, where late the sweet birds sang."] },
+  { id: "poem:en:057", title: "Sonnet 97", author: "William Shakespeare", lines: ["How like a winter hath my absence been", "From thee, the pleasure of the fleeting year!", "What freezings have I felt, what dark days seen!", "What old December's bareness every where!"] },
+  { id: "poem:en:058", title: "Sonnet 98", author: "William Shakespeare", lines: ["From you have I been absent in the spring,", "When proud-pied April, dress'd in all his trim,", "Hath put a spirit of youth in every thing."] },
+  { id: "poem:en:059", title: "Sonnet 104", author: "William Shakespeare", lines: ["To me, fair friend, you never can be old,", "For as you were when first your eye I eyed,", "Such seems your beauty still."] },
+  { id: "poem:en:060", title: "Sonnet 130", author: "William Shakespeare", lines: ["My mistress' eyes are nothing like the sun;", "Coral is far more red than her lips' red;", "If snow be white, why then her breasts are dun;", "If hairs be wires, black wires grow on her head."] },
+  { id: "poem:en:061", title: "Fear No More the Heat o' the Sun (Cymbeline)", author: "William Shakespeare", lines: ["Fear no more the heat o' the sun,", "Nor the furious winter's rages;", "Thou thy worldly task hast done,", "Home art gone, and ta'en thy wages."] },
+  { id: "poem:en:062", title: "Ariel's Song (The Tempest)", author: "William Shakespeare", lines: ["Those are pearls that were his eyes:", "Nothing of him that doth fade", "But doth suffer a sea-change", "Into something rich and strange."] },
+  { id: "poem:en:063", title: "Under the Greenwood Tree (As You Like It)", author: "William Shakespeare", lines: ["Under the greenwood tree", "Who loves to lie with me,", "And turn his merry note", "Unto the sweet bird's throat."] },
+  { id: "poem:en:064", title: "Blow, Blow, Thou Winter Wind (As You Like It)", author: "William Shakespeare", lines: ["Blow, blow, thou winter wind,", "Thou art not so unkind", "As man's ingratitude."] },
+  { id: "poem:en:065", title: "All the World's a Stage (As You Like It)", author: "William Shakespeare", lines: ["All the world's a stage,", "And all the men and women merely players;", "They have their exits and their entrances,", "And one man in his time plays many parts."] },
+  { id: "poem:en:066", title: "We Are Such Stuff (The Tempest)", author: "William Shakespeare", lines: ["We are such stuff", "As dreams are made on, and our little life", "Is rounded with a sleep."] },
+  { id: "poem:en:067", title: "Tomorrow, and Tomorrow, and Tomorrow (Macbeth)", author: "William Shakespeare", lines: ["To-morrow, and to-morrow, and to-morrow,", "Creeps in this petty pace from day to day,", "To the last syllable of recorded time."] },
+  { id: "poem:en:068", title: "To Be, or Not to Be (Hamlet)", author: "William Shakespeare", lines: ["To be, or not to be, that is the question:", "Whether 'tis nobler in the mind to suffer", "The slings and arrows of outrageous fortune,", "Or to take arms against a sea of troubles."] },
+  { id: "poem:en:069", title: "What's in a Name? (Romeo and Juliet)", author: "William Shakespeare", lines: ["What's in a name? That which we call a rose", "By any other name would smell as sweet."] },
+  { id: "poem:en:070", title: "There Is a Tide (Julius Caesar)", author: "William Shakespeare", lines: ["There is a tide in the affairs of men,", "Which, taken at the flood, leads on to fortune;", "Omitted, all the voyage of their life", "Is bound in shallows and in miseries."] },
+  { id: "poem:en:071", title: "The Quality of Mercy (The Merchant of Venice)", author: "William Shakespeare", lines: ["The quality of mercy is not strain'd;", "It droppeth as the gentle rain from heaven", "Upon the place beneath."] },
+  { id: "poem:en:072", title: "If Music Be the Food of Love (Twelfth Night)", author: "William Shakespeare", lines: ["If music be the food of love, play on;", "Give me excess of it, that, surfeiting,", "The appetite may sicken, and so die."] },
+  { id: "poem:en:073", title: "Success is counted sweetest", author: "Emily Dickinson", lines: ["Success is counted sweetest", "By those who ne'er succeed.", "To comprehend a nectar", "Requires sorest need."] },
+  { id: "poem:en:074", title: "I never saw a Moor", author: "Emily Dickinson", lines: ["I never saw a Moor —", "I never saw the Sea —", "Yet know I how the Heather looks", "And what a Billow be."] },
+  { id: "poem:en:075", title: "If I can stop one heart from breaking", author: "Emily Dickinson", lines: ["If I can stop one heart from breaking,", "I shall not live in vain."] },
+  { id: "poem:en:076", title: "There is no Frigate like a Book", author: "Emily Dickinson", lines: ["There is no Frigate like a Book", "To take us Lands away", "Nor any Coursers like a Page", "Of prancing Poetry —"] },
+  { id: "poem:en:077", title: "Tell all the truth but tell it slant", author: "Emily Dickinson", lines: ["Tell all the truth but tell it slant —", "Success in Circuit lies", "Too bright for our infirm Delight", "The Truth's superb surprise"] },
+  { id: "poem:en:078", title: "The Brain — is wider than the Sky", author: "Emily Dickinson", lines: ["The Brain — is wider than the Sky —", "For — put them side by side —", "The one the other will contain", "With ease — and You — beside —"] },
+  { id: "poem:en:079", title: "I dwell in Possibility", author: "Emily Dickinson", lines: ["I dwell in Possibility —", "A fairer House than Prose —", "More numerous of Windows —", "Superior — for Doors —"] },
+  { id: "poem:en:080", title: "Wild nights — Wild nights!", author: "Emily Dickinson", lines: ["Wild nights — Wild nights!", "Were I with thee", "Wild nights should be", "Our luxury!"] },
+  { id: "poem:en:081", title: "There's a certain Slant of light", author: "Emily Dickinson", lines: ["There's a certain Slant of light,", "Winter Afternoons —", "That oppresses, like the Heft", "Of Cathedral Tunes —"] },
+  { id: "poem:en:082", title: "I heard a Fly buzz — when I died", author: "Emily Dickinson", lines: ["I heard a Fly buzz — when I died —", "The Stillness in the Room", "Was like the Stillness in the Air —", "Between the Heaves of Storm —"] },
+  { id: "poem:en:083", title: "Much Madness is divinest Sense", author: "Emily Dickinson", lines: ["Much Madness is divinest Sense —", "To a discerning Eye —", "Much Sense — the starkest Madness —", "'Tis the Majority"] },
+  { id: "poem:en:084", title: "The Soul selects her own Society", author: "Emily Dickinson", lines: ["The Soul selects her own Society —", "Then — shuts the Door —", "To her divine Majority —", "Present no more —"] },
+  { id: "poem:en:085", title: "To make a prairie", author: "Emily Dickinson", lines: ["To make a prairie it takes a clover and one bee,", "One clover, and a bee,", "And revery.", "The revery alone will do,", "If bees are few."] },
+  { id: "poem:en:086", title: "After great pain, a formal feeling comes", author: "Emily Dickinson", lines: ["After great pain, a formal feeling comes —", "The Nerves sit ceremonious, like Tombs —", "The stiff Heart questions 'was it He, that bore,'", "And 'Yesterday, or Centuries before'?"] },
+  { id: "poem:en:087", title: "The morns are meeker than they were", author: "Emily Dickinson", lines: ["The morns are meeker than they were,", "The nuts are getting brown;", "The berry's cheek is plumper,", "The rose is out of town."] },
+  { id: "poem:en:088", title: "Some keep the Sabbath going to Church", author: "Emily Dickinson", lines: ["Some keep the Sabbath going to Church —", "I keep it, staying at Home —", "With a Bobolink for a Chorister —", "And an Orchard, for a Dome —"] },
+  { id: "poem:en:089", title: "When I Heard the Learn'd Astronomer", author: "Walt Whitman", lines: ["Till rising and gliding out I wander'd off by myself,", "In the mystical moist night-air, and from time to time,", "Look'd up in perfect silence at the stars."] },
+  { id: "poem:en:090", title: "O Me! O Life!", author: "Walt Whitman", lines: ["Answer.", "That you are here—that life exists and identity,", "That the powerful play goes on, and you may contribute a verse."] },
+  { id: "poem:en:091", title: "A Noiseless Patient Spider", author: "Walt Whitman", lines: ["A noiseless patient spider,", "I mark'd where on a little promontory it stood isolated,", "Mark'd how to explore the vacant vast surrounding,", "It launch'd forth filament, filament, filament, out of itself."] },
+  { id: "poem:en:092", title: "I Hear America Singing", author: "Walt Whitman", lines: ["I hear America singing, the varied carols I hear,", "Those of mechanics, each one singing his as it should be blithe and strong."] },
+  { id: "poem:en:093", title: "Miracles", author: "Walt Whitman", lines: ["Why, who makes much of a miracle?", "As to me I know of nothing else but miracles."] },
+  { id: "poem:en:094", title: "Song of Myself, 6", author: "Walt Whitman", lines: ["A child said What is the grass? fetching it to me with full hands;", "How could I answer the child? I do not know what it is any more than he."] },
+  { id: "poem:en:095", title: "Song of Myself, 51", author: "Walt Whitman", lines: ["Do I contradict myself?", "Very well then I contradict myself,", "(I am large, I contain multitudes.)"] },
+  { id: "poem:en:096", title: "Song of the Open Road", author: "Walt Whitman", lines: ["Afoot and light-hearted I take to the open road,", "Healthy, free, the world before me,", "The long brown path before me leading wherever I choose."] },
+  { id: "poem:en:097", title: "When Lilacs Last in the Dooryard Bloom'd", author: "Walt Whitman", lines: ["When lilacs last in the dooryard bloom'd,", "And the great star early droop'd in the western sky in the night,", "I mourn'd, and yet shall mourn with ever-returning spring."] },
+  { id: "poem:en:098", title: "Who Has Seen the Wind?", author: "Christina Rossetti", lines: ["Who has seen the wind?", "Neither I nor you:", "But when the leaves hang trembling,", "The wind is passing through."] },
+  { id: "poem:en:099", title: "In the Bleak Midwinter", author: "Christina Rossetti", lines: ["In the bleak mid-winter", "Frosty wind made moan,", "Earth stood hard as iron,", "Water like a stone."] },
+  { id: "poem:en:100", title: "A Birthday", author: "Christina Rossetti", lines: ["My heart is like a singing bird", "Whose nest is in a water'd shoot;", "My heart is like an apple-tree", "Whose boughs are bent with thickset fruit."] },
+  { id: "poem:en:101", title: "Up-Hill", author: "Christina Rossetti", lines: ["Does the road wind up-hill all the way?", "Yes, to the very end.", "Will the day's journey take the whole long day?", "From morn to night, my friend."] },
+  { id: "poem:en:102", title: "Song (When I am dead, my dearest)", author: "Christina Rossetti", lines: ["When I am dead, my dearest,", "Sing no sad songs for me;", "Plant thou no roses at my head,", "Nor shady cypress tree."] },
+  { id: "poem:en:103", title: "Goblin Market", author: "Christina Rossetti", lines: ["Morning and evening", "Maids heard the goblins cry:", "'Come buy our orchard fruits,", "Come buy, come buy.'"] },
+  { id: "poem:en:104", title: "Auguries of Innocence", author: "William Blake", lines: ["To see a World in a Grain of Sand", "And a Heaven in a Wild Flower,", "Hold Infinity in the palm of your hand", "And Eternity in an hour."] },
+  { id: "poem:en:105", title: "The Lamb", author: "William Blake", lines: ["Little Lamb who made thee", "Dost thou know who made thee", "Gave thee life & bid thee feed,", "By the stream & o'er the mead."] },
+  { id: "poem:en:106", title: "Eternity", author: "William Blake", lines: ["He who binds to himself a joy", "Does the winged life destroy;", "But he who kisses the joy as it flies", "Lives in eternity's sun rise."] },
+  { id: "poem:en:107", title: "The Sick Rose", author: "William Blake", lines: ["O Rose thou art sick.", "The invisible worm,", "That flies in the night", "In the howling storm."] },
+  { id: "poem:en:108", title: "And did those feet in ancient time", author: "William Blake", lines: ["And did those feet in ancient time", "Walk upon England's mountains green?", "And was the holy Lamb of God", "On England's pleasant pastures seen?"] },
+  { id: "poem:en:109", title: "The Fly", author: "William Blake", lines: ["Little Fly", "Thy summer's play,", "My thoughtless hand", "Has brush'd away."] },
+  { id: "poem:en:110", title: "Composed upon Westminster Bridge", author: "William Wordsworth", lines: ["Earth has not anything to show more fair:", "Dull would he be of soul who could pass by", "A sight so touching in its majesty."] },
+  { id: "poem:en:111", title: "Lines Written in Early Spring", author: "William Wordsworth", lines: ["I heard a thousand blended notes,", "While in a grove I sate reclined,", "In that sweet mood when pleasant thoughts", "Bring sad thoughts to the mind."] },
+  { id: "poem:en:112", title: "The Solitary Reaper", author: "William Wordsworth", lines: ["Behold her, single in the field,", "Yon solitary Highland Lass!", "Reaping and singing by herself;", "Stop here, or gently pass!"] },
+  { id: "poem:en:113", title: "She Dwelt among the Untrodden Ways", author: "William Wordsworth", lines: ["She dwelt among the untrodden ways", "Beside the springs of Dove,", "A Maid whom there were none to praise", "And very few to love."] },
+  { id: "poem:en:114", title: "Ode: Intimations of Immortality", author: "William Wordsworth", lines: ["Our birth is but a sleep and a forgetting:", "The Soul that rises with us, our life's Star,", "Hath had elsewhere its setting,", "And cometh from afar."] },
+  { id: "poem:en:115", title: "The Tables Turned", author: "William Wordsworth", lines: ["Up! up! my Friend, and quit your books;", "Or surely you'll grow double:", "Up! up! my Friend, and clear your looks;", "Why all this toil and trouble?"] },
+  { id: "poem:en:116", title: "A Slumber Did My Spirit Seal", author: "William Wordsworth", lines: ["A slumber did my spirit seal;", "I had no human fears:", "She seemed a thing that could not feel", "The touch of earthly years."] },
+  { id: "poem:en:117", title: "The Prelude", author: "William Wordsworth", lines: ["Bliss was it in that dawn to be alive,", "But to be young was very heaven!"] },
+  { id: "poem:en:118", title: "Ode on a Grecian Urn", author: "John Keats", lines: ["'Beauty is truth, truth beauty,'—that is all", "Ye know on earth, and all ye need to know."] },
+  { id: "poem:en:119", title: "Endymion", author: "John Keats", lines: ["A thing of beauty is a joy for ever:", "Its loveliness increases; it will never", "Pass into nothingness."] },
+  { id: "poem:en:120", title: "Bright Star", author: "John Keats", lines: ["Bright star, would I were stedfast as thou art—", "Not in lone splendour hung aloft the night", "And watching, with eternal lids apart,", "Like nature's patient, sleepless Eremite."] },
+  { id: "poem:en:121", title: "When I Have Fears That I May Cease to Be", author: "John Keats", lines: ["When I have fears that I may cease to be", "Before my pen has glean'd my teeming brain,", "Before high-piled books, in charactery,", "Hold like rich garners the full ripen'd grain."] },
+  { id: "poem:en:122", title: "La Belle Dame sans Merci", author: "John Keats", lines: ["O what can ail thee, knight-at-arms,", "Alone and palely loitering?", "The sedge has withered from the lake,", "And no birds sing."] },
+  { id: "poem:en:123", title: "On the Grasshopper and Cricket", author: "John Keats", lines: ["The poetry of earth is never dead:", "When all the birds are faint with the hot sun,", "And hide in cooling trees, a voice will run", "From hedge to hedge about the new-mown mead."] },
+  { id: "poem:en:124", title: "Music, When Soft Voices Die", author: "Percy Bysshe Shelley", lines: ["Music, when soft voices die,", "Vibrates in the memory—", "Odours, when sweet violets sicken,", "Live within the sense they quicken."] },
+  { id: "poem:en:125", title: "Love's Philosophy", author: "Percy Bysshe Shelley", lines: ["The fountains mingle with the river", "And the rivers with the Ocean,", "The winds of Heaven mix for ever", "With a sweet emotion."] },
+  { id: "poem:en:126", title: "So, We'll Go No More a Roving", author: "Lord Byron", lines: ["So, we'll go no more a roving", "So late into the night,", "Though the heart be still as loving,", "And the moon be still as bright."] },
+  { id: "poem:en:127", title: "Childe Harold's Pilgrimage", author: "Lord Byron", lines: ["There is a pleasure in the pathless woods,", "There is a rapture on the lonely shore,", "There is society where none intrudes,", "By the deep Sea, and music in its roar."] },
+  { id: "poem:en:128", title: "The Destruction of Sennacherib", author: "Lord Byron", lines: ["The Assyrian came down like the wolf on the fold,", "And his cohorts were gleaming in purple and gold."] },
+  { id: "poem:en:129", title: "The Rime of the Ancient Mariner", author: "Samuel Taylor Coleridge", lines: ["Water, water, every where,", "And all the boards did shrink;", "Water, water, every where,", "Nor any drop to drink."] },
+  { id: "poem:en:130", title: "The Eagle", author: "Alfred, Lord Tennyson", lines: ["He clasps the crag with crooked hands;", "Close to the sun in lonely lands,", "Ring'd with the azure world, he stands."] },
+  { id: "poem:en:131", title: "In Memoriam A.H.H.", author: "Alfred, Lord Tennyson", lines: ["I hold it true, whate'er befall;", "I feel it, when I sorrow most;", "'Tis better to have loved and lost", "Than never to have loved at all."] },
+  { id: "poem:en:132", title: "Ring Out, Wild Bells", author: "Alfred, Lord Tennyson", lines: ["Ring out, wild bells, to the wild sky,", "The flying cloud, the frosty light:", "The year is dying in the night;", "Ring out, wild bells, and let him die."] },
+  { id: "poem:en:133", title: "Break, Break, Break", author: "Alfred, Lord Tennyson", lines: ["Break, break, break,", "On thy cold gray stones, O Sea!", "And I would that my tongue could utter", "The thoughts that arise in me."] },
+  { id: "poem:en:134", title: "The Charge of the Light Brigade", author: "Alfred, Lord Tennyson", lines: ["Half a league, half a league,", "Half a league onward,", "All in the valley of Death", "Rode the six hundred."] },
+  { id: "poem:en:135", title: "The Lady of Shalott", author: "Alfred, Lord Tennyson", lines: ["On either side the river lie", "Long fields of barley and of rye,", "That clothe the wold and meet the sky;", "And thro' the field the road runs by", "To many-tower'd Camelot."] },
+  { id: "poem:en:136", title: "Ulysses (closing lines)", author: "Alfred, Lord Tennyson", lines: ["One equal temper of heroic hearts,", "Made weak by time and fate, but strong in will", "To strive, to seek, to find, and not to yield."] },
+  { id: "poem:en:137", title: "Sweet and Low", author: "Alfred, Lord Tennyson", lines: ["Sweet and low, sweet and low,", "Wind of the western sea,", "Low, low, breathe and blow,", "Wind of the western sea!"] },
+  { id: "poem:en:138", title: "Tears, Idle Tears", author: "Alfred, Lord Tennyson", lines: ["Tears, idle tears, I know not what they mean,", "Tears from the depth of some divine despair", "Rise in the heart, and gather to the eyes,", "In looking on the happy autumn-fields,", "And thinking of the days that are no more."] },
+  { id: "poem:en:139", title: "Pippa's Song", author: "Robert Browning", lines: ["The lark's on the wing;", "The snail's on the thorn:", "God's in His heaven—", "All's right with the world!"] },
+  { id: "poem:en:140", title: "Home-Thoughts, from Abroad", author: "Robert Browning", lines: ["Oh, to be in England", "Now that April's there,", "And whoever wakes in England", "Sees, some morning, unaware."] },
+  { id: "poem:en:141", title: "Andrea del Sarto", author: "Robert Browning", lines: ["Ah, but a man's reach should exceed his grasp,", "Or what's a heaven for?"] },
+  { id: "poem:en:142", title: "Rabbi Ben Ezra", author: "Robert Browning", lines: ["Grow old along with me!", "The best is yet to be,", "The last of life, for which the first was made."] },
+  { id: "poem:en:143", title: "Aurora Leigh", author: "Elizabeth Barrett Browning", lines: ["Earth's crammed with heaven,", "And every common bush afire with God;", "But only he who sees, takes off his shoes."] },
+  { id: "poem:en:144", title: "Sonnet 14 (Sonnets from the Portuguese)", author: "Elizabeth Barrett Browning", lines: ["If thou must love me, let it be for nought", "Except for love's sake only."] },
+  { id: "poem:en:145", title: "A Dream Within a Dream", author: "Edgar Allan Poe", lines: ["Take this kiss upon the brow!", "And, in parting from you now,", "Thus much let me avow—", "You are not wrong, who deem", "That my days have been a dream."] },
+  { id: "poem:en:146", title: "Alone", author: "Edgar Allan Poe", lines: ["From childhood's hour I have not been", "As others were—I have not seen", "As others saw—I could not bring", "My passions from a common spring."] },
+  { id: "poem:en:147", title: "To Helen", author: "Edgar Allan Poe", lines: ["Thy Naiad airs have brought me home", "To the glory that was Greece,", "And the grandeur that was Rome."] },
+  { id: "poem:en:148", title: "The Bells", author: "Edgar Allan Poe", lines: ["Hear the sledges with the bells—", "Silver bells!", "What a world of merriment their melody foretells!"] },
+  { id: "poem:en:149", title: "The Arrow and the Song", author: "Henry Wadsworth Longfellow", lines: ["I shot an arrow into the air,", "It fell to earth, I knew not where;", "For, so swiftly it flew, the sight", "Could not follow it in its flight."] },
+  { id: "poem:en:150", title: "The Day Is Done", author: "Henry Wadsworth Longfellow", lines: ["The day is done, and the darkness", "Falls from the wings of Night,", "As a feather is wafted downward", "From an eagle in his flight."] },
+  { id: "poem:en:151", title: "The Rainy Day", author: "Henry Wadsworth Longfellow", lines: ["Be still, sad heart! and cease repining;", "Behind the clouds is the sun still shining;", "Thy fate is the common fate of all,", "Into each life some rain must fall."] },
+  { id: "poem:en:152", title: "Paul Revere's Ride", author: "Henry Wadsworth Longfellow", lines: ["Listen, my children, and you shall hear", "Of the midnight ride of Paul Revere,", "On the eighteenth of April, in Seventy-five."] },
+  { id: "poem:en:153", title: "The Tide Rises, the Tide Falls", author: "Henry Wadsworth Longfellow", lines: ["The tide rises, the tide falls,", "The twilight darkens, the curlew calls;", "Along the sea-sands damp and brown", "The traveller hastens toward the town."] },
+  { id: "poem:en:154", title: "The Village Blacksmith", author: "Henry Wadsworth Longfellow", lines: ["Under a spreading chestnut-tree", "The village smithy stands;", "The smith, a mighty man is he,", "With large and sinewy hands."] },
+  { id: "poem:en:155", title: "Evangeline", author: "Henry Wadsworth Longfellow", lines: ["This is the forest primeval. The murmuring pines and the hemlocks,", "Bearded with moss, and in garments green, indistinct in the twilight."] },
+  { id: "poem:en:156", title: "The Ballad of East and West", author: "Rudyard Kipling", lines: ["Oh, East is East, and West is West, and never the twain shall meet,", "Till Earth and Sky stand presently at God's great Judgment Seat."] },
+  { id: "poem:en:157", title: "The Way through the Woods", author: "Rudyard Kipling", lines: ["They shut the road through the woods", "Seventy years ago.", "Weather and rain have undone it again,", "And now you would never know", "There was once a road through the woods."] },
+  { id: "poem:en:158", title: "When I Was One-and-Twenty", author: "A. E. Housman", lines: ["When I was one-and-twenty", "I heard a wise man say,", "'Give crowns and pounds and guineas", "But not your heart away.'"] },
+  { id: "poem:en:159", title: "To an Athlete Dying Young", author: "A. E. Housman", lines: ["The time you won your town the race", "We chaired you through the market-place;", "Man and boy stood cheering by,", "And home we brought you shoulder-high."] },
+  { id: "poem:en:160", title: "Into my heart an air that kills", author: "A. E. Housman", lines: ["Into my heart an air that kills", "From yon far country blows:", "What are those blue remembered hills,", "What spires, what farms are those?"] },
+  { id: "poem:en:161", title: "The Second Coming", author: "W. B. Yeats", lines: ["Turning and turning in the widening gyre", "The falcon cannot hear the falconer;", "Things fall apart; the centre cannot hold;", "Mere anarchy is loosed upon the world."] },
+  { id: "poem:en:162", title: "Down by the Salley Gardens", author: "W. B. Yeats", lines: ["Down by the salley gardens my love and I did meet;", "She passed the salley gardens with little snow-white feet."] },
+  { id: "poem:en:163", title: "The Song of Wandering Aengus", author: "W. B. Yeats", lines: ["And walk among long dappled grass,", "And pluck till time and times are done,", "The silver apples of the moon,", "The golden apples of the sun."] },
+  { id: "poem:en:164", title: "An Irish Airman Foresees His Death", author: "W. B. Yeats", lines: ["I know that I shall meet my fate", "Somewhere among the clouds above;", "Those that I fight I do not hate,", "Those that I guard I do not love."] },
+  { id: "poem:en:165", title: "The Wild Swans at Coole", author: "W. B. Yeats", lines: ["The trees are in their autumn beauty,", "The woodland paths are dry,", "Under the October twilight the water", "Mirrors a still sky."] },
+  { id: "poem:en:166", title: "Pied Beauty", author: "Gerard Manley Hopkins", lines: ["Glory be to God for dappled things—", "For skies of couple-colour as a brinded cow;", "For rose-moles all in stipple upon trout that swim."] },
+  { id: "poem:en:167", title: "God's Grandeur", author: "Gerard Manley Hopkins", lines: ["The world is charged with the grandeur of God.", "It will flame out, like shining from shook foil;", "It gathers to a greatness, like the ooze of oil", "Crushed."] },
+  { id: "poem:en:168", title: "Spring and Fall", author: "Gerard Manley Hopkins", lines: ["Margaret, are you grieving", "Over Goldengrove unleaving?", "Leaves, like the things of man, you", "With your fresh thoughts care for, can you?"] },
+  { id: "poem:en:169", title: "The Darkling Thrush", author: "Thomas Hardy", lines: ["I leant upon a coppice gate", "When Frost was spectre-grey,", "And Winter's dregs made desolate", "The weakening eye of day."] },
+  { id: "poem:en:170", title: "The Oxen", author: "Thomas Hardy", lines: ["Christmas Eve, and twelve of the clock.", "'Now they are all on their knees,'", "An elder said as we sat in a flock", "By the embers in hearthside ease."] },
+  { id: "poem:en:171", title: "Auld Lang Syne", author: "Robert Burns", lines: ["Should auld acquaintance be forgot,", "And never brought to mind?", "Should auld acquaintance be forgot,", "And auld lang syne!"] },
+  { id: "poem:en:172", title: "To a Mouse", author: "Robert Burns", lines: ["The best laid schemes o' Mice an' Men", "Gang aft agley,", "An' lea'e us nought but grief an' pain,", "For promis'd joy!"] },
+  { id: "poem:en:173", title: "My Heart's in the Highlands", author: "Robert Burns", lines: ["My heart's in the Highlands, my heart is not here;", "My heart's in the Highlands, a-chasing the deer."] },
+  { id: "poem:en:174", title: "Song: To Celia", author: "Ben Jonson", lines: ["Drink to me only with thine eyes,", "And I will pledge with mine;", "Or leave a kiss but in the cup,", "And I'll not look for wine."] },
+  { id: "poem:en:175", title: "Death, Be Not Proud", author: "John Donne", lines: ["Death, be not proud, though some have called thee", "Mighty and dreadful, for thou art not so."] },
+  { id: "poem:en:176", title: "Song (Go and catch a falling star)", author: "John Donne", lines: ["Go and catch a falling star,", "Get with child a mandrake root,", "Tell me where all past years are,", "Or who cleft the devil's foot."] },
+  { id: "poem:en:177", title: "The Sun Rising", author: "John Donne", lines: ["Busy old fool, unruly sun,", "Why dost thou thus,", "Through windows, and through curtains call on us?"] },
+  { id: "poem:en:178", title: "The Passionate Shepherd to His Love", author: "Christopher Marlowe", lines: ["Come live with me and be my love,", "And we will all the pleasures prove,", "That valleys, groves, hills, and fields,", "Woods, or steepy mountain yields."] },
+  { id: "poem:en:179", title: "Doctor Faustus", author: "Christopher Marlowe", lines: ["Was this the face that launch'd a thousand ships,", "And burnt the topless towers of Ilium?"] },
+  { id: "poem:en:180", title: "Paradise Lost", author: "John Milton", lines: ["The mind is its own place, and in itself", "Can make a Heav'n of Hell, a Hell of Heav'n."] },
+  { id: "poem:en:181", title: "Love (III)", author: "George Herbert", lines: ["Love bade me welcome: yet my soul drew back,", "Guilty of dust and sin.", "But quick-eyed Love, observing me grow slack", "From my first entrance in."] },
+  { id: "poem:en:182", title: "Virtue", author: "George Herbert", lines: ["Sweet day, so cool, so calm, so bright,", "The bridal of the earth and sky:", "The dew shall weep thy fall to-night;", "For thou must die."] },
+  { id: "poem:en:183", title: "To Althea, from Prison", author: "Richard Lovelace", lines: ["Stone walls do not a prison make,", "Nor iron bars a cage;", "Minds innocent and quiet take", "That for an hermitage."] },
+  { id: "poem:en:184", title: "The World", author: "Henry Vaughan", lines: ["I saw Eternity the other night,", "Like a great ring of pure and endless light,", "All calm, as it was bright."] },
+  { id: "poem:en:185", title: "The Garden", author: "Andrew Marvell", lines: ["Annihilating all that's made", "To a green thought in a green shade."] },
+  { id: "poem:en:186", title: "To My Dear and Loving Husband", author: "Anne Bradstreet", lines: ["If ever two were one, then surely we.", "If ever man were loved by wife, then thee."] },
+  { id: "poem:en:187", title: "An Essay on Criticism", author: "Alexander Pope", lines: ["A little learning is a dang'rous thing;", "Drink deep, or taste not the Pierian spring."] },
+  { id: "poem:en:188", title: "An Essay on Man", author: "Alexander Pope", lines: ["Hope springs eternal in the human breast:", "Man never is, but always to be blest."] },
+  { id: "poem:en:189", title: "Light Shining out of Darkness", author: "William Cowper", lines: ["God moves in a mysterious way", "His wonders to perform;", "He plants his footsteps in the sea,", "And rides upon the storm."] },
+  { id: "poem:en:190", title: "No Coward Soul Is Mine", author: "Emily Brontë", lines: ["No coward soul is mine,", "No trembler in the world's storm-troubled sphere:", "I see Heaven's glories shine,", "And faith shines equal, arming me from fear."] },
+  { id: "poem:en:191", title: "Dover Beach", author: "Matthew Arnold", lines: ["The sea is calm to-night.", "The tide is full, the moon lies fair", "Upon the straits; on the French coast the light", "Gleams and is gone."] },
+  { id: "poem:en:192", title: "The Lay of the Last Minstrel", author: "Walter Scott", lines: ["Breathes there the man with soul so dead,", "Who never to himself hath said,", "This is my own, my native land!"] },
+  { id: "poem:en:193", title: "Marmion", author: "Walter Scott", lines: ["Oh, what a tangled web we weave,", "When first we practise to deceive!"] },
+  { id: "poem:en:194", title: "I Remember, I Remember", author: "Thomas Hood", lines: ["I remember, I remember,", "The house where I was born,", "The little window where the sun", "Came peeping in at morn."] },
+  { id: "poem:en:195", title: "The Last Rose of Summer", author: "Thomas Moore", lines: ["'Tis the last rose of summer,", "Left blooming alone;", "All her lovely companions", "Are faded and gone."] },
+  { id: "poem:en:196", title: "I Am", author: "John Clare", lines: ["I am—yet what I am none cares or knows;", "My friends forsake me like a memory lost."] },
+  { id: "poem:en:197", title: "Dying Speech of an Old Philosopher", author: "Walter Savage Landor", lines: ["I strove with none, for none was worth my strife:", "Nature I loved, and next to Nature, Art:", "I warm'd both hands before the fire of Life;", "It sinks, and I am ready to depart."] },
+  { id: "poem:en:198", title: "Abou Ben Adhem", author: "Leigh Hunt", lines: ["Abou Ben Adhem (may his tribe increase!)", "Awoke one night from a deep dream of peace,", "And saw, within the moonlight in his room,", "Making it rich, and like a lily in bloom,", "An angel writing in a book of gold."] },
+  { id: "poem:en:199", title: "Jenny Kiss'd Me", author: "Leigh Hunt", lines: ["Jenny kiss'd me when we met,", "Jumping from the chair she sat in;", "Time, you thief, who love to get", "Sweets into your list, put that in!"] },
+  { id: "poem:en:200", title: "Concord Hymn", author: "Ralph Waldo Emerson", lines: ["By the rude bridge that arched the flood,", "Their flag to April's breeze unfurled,", "Here once the embattled farmers stood,", "And fired the shot heard round the world."] },
+  { id: "poem:en:201", title: "Fable", author: "Ralph Waldo Emerson", lines: ["The mountain and the squirrel", "Had a quarrel;", "And the former called the latter 'Little Prig.'"] },
+  { id: "poem:en:202", title: "Maud Muller", author: "John Greenleaf Whittier", lines: ["For of all sad words of tongue or pen,", "The saddest are these: 'It might have been!'"] },
+  { id: "poem:en:203", title: "Jabberwocky", author: "Lewis Carroll", lines: ["'Twas brillig, and the slithy toves", "Did gyre and gimble in the wabe:", "All mimsy were the borogoves,", "And the mome raths outgrabe."] },
+  { id: "poem:en:204", title: "The Owl and the Pussy-cat", author: "Edward Lear", lines: ["The Owl and the Pussy-cat went to sea", "In a beautiful pea-green boat,", "They took some honey, and plenty of money,", "Wrapped up in a five-pound note."] },
+  { id: "poem:en:205", title: "Requiem", author: "Robert Louis Stevenson", lines: ["Under the wide and starry sky,", "Dig the grave and let me lie.", "Glad did I live and gladly die,", "And I laid me down with a will."] },
+  { id: "poem:en:206", title: "My Shadow", author: "Robert Louis Stevenson", lines: ["I have a little shadow that goes in and out with me,", "And what can be the use of him is more than I can see."] },
+  { id: "poem:en:207", title: "Bed in Summer", author: "Robert Louis Stevenson", lines: ["In winter I get up at night", "And dress by yellow candle-light.", "In summer, quite the other way,", "I have to go to bed by day."] },
+  { id: "poem:en:208", title: "Happy Thought", author: "Robert Louis Stevenson", lines: ["The world is so full of a number of things,", "I'm sure we should all be as happy as kings."] },
+  { id: "poem:en:209", title: "The Ballad of Reading Gaol", author: "Oscar Wilde", lines: ["Yet each man kills the thing he loves,", "By each let this be heard,", "Some do it with a bitter look,", "Some with a flattering word."] },
+  { id: "poem:en:210", title: "The Garden of Proserpine", author: "Algernon Charles Swinburne", lines: ["That no life lives for ever;", "That dead men rise up never;", "That even the weariest river", "Winds somewhere safe to sea."] },
+  { id: "poem:en:211", title: "They Are Not Long", author: "Ernest Dowson", lines: ["They are not long, the weeping and the laughter,", "Love and desire and hate:", "I think they have no portion in us after", "We pass the gate."] },
+  { id: "poem:en:212", title: "Solitude", author: "Ella Wheeler Wilcox", lines: ["Laugh, and the world laughs with you;", "Weep, and you weep alone;", "For the sad old earth must borrow its mirth,", "But has trouble enough of its own."] },
+  { id: "poem:en:213", title: "Richard Cory", author: "Edwin Arlington Robinson", lines: ["Whenever Richard Cory went down town,", "We people on the pavement looked at him:", "He was a gentleman from sole to crown,", "Clean favored, and imperially slim."] },
+  { id: "poem:en:214", title: "Sympathy", author: "Paul Laurence Dunbar", lines: ["I know why the caged bird sings, ah me,", "When his wing is bruised and his bosom sore."] },
+  { id: "poem:en:215", title: "We Wear the Mask", author: "Paul Laurence Dunbar", lines: ["We wear the mask that grins and lies,", "It hides our cheeks and shades our eyes,—", "This debt we pay to human guile."] },
+  { id: "poem:en:216", title: "In the Desert", author: "Stephen Crane", lines: ["In the desert", "I saw a creature, naked, bestial,", "Who, squatting upon the ground,", "Held his heart in his hands,", "And ate of it."] },
+  { id: "poem:en:217", title: "A Man Said to the Universe", author: "Stephen Crane", lines: ["A man said to the universe:", "'Sir, I exist!'", "'However,' replied the universe,", "'The fact has not created in me", "A sense of obligation.'"] },
+  { id: "poem:en:218", title: "Barter", author: "Sara Teasdale", lines: ["Life has loveliness to sell,", "All beautiful and splendid things,", "Blue waves whitened on a cliff,", "Soaring fire that sways and sings."] },
+  { id: "poem:en:219", title: "Stars", author: "Sara Teasdale", lines: ["Alone in the night", "On a dark hill", "With pines around me", "Spicy and still."] },
+  { id: "poem:en:220", title: "Trees", author: "Joyce Kilmer", lines: ["I think that I shall never see", "A poem lovely as a tree."] },
+  { id: "poem:en:221", title: "First Fig", author: "Edna St. Vincent Millay", lines: ["My candle burns at both ends;", "It will not last the night;", "But ah, my foes, and oh, my friends—", "It gives a lovely light!"] },
+  { id: "poem:en:222", title: "Second Fig", author: "Edna St. Vincent Millay", lines: ["Safe upon the solid rock the ugly houses stand:", "Come and see my shining palace built upon the sand!"] },
+  { id: "poem:en:223", title: "Thirteen Ways of Looking at a Blackbird", author: "Wallace Stevens", lines: ["Among twenty snowy mountains,", "The only moving thing", "Was the eye of the blackbird."] },
+  { id: "poem:en:224", title: "Leisure", author: "W. H. Davies", lines: ["What is this life if, full of care,", "We have no time to stand and stare."] },
+  { id: "poem:en:225", title: "Adlestrop", author: "Edward Thomas", lines: ["Yes. I remember Adlestrop—", "The name, because one afternoon", "Of heat the express-train drew up there", "Unwontedly. It was late June."] },
+  { id: "poem:en:226", title: "Anthem for Doomed Youth", author: "Wilfred Owen", lines: ["What passing-bells for these who die as cattle?", "Only the monstrous anger of the guns."] },
+  { id: "poem:en:227", title: "In Flanders Fields", author: "John McCrae", lines: ["In Flanders fields the poppies blow", "Between the crosses, row on row,", "That mark our place; and in the sky", "The larks, still bravely singing, fly", "Scarce heard amid the guns below."] },
+  { id: "poem:en:228", title: "The Soldier", author: "Rupert Brooke", lines: ["If I should die, think only this of me:", "That there's some corner of a foreign field", "That is for ever England."] },
+  { id: "poem:en:229", title: "For the Fallen", author: "Laurence Binyon", lines: ["They shall grow not old, as we that are left grow old:", "Age shall not weary them, nor the years condemn."] },
+  { id: "poem:en:230", title: "Gitanjali 35", author: "Rabindranath Tagore", lines: ["Where the mind is without fear and the head is held high;", "Where knowledge is free."] },
+  { id: "poem:en:231", title: "Stray Birds 82", author: "Rabindranath Tagore", lines: ["Let life be beautiful like summer flowers", "and death like autumn leaves."] },
+  { id: "poem:en:232", title: "On Children (The Prophet)", author: "Kahlil Gibran", lines: ["Your children are not your children.", "They are the sons and daughters of Life's longing for itself.", "They come through you but not from you."] },
+  { id: "poem:en:233", title: "Rubáiyát of Omar Khayyám (LI)", author: "Omar Khayyám, tr. Edward FitzGerald", lines: ["The Moving Finger writes; and, having writ,", "Moves on: nor all your Piety nor Wit", "Shall lure it back to cancel half a Line,", "Nor all your Tears wash out a Word of it."] },
+  { id: "poem:en:234", title: "Rubáiyát of Omar Khayyám (XII)", author: "Omar Khayyám, tr. Edward FitzGerald", lines: ["A Book of Verses underneath the Bough,", "A Jug of Wine, a Loaf of Bread—and Thou", "Beside me singing in the Wilderness—", "Oh, Wilderness were Paradise enow!"] },
 ];
 
 /* ---------- History: on this day, keyed by MM-DD ---------- */
@@ -939,6 +1341,1111 @@ const HISTORY = {
   "12-31": { year: 1879, zh: "爱迪生在门洛帕克首次公开演示白炽灯，实验室与街道被电灯照亮，迎接新年。", en: "Edison gives the first public demonstration of his incandescent light at Menlo Park, lighting up the laboratory to greet the new year." },
 };
 
+/* More events per date, drawn after HISTORY's own entry for the day.
+   Each entry keeps a permanent id (history:MM-DD:n, n ≥ 2); append new
+   entries with the next n, never renumber. HISTORY itself stays keyed
+   by date because its keys are the frozen random-day deck ids. */
+const HISTORY_MORE = {
+  "01-01": [
+    { id: "history:01-01:2", year: 1912, zh: "中华民国在南京成立，孙中山就任临时大总统，中国进入共和政体的新阶段。", en: "The Republic of China is founded in Nanjing, with Sun Yat-sen taking office as provisional president, marking a new chapter in China's republican history." },
+  ],
+  "01-02": [
+    { id: "history:01-02:2", year: 1492, zh: "格拉纳达向天主教双王投降，伊比利亚半岛上最后一个穆斯林王国就此终结。", en: "Granada surrenders to Ferdinand and Isabella, ending the last Muslim kingdom on the Iberian Peninsula." },
+  ],
+  "01-03": [
+    { id: "history:01-03:2", year: 1892, zh: "托尔金出生于奥兰治自由邦的布隆方丹（今南非），后来写出《霍比特人》和《魔戒》。", en: "J. R. R. Tolkien is born in Bloemfontein, Orange Free State (now South Africa); he will write The Hobbit and The Lord of the Rings." },
+  ],
+  "01-04": [
+    { id: "history:01-04:2", year: 1958, zh: "人类第一颗人造卫星斯普特尼克一号在绕地球飞行三个月后坠入大气层烧毁。", en: "Sputnik 1, the first artificial satellite, falls back into the atmosphere and burns up after three months in orbit." },
+  ],
+  "01-05": [
+    { id: "history:01-05:2", year: 1914, zh: "福特公司宣布将工人日薪提高到 5 美元，几乎是当时行业水平的两倍。", en: "Ford announces a $5 daily wage for its workers, roughly double the going rate in the industry." },
+  ],
+  "01-06": [
+    { id: "history:01-06:2", year: 1884, zh: "遗传学奠基人门德尔在布尔诺逝世。他的豌豆杂交研究长期未获广泛重视，直到1900年才被重新发现并受到关注。", en: "Gregor Mendel, a founder of genetics, dies in Brno. His pea experiments receive little widespread attention until their rediscovery in 1900." },
+  ],
+  "01-07": [
+    { id: "history:01-07:2", year: 1927, zh: "伦敦与纽约之间开通首个商用跨大西洋无线电话服务，三分钟通话收费 75 美元。", en: "Commercial transatlantic radiotelephone service opens between London and New York, at $75 for three minutes." },
+  ],
+  "01-08": [
+    { id: "history:01-08:2", year: 1642, zh: "伽利略在佛罗伦萨附近的阿切特里去世，生命最后几年他一直处于软禁之中。", en: "Galileo Galilei dies at Arcetri near Florence, having spent his final years under house arrest." },
+  ],
+  "01-09": [
+    { id: "history:01-09:2", year: 1793, zh: "法国人布朗夏尔在费城乘充氢气球升空，完成美国首次载人自由气球飞行，华盛顿亲临观看。", en: "Jean-Pierre Blanchard makes the first untethered manned balloon flight in the United States, using a hydrogen-filled balloon in Philadelphia as George Washington watches." },
+  ],
+  "01-10": [
+    { id: "history:01-10:2", year: 1920, zh: "《凡尔赛和约》生效，国际联盟成立，这是首个以促进国际合作与和平安全为宗旨的政府间组织。", en: "The Treaty of Versailles takes effect and the League of Nations is established, the first intergovernmental organization devoted to international cooperation, peace and security." },
+  ],
+  "01-11": [
+    { id: "history:01-11:2", year: 1787, zh: "威廉·赫歇尔发现天王星的两颗卫星，后来被命名为泰坦尼亚和奥伯龙。", en: "William Herschel discovers two moons of Uranus, later named Titania and Oberon." },
+  ],
+  "01-12": [
+    { id: "history:01-12:2", year: 1876, zh: "美国作家杰克·伦敦出生于旧金山，后来写出《野性的呼唤》。", en: "American writer Jack London is born in San Francisco; he will later write The Call of the Wild." },
+  ],
+  "01-13": [
+    { id: "history:01-13:2", year: 1910, zh: "纽约大都会歌剧院的演出通过无线电向公众播出，男高音卡鲁索的歌声成为最早的公共广播之一。", en: "A performance at New York's Metropolitan Opera, featuring tenor Enrico Caruso, is among the first public radio broadcasts." },
+  ],
+  "01-14": [
+    { id: "history:01-14:2", year: 1784, zh: "美国邦联国会批准结束美国独立战争的《巴黎条约》，该条约于同年5月12日正式生效。", en: "The U.S. Congress of the Confederation ratifies the Treaty of Paris ending the American Revolutionary War; the treaty enters into force on May 12." },
+  ],
+  "01-15": [
+    { id: "history:01-15:2", year: 1759, zh: "大英博物馆在伦敦对公众开放，免费向「所有勤学好奇之人」开放。", en: "The British Museum opens to the public in London, free to 'all studious and curious persons'." },
+  ],
+  "01-16": [
+    { id: "history:01-16:2", year: 1605, zh: "塞万提斯的《堂吉诃德》第一部在马德里出版，常被视为第一部现代小说。", en: "The first part of Cervantes's Don Quixote is published in Madrid; it is often called the first modern novel." },
+  ],
+  "01-17": [
+    { id: "history:01-17:2", year: 1773, zh: "库克船长的「决心号」成为第一艘驶入南极圈的船只。", en: "Captain James Cook's ship Resolution becomes the first known vessel to cross the Antarctic Circle." },
+  ],
+  "01-18": [
+    { id: "history:01-18:2", year: 1871, zh: "德意志帝国在凡尔赛宫镜厅宣告成立，普鲁士国王威廉一世被宣布为德意志皇帝。", en: "The German Empire is proclaimed in the Hall of Mirrors at Versailles, with Wilhelm I of Prussia as emperor." },
+  ],
+  "01-19": [
+    { id: "history:01-19:2", year: 1736, zh: "瓦特出生于苏格兰格里诺克（旧历1月19日，公历1月30日），他改良的蒸汽机后来推动了工业革命。", en: "James Watt is born in Greenock, Scotland (January 19 Old Style, January 30 Gregorian); his improved steam engine will help drive the Industrial Revolution." },
+  ],
+  "01-20": [
+    { id: "history:01-20:2", year: 1265, zh: "西蒙·德·孟福尔召集的议会在威斯敏斯特开幕，首次邀请城镇代表参加，被视为英国下议院的雏形。", en: "Simon de Montfort's parliament meets at Westminster, the first to summon town representatives: an early ancestor of the House of Commons." },
+  ],
+  "01-21": [
+    { id: "history:01-21:2", year: 1954, zh: "世界上第一艘核动力潜艇「鹦鹉螺号」在美国下水。", en: "USS Nautilus, the world's first nuclear-powered submarine, is launched in Connecticut." },
+  ],
+  "01-22": [
+    { id: "history:01-22:2", year: 1788, zh: "英国诗人拜伦出生于伦敦，他后来成为浪漫主义运动的代表人物。", en: "The poet Lord Byron is born in London; he will become a leading figure of the Romantic movement." },
+  ],
+  "01-23": [
+    { id: "history:01-23:2", year: 1556, zh: "陕西华县一带发生大地震（按儒略历）。《明史》载“压死八十三万有奇”，现代研究认为直接遇难人数要少得多。", en: "A great earthquake strikes Huaxian, Shaanxi (Julian calendar date). The Ming History records over 830,000 dead; modern studies put direct deaths far lower." },
+  ],
+  "01-24": [
+    { id: "history:01-24:2", year: 1984, zh: "苹果公司的第一台 Macintosh 电脑开始发售，推动鼠标和图形界面在个人电脑上的普及。", en: "Apple's first Macintosh goes on sale, helping popularize the mouse and graphical interface on personal computers." },
+  ],
+  "01-25": [
+    { id: "history:01-25:2", year: 1924, zh: "法国霞慕尼国际冬季运动周开幕，这项赛事于1926年被国际奥委会正式追认为第一届冬奥会。", en: "International Winter Sports Week opens in Chamonix, France; in 1926 the IOC recognizes it as the first Winter Olympic Games." },
+  ],
+  "01-26": [
+    { id: "history:01-26:2", year: 1950, zh: "《印度宪法》生效，印度成为共和国，这一天后来定为印度共和国日。", en: "India's constitution takes effect and the country becomes a republic; the day is now celebrated as Republic Day." },
+  ],
+  "01-27": [
+    { id: "history:01-27:2", year: 1756, zh: "莫扎特出生于萨尔茨堡，五岁就开始作曲。", en: "Wolfgang Amadeus Mozart is born in Salzburg; he will be composing by the age of five." },
+  ],
+  "01-28": [
+    { id: "history:01-28:2", year: 1813, zh: "简·奥斯汀的《傲慢与偏见》在伦敦出版，出版时没有署作者真名。", en: "Jane Austen's Pride and Prejudice is published in London, without her name on the title page." },
+  ],
+  "01-29": [
+    { id: "history:01-29:2", year: 1845, zh: "爱伦·坡的诗《乌鸦》在纽约《晚镜报》上发表，几乎一夜成名。", en: "Edgar Allan Poe's poem The Raven appears in the New York Evening Mirror and makes him famous almost overnight." },
+  ],
+  "01-30": [
+    { id: "history:01-30:2", year: 1649, zh: "英格兰国王查理一世在伦敦白厅外被处决，英格兰随后建立共和国，直至1660年王政复辟。", en: "King Charles I of England is executed outside Whitehall in London; England subsequently becomes a republic until the restoration of the monarchy in 1660." },
+  ],
+  "01-31": [
+    { id: "history:01-31:2", year: 1797, zh: "奥地利作曲家舒伯特出生于维也纳，他在 31 年的短暂一生中写下六百多首艺术歌曲。", en: "Franz Schubert is born in Vienna; in a life of only 31 years he will write more than 600 songs." },
+  ],
+  "02-01": [
+    { id: "history:02-01:2", year: 2003, zh: "哥伦比亚号航天飞机返回地球时在得克萨斯州上空解体，七名宇航员全部遇难。", en: "The space shuttle Columbia breaks apart over Texas while returning to Earth, killing all seven astronauts aboard." },
+  ],
+  "02-02": [
+    { id: "history:02-02:2", year: 1922, zh: "乔伊斯的小说《尤利西斯》在巴黎出版，这一天正是他的 40 岁生日。", en: "James Joyce's novel Ulysses is published in Paris, on the author's fortieth birthday." },
+  ],
+  "02-03": [
+    { id: "history:02-03:2", year: 1809, zh: "德国作曲家门德尔松出生于汉堡，《仲夏夜之梦》中的《婚礼进行曲》出自他手。", en: "Felix Mendelssohn is born in Hamburg; his Wedding March from A Midsummer Night's Dream is still played at weddings." },
+  ],
+  "02-04": [
+    { id: "history:02-04:2", year: 1789, zh: "乔治·华盛顿被选举人团全票选为美国第一任总统，他至今仍是唯一全票当选的总统。", en: "George Washington is unanimously elected first President of the United States by the Electoral College; he remains the only president ever elected unanimously." },
+  ],
+  "02-05": [
+    { id: "history:02-05:2", year: 1919, zh: "卓别林、玛丽·璧克馥、道格拉斯·范朋克和格里菲斯共同创办联美电影公司，让演员掌握自己的作品。", en: "Chaplin, Mary Pickford, Douglas Fairbanks and D. W. Griffith found United Artists so that performers can control their own films." },
+  ],
+  "02-06": [
+    { id: "history:02-06:2", year: 1840, zh: "英国代表与毛利酋长签署《怀唐伊条约》，这一天后来成为新西兰国庆日。", en: "British representatives and Māori chiefs sign the Treaty of Waitangi; the day becomes New Zealand's national day." },
+  ],
+  "02-07": [
+    { id: "history:02-07:2", year: 1812, zh: "狄更斯出生于英格兰朴次茅斯，童年在鞋油工厂做工的经历日后反复出现在他的小说里。", en: "Charles Dickens is born in Portsmouth, England; his childhood work in a blacking factory will echo through his novels." },
+  ],
+  "02-08": [
+    { id: "history:02-08:2", year: 1834, zh: "门捷列夫出生于西伯利亚托博尔斯克，他后来编出了化学元素周期表。", en: "Dmitri Mendeleev is born in Tobolsk, Siberia; he will later devise the periodic table of the elements." },
+  ],
+  "02-09": [
+    { id: "history:02-09:2", year: 1969, zh: "波音 747 首飞成功，这架「巨无霸」让远程航空旅行走向大众。", en: "The Boeing 747 makes its first flight; the 'jumbo jet' will bring long-haul air travel to the masses." },
+  ],
+  "02-10": [
+    { id: "history:02-10:2", year: 1763, zh: "英、法、西三国签订《巴黎和约》，七年战争结束，法国失去在北美的大片领土。", en: "The Treaty of Paris ends the Seven Years' War; France cedes most of its North American territory." },
+  ],
+  "02-11": [
+    { id: "history:02-11:2", year: 1847, zh: "爱迪生出生于美国俄亥俄州米兰镇，一生拥有一千多项美国专利。", en: "Thomas Edison is born in Milan, Ohio; he will hold more than a thousand U.S. patents." },
+  ],
+  "02-12": [
+    { id: "history:02-12:2", year: 1912, zh: "隆裕太后代清帝溥仪颁布退位诏书，延续两千多年的帝制在中国结束。", en: "The Xuantong Emperor Puyi abdicates, ending more than two thousand years of imperial rule in China." },
+  ],
+  "02-13": [
+    { id: "history:02-13:2", year: 1945, zh: "盟军开始轰炸德国德累斯顿，这座有「易北河上的佛罗伦萨」之称的古城几乎被夷为平地。", en: "Allied bombers begin their raids on Dresden; the city once called 'Florence on the Elbe' is largely destroyed." },
+  ],
+  "02-14": [
+    { id: "history:02-14:2", year: 1990, zh: "旅行者一号将相机转向地球，从约60亿公里外拍下著名的「暗淡蓝点」，照片中的地球不足一个像素大小。", en: "Voyager 1 points its camera toward Earth from about six billion kilometres away, capturing the Pale Blue Dot: Earth smaller than a single pixel." },
+  ],
+  "02-15": [
+    { id: "history:02-15:2", year: 1867, zh: "约翰·施特劳斯的圆舞曲《蓝色多瑙河》在维也纳首演。", en: "Johann Strauss II's waltz The Blue Danube is first performed in Vienna." },
+  ],
+  "02-16": [
+    { id: "history:02-16:2", year: 1937, zh: "杜邦公司的华莱士·卡罗瑟斯获得多项“线性缩聚物”美国专利，这项聚酰胺研究后来促成了尼龙的商业化。", en: "Wallace Carothers of DuPont is granted US patents on linear condensation polymers; this polyamide research later led to commercial nylon." },
+  ],
+  "02-17": [
+    { id: "history:02-17:2", year: 1904, zh: "普契尼的歌剧《蝴蝶夫人》在米兰斯卡拉歌剧院首演，首演反响冷淡，修改后才大获成功。", en: "Puccini's opera Madama Butterfly premieres at La Scala in Milan; it fails at first and succeeds only after revision." },
+  ],
+  "02-18": [
+    { id: "history:02-18:2", year: 1564, zh: "米开朗基罗在罗马去世，享年 88 岁，临终前几天仍在雕刻。", en: "Michelangelo dies in Rome at 88, still carving sculpture days before his death." },
+  ],
+  "02-19": [
+    { id: "history:02-19:2", year: 1473, zh: "哥白尼出生于波兰托伦，他后来提出了日心说。", en: "Nicolaus Copernicus is born in Toruń, Poland; he will later put the Sun at the centre of the cosmos." },
+  ],
+  "02-20": [
+    { id: "history:02-20:2", year: 1872, zh: "纽约大都会艺术博物馆向公众开放。", en: "The Metropolitan Museum of Art opens to the public in New York." },
+  ],
+  "02-21": [
+    { id: "history:02-21:2", year: 1848, zh: "马克思和恩格斯的《共产党宣言》在伦敦出版。", en: "Marx and Engels's Communist Manifesto is published in London." },
+  ],
+  "02-22": [
+    { id: "history:02-22:2", year: 1857, zh: "德国物理学家赫兹出生于汉堡，他首次证实了电磁波的存在，频率单位「赫兹」即以他命名。", en: "Physicist Heinrich Hertz is born in Hamburg; he will prove that electromagnetic waves exist, and the unit of frequency bears his name." },
+  ],
+  "02-23": [
+    { id: "history:02-23:2", year: 1685, zh: "作曲家亨德尔出生于哈雷（今德国），他后来在伦敦创作清唱剧《弥赛亚》。", en: "George Frideric Handel is born in Halle (now Germany); he will later compose the oratorio Messiah in London." },
+  ],
+  "02-24": [
+    { id: "history:02-24:2", year: 1786, zh: "威廉·格林出生于德国哈瑙，他和哥哥雅各布一起收集整理了《格林童话》。", en: "Wilhelm Grimm is born in Hanau, Germany; with his brother Jacob he will collect Grimms' Fairy Tales." },
+  ],
+  "02-25": [
+    { id: "history:02-25:2", year: 1841, zh: "印象派画家雷诺阿出生于法国利摩日。", en: "Impressionist painter Pierre-Auguste Renoir is born in Limoges, France." },
+  ],
+  "02-26": [
+    { id: "history:02-26:2", year: 1802, zh: "雨果出生于法国贝桑松，后来写出《巴黎圣母院》和《悲惨世界》。", en: "Victor Hugo is born in Besançon, France; he will write The Hunchback of Notre-Dame and Les Misérables." },
+  ],
+  "02-27": [
+    { id: "history:02-27:2", year: 1807, zh: "美国诗人朗费罗出生于缅因州波特兰。", en: "American poet Henry Wadsworth Longfellow is born in Portland, Maine." },
+  ],
+  "02-28": [
+    { id: "history:02-28:2", year: 1922, zh: "英国单方面宣布结束对埃及的保护，埃及获得名义上的独立。", en: "Britain unilaterally ends its protectorate over Egypt, which gains nominal independence." },
+  ],
+  "02-29": [
+    { id: "history:02-29:2", year: 1792, zh: "意大利作曲家罗西尼在闰日出生于佩萨罗，《塞维利亚的理发师》出自他手。", en: "Gioachino Rossini is born on leap day in Pesaro; he will write The Barber of Seville." },
+  ],
+  "03-01": [
+    { id: "history:03-01:2", year: 1781, zh: "《邦联条例》获得全部十三个州批准生效，成为美国第一部宪法性文件。", en: "The Articles of Confederation take effect after ratification by all thirteen states, America's first constitution." },
+  ],
+  "03-02": [
+    { id: "history:03-02:2", year: 1836, zh: "得克萨斯宣布脱离墨西哥独立，成立得克萨斯共和国。", en: "Texas declares independence from Mexico and becomes the Republic of Texas." },
+  ],
+  "03-03": [
+    { id: "history:03-03:2", year: 1847, zh: "贝尔出生于苏格兰爱丁堡，他后来获得了电话的专利。", en: "Alexander Graham Bell is born in Edinburgh, Scotland; he will later patent the telephone." },
+  ],
+  "03-04": [
+    { id: "history:03-04:2", year: 1678, zh: "作曲家维瓦尔第出生于威尼斯，他的《四季》至今仍是最常演奏的巴洛克作品之一。", en: "Antonio Vivaldi is born in Venice; his Four Seasons remains one of the most performed Baroque works." },
+  ],
+  "03-05": [
+    { id: "history:03-05:2", year: 1770, zh: "波士顿惨案：英军向波士顿民众开枪，五人死亡，殖民地与英国的关系进一步恶化。", en: "The Boston Massacre: British soldiers fire on a crowd in Boston, killing five and deepening the rift with Britain." },
+  ],
+  "03-06": [
+    { id: "history:03-06:2", year: 1899, zh: "拜耳公司注册「阿司匹林」商标，这种药至今仍是世界上用量最大的药物之一。", en: "Bayer registers the trademark Aspirin, still one of the most widely used medicines in the world." },
+  ],
+  "03-07": [
+    { id: "history:03-07:2", year: 1274, zh: "神学家托马斯·阿奎那去世，他试图让亚里士多德哲学与基督教信仰相互调和。", en: "Theologian Thomas Aquinas dies; he sought to reconcile Aristotle's philosophy with Christian faith." },
+  ],
+  "03-08": [
+    { id: "history:03-08:2", year: 1917, zh: "彼得格勒妇女在国际妇女节举行罢工和游行（俄历2月23日，公历3月8日），揭开推翻沙皇统治的二月革命序幕。", en: "Women in Petrograd strike and march on International Women's Day (February 23 Old Style, March 8 Gregorian), sparking the February Revolution that topples the tsar." },
+  ],
+  "03-09": [
+    { id: "history:03-09:2", year: 1959, zh: "芭比娃娃在纽约美国玩具展上首次亮相。", en: "The Barbie doll makes its debut at the American Toy Fair in New York." },
+  ],
+  "03-10": [
+    { id: "history:03-10:2", year: 1831, zh: "法国国王路易-菲利普下令组建法国外籍军团。", en: "King Louis-Philippe establishes the French Foreign Legion." },
+  ],
+  "03-11": [
+    { id: "history:03-11:2", year: 2011, zh: "日本东北地区发生 9.0 级大地震，引发海啸和福岛核事故。", en: "A magnitude 9.0 earthquake strikes northeastern Japan, triggering a tsunami and the Fukushima nuclear disaster." },
+  ],
+  "03-12": [
+    { id: "history:03-12:2", year: 1925, zh: "孙中山在北京病逝，终年58岁。1979年，中国将这一天定为植树节。", en: "Sun Yat-sen dies in Beijing, aged 58. In 1979 China made the date its national Tree Planting Day." },
+  ],
+  "03-13": [
+    { id: "history:03-13:2", year: 1733, zh: "化学家普里斯特利出生于英格兰，他后来分离出了氧气。", en: "Chemist Joseph Priestley is born in England; he will later isolate oxygen." },
+  ],
+  "03-14": [
+    { id: "history:03-14:2", year: 1883, zh: "马克思在伦敦逝世，3月17日安葬于海格特公墓。", en: "Karl Marx dies in London and is buried at Highgate Cemetery on March 17." },
+  ],
+  "03-15": [
+    { id: "history:03-15:2", year: 1493, zh: "哥伦布结束第一次航行，回到西班牙帕洛斯港。", en: "Columbus returns to the Spanish port of Palos at the end of his first voyage." },
+  ],
+  "03-16": [
+    { id: "history:03-16:2", year: 1802, zh: "美国西点军校成立。", en: "The United States Military Academy at West Point is founded." },
+  ],
+  "03-17": [
+    { id: "history:03-17:2", year: 1958, zh: "美国发射先锋一号卫星，它至今仍在轨道上，是在轨时间最长的人造物体。", en: "The U.S. launches Vanguard 1; still in orbit today, it is the oldest human-made object still in orbit." },
+  ],
+  "03-18": [
+    { id: "history:03-18:2", year: 1662, zh: "帕斯卡参与创办的公共马车线路在巴黎开通，被视为世界上最早的公共交通。", en: "A public carriage service co-founded by Blaise Pascal begins in Paris, often called the first public transit." },
+  ],
+  "03-19": [
+    { id: "history:03-19:2", year: 1918, zh: "美国《标准时间法》正式成为法律，确立联邦标准时区制度，并引入夏令时。", en: "The U.S. Standard Time Act is signed into law, establishing federal standard time zones and introducing daylight saving time." },
+  ],
+  "03-20": [
+    { id: "history:03-20:2", year: 1800, zh: "伏打写信给英国皇家学会，介绍他发明的伏打电堆，这是世界上第一个电池。", en: "Alessandro Volta writes to the Royal Society describing his voltaic pile, the first electric battery." },
+  ],
+  "03-21": [
+    { id: "history:03-21:2", year: 2006, zh: "推特联合创始人杰克·多西发出第一条推文。", en: "Twitter co-founder Jack Dorsey sends the first tweet." },
+  ],
+  "03-22": [
+    { id: "history:03-22:2", year: 1832, zh: "歌德在魏玛去世，享年 82 岁，《浮士德》第二部在他去世前不久才完成。", en: "Johann Wolfgang von Goethe dies in Weimar at 82, having finished the second part of Faust shortly before." },
+  ],
+  "03-23": [
+    { id: "history:03-23:2", year: 1857, zh: "纽约一家安装了奥蒂斯客运电梯的百货商店正式开业，成为现代客运电梯发展史上的重要里程碑。", en: "A New York department store equipped with an Otis passenger elevator opens, marking a milestone in the development of modern passenger elevators." },
+  ],
+  "03-24": [
+    { id: "history:03-24:2", year: 1603, zh: "英国女王伊丽莎白一世去世，苏格兰国王詹姆斯六世继位，英格兰与苏格兰同戴一顶王冠。", en: "Queen Elizabeth I dies; James VI of Scotland succeeds her, uniting the crowns of England and Scotland." },
+  ],
+  "03-25": [
+    { id: "history:03-25:2", year: 1655, zh: "惠更斯发现土星最大的卫星土卫六（泰坦）。", en: "Christiaan Huygens discovers Titan, Saturn's largest moon." },
+  ],
+  "03-26": [
+    { id: "history:03-26:2", year: 1827, zh: "贝多芬在维也纳去世。三天后出殡，数以千计的市民沿街送行。", en: "Ludwig van Beethoven dies in Vienna; at his funeral three days later, many thousands line the streets." },
+  ],
+  "03-27": [
+    { id: "history:03-27:2", year: 1845, zh: "威廉·伦琴出生于普鲁士伦内普（今德国雷姆沙伊德），他后来发现X射线，并获得首届诺贝尔物理学奖。", en: "Wilhelm Röntgen is born in Lennep, Prussia (now Remscheid, Germany); he will discover X-rays and receive the first Nobel Prize in Physics." },
+  ],
+  "03-28": [
+    { id: "history:03-28:2", year: 1910, zh: "法国人亨利·法布尔驾驶自制的水上飞机从贝尔潟湖水面起飞，这是水上飞机首次成功飞行。", en: "Henri Fabre takes off from the Étang de Berre in France in his Hydravion, the first successful seaplane." },
+  ],
+  "03-29": [
+    { id: "history:03-29:2", year: 1867, zh: "《英属北美法案》获得英国王室御准，为加拿大联邦的建立奠定法律基础。", en: "The British North America Act receives royal assent, laying the legal foundation for the Canadian Confederation." },
+  ],
+  "03-30": [
+    { id: "history:03-30:2", year: 1853, zh: "文森特·梵高出生于荷兰津德尔特，他的绘画成就在去世后获得广泛认可。", en: "Vincent van Gogh is born in Zundert, the Netherlands; his artistic achievements will gain widespread recognition after his death." },
+  ],
+  "03-31": [
+    { id: "history:03-31:2", year: 1596, zh: "笛卡尔出生于法国，他留下了「我思故我在」这句话。", en: "René Descartes is born in France; he will leave the world 'I think, therefore I am.'" },
+  ],
+  "04-01": [
+    { id: "history:04-01:2", year: 1918, zh: "英国皇家空军成立，成为世界上第一支独立的空军。", en: "The Royal Air Force is formed in Britain, the world's first independent air force." },
+  ],
+  "04-02": [
+    { id: "history:04-02:2", year: 1792, zh: "美国国会通过《铸币法》，设立美国铸币局，确立美元为货币单位。", en: "The U.S. Coinage Act establishes the Mint and makes the dollar the national unit of money." },
+  ],
+  "04-03": [
+    { id: "history:04-03:2", year: 1860, zh: "美国驿马快信开始运营，骑手接力在十天左右把邮件从密苏里送到加利福尼亚。", en: "The Pony Express begins, with relay riders carrying mail from Missouri to California in about ten days." },
+  ],
+  "04-04": [
+    { id: "history:04-04:2", year: 1968, zh: "马丁·路德·金在田纳西州孟菲斯遇刺身亡，年仅 39 岁。", en: "Martin Luther King Jr. is assassinated in Memphis, Tennessee, at the age of 39." },
+  ],
+  "04-05": [
+    { id: "history:04-05:2", year: 1588, zh: "英国哲学家霍布斯出生，他在《利维坦》中探讨了国家权力的来源。", en: "Philosopher Thomas Hobbes is born in England; in Leviathan he will ask where the power of the state comes from." },
+  ],
+  "04-06": [
+    { id: "history:04-06:2", year: 1917, zh: "美国对德国宣战，加入第一次世界大战。", en: "The United States declares war on Germany and enters the First World War." },
+  ],
+  "04-07": [
+    { id: "history:04-07:2", year: 1795, zh: "法国通过法律，正式采用「米」作为长度单位，公制由此诞生。", en: "France adopts the metre by law as its unit of length, giving birth to the metric system." },
+  ],
+  "04-08": [
+    { id: "history:04-08:2", year: 1904, zh: "英国与法国签订《英法协约》，了结多项殖民地争端，两国关系由此显著改善。", en: "Britain and France sign the Entente Cordiale, settling colonial disputes and markedly improving Anglo-French relations." },
+  ],
+  "04-09": [
+    { id: "history:04-09:2", year: 1682, zh: "法国探险家拉萨尔抵达密西西比河口，宣布整个流域归法国所有，命名为路易斯安那。", en: "French explorer La Salle reaches the mouth of the Mississippi and claims its basin for France, naming it Louisiana." },
+  ],
+  "04-10": [
+    { id: "history:04-10:2", year: 1971, zh: "美国乒乓球队抵达中国访问，「乒乓外交」打开了中美交往的大门。", en: "The U.S. table tennis team arrives in China; 'ping-pong diplomacy' opens the door between the two countries." },
+  ],
+  "04-11": [
+    { id: "history:04-11:2", year: 1814, zh: "拿破仑签署《枫丹白露条约》宣布退位，随后被流放到厄尔巴岛。", en: "Napoleon abdicates under the Treaty of Fontainebleau and is exiled to the island of Elba." },
+  ],
+  "04-12": [
+    { id: "history:04-12:2", year: 1981, zh: "哥伦比亚号航天飞机首次发射，这是世界上第一架可重复使用的航天器。", en: "The space shuttle Columbia makes its first launch, the first reusable spacecraft." },
+  ],
+  "04-13": [
+    { id: "history:04-13:2", year: 1743, zh: "托马斯·杰斐逊出生于弗吉尼亚，他后来起草了《独立宣言》。", en: "Thomas Jefferson is born in Virginia; he will draft the Declaration of Independence." },
+  ],
+  "04-14": [
+    { id: "history:04-14:2", year: 1865, zh: "林肯在华盛顿福特剧院观剧时遭枪击，次日清晨去世。", en: "Abraham Lincoln is shot at Ford's Theatre in Washington and dies the next morning." },
+  ],
+  "04-15": [
+    { id: "history:04-15:2", year: 1452, zh: "达·芬奇出生于意大利芬奇镇附近。", en: "Leonardo da Vinci is born near the town of Vinci, Italy." },
+  ],
+  "04-16": [
+    { id: "history:04-16:2", year: 1746, zh: "卡洛登战役在苏格兰高地爆发，这是英国本土上的最后一场激战。", en: "The Battle of Culloden is fought in the Scottish Highlands, the last pitched battle on British soil." },
+  ],
+  "04-17": [
+    { id: "history:04-17:2", year: 1895, zh: "中日签订《马关条约》，中国割让台湾，并赔款白银两亿两。", en: "China and Japan sign the Treaty of Shimonoseki; China cedes Taiwan and pays an indemnity of 200 million taels of silver." },
+  ],
+  "04-18": [
+    { id: "history:04-18:2", year: 1955, zh: "爱因斯坦在美国普林斯顿去世，享年 76 岁。", en: "Albert Einstein dies in Princeton, New Jersey, at the age of 76." },
+  ],
+  "04-19": [
+    { id: "history:04-19:2", year: 1882, zh: "达尔文在英国唐恩宅去世，后来被安葬于威斯敏斯特教堂，与牛顿相距不远。", en: "Charles Darwin dies at Down House in England; he is later buried in Westminster Abbey, near Isaac Newton." },
+  ],
+  "04-20": [
+    { id: "history:04-20:2", year: 1862, zh: "巴斯德和贝尔纳进行早期巴氏杀菌实验，利用加热减少液体中的微生物。", en: "Louis Pasteur and Claude Bernard conduct an early pasteurisation experiment, using heat to reduce microbial populations in liquids." },
+  ],
+  "04-21": [
+    { id: "history:04-21:2", year: 1836, zh: "圣哈辛托战役中，得克萨斯军队在十几分钟内击溃墨西哥军队，次日俘获圣安纳将军。", en: "At the Battle of San Jacinto, Texan forces rout the Mexican army in under twenty minutes; General Santa Anna is captured the next day." },
+  ],
+  "04-22": [
+    { id: "history:04-22:2", year: 1724, zh: "哲学家康德出生于柯尼斯堡，他一生几乎没有离开过这座城市。", en: "Philosopher Immanuel Kant is born in Königsberg, a city he will barely leave in his lifetime." },
+  ],
+  "04-23": [
+    { id: "history:04-23:2", year: 2005, zh: "YouTube 上传了第一段视频《我在动物园》，只有 19 秒。", en: "The first YouTube video, Me at the zoo, is uploaded. It is 19 seconds long." },
+  ],
+  "04-24": [
+    { id: "history:04-24:2", year: 1970, zh: "中国第一颗人造卫星东方红一号发射成功，在太空中播放《东方红》乐曲。", en: "China launches its first satellite, Dong Fang Hong 1, which broadcasts the song 'The East Is Red' from orbit." },
+  ],
+  "04-25": [
+    { id: "history:04-25:2", year: 1859, zh: "苏伊士运河在塞得港破土动工，十年后通航。", en: "Ground is broken for the Suez Canal at Port Said; it will open ten years later." },
+  ],
+  "04-26": [
+    { id: "history:04-26:2", year: 1564, zh: "莎士比亚在斯特拉特福受洗，他的确切生日没有留下记录。", en: "William Shakespeare is baptised in Stratford-upon-Avon; his exact birth date is not recorded." },
+  ],
+  "04-27": [
+    { id: "history:04-27:2", year: 1667, zh: "弥尔顿签约出售《失乐园》的版权，首付5英镑，另有附条件的后续付款。", en: "John Milton signs a contract for the copyright of Paradise Lost, with £5 upfront and further conditional payments." },
+  ],
+  "04-28": [
+    { id: "history:04-28:2", year: 1789, zh: "「邦蒂号」上发生叛变，船长布莱和 18 名船员被放到一条小艇上漂流。", en: "Mutiny breaks out on HMS Bounty; Captain Bligh and 18 men are set adrift in a small boat." },
+  ],
+  "04-29": [
+    { id: "history:04-29:2", year: 1913, zh: "吉迪恩·桑德巴克获得一种可分离扣件的专利，为现代拉链的发展奠定基础。", en: "Gideon Sundback is granted a patent for a separable fastener, a precursor to the modern zipper." },
+  ],
+  "04-30": [
+    { id: "history:04-30:2", year: 1803, zh: "美国与法国达成路易斯安那购地协议，条约署期为4月30日，使美国领土面积近乎翻倍。", en: "The Louisiana Purchase treaty between the United States and France is dated April 30, nearly doubling the size of the United States." },
+  ],
+  "05-01": [
+    { id: "history:05-01:2", year: 1851, zh: "伦敦万国工业博览会在水晶宫开幕，这是世界上第一届世博会。", en: "The Great Exhibition opens in London's Crystal Palace, the first world's fair." },
+  ],
+  "05-02": [
+    { id: "history:05-02:2", year: 1945, zh: "柏林守军向苏军投降，欧洲战场的战事接近尾声。", en: "The Berlin garrison surrenders to the Soviet army, as the war in Europe nears its end." },
+  ],
+  "05-03": [
+    { id: "history:05-03:2", year: 1469, zh: "马基雅维利出生于佛罗伦萨，后来写出《君主论》。", en: "Niccolò Machiavelli is born in Florence; he will write The Prince." },
+  ],
+  "05-04": [
+    { id: "history:05-04:2", year: 1904, zh: "查尔斯·罗尔斯与亨利·莱斯在曼彻斯特会面，劳斯莱斯的故事由此开始。", en: "Charles Rolls meets Henry Royce in Manchester, beginning the story of Rolls-Royce." },
+  ],
+  "05-05": [
+    { id: "history:05-05:2", year: 1821, zh: "拿破仑在大西洋上的圣赫勒拿岛去世，享年 51 岁。", en: "Napoleon dies in exile on the Atlantic island of Saint Helena, aged 51." },
+  ],
+  "05-06": [
+    { id: "history:05-06:2", year: 1840, zh: "世界上第一枚邮票「黑便士」在英国正式启用。", en: "The Penny Black, the world's first adhesive postage stamp, becomes valid for use in Britain." },
+  ],
+  "05-07": [
+    { id: "history:05-07:2", year: 1833, zh: "作曲家勃拉姆斯出生于汉堡。", en: "Composer Johannes Brahms is born in Hamburg." },
+  ],
+  "05-08": [
+    { id: "history:05-08:2", year: 1980, zh: "世界卫生组织正式宣布天花已被消灭，这是人类消灭的第一种传染病。", en: "The World Health Organization declares smallpox eradicated, the first human disease ever wiped out." },
+  ],
+  "05-09": [
+    { id: "history:05-09:2", year: 1671, zh: "托马斯·布拉德企图从伦敦塔盗走英国王冠珠宝，失手被擒，后来竟获国王赦免。", en: "Thomas Blood tries to steal the Crown Jewels from the Tower of London; caught, he is later pardoned by the king." },
+  ],
+  "05-10": [
+    { id: "history:05-10:2", year: 1869, zh: "「金道钉」在犹他州打下，美国第一条横贯大陆铁路全线贯通。", en: "The golden spike is driven in Utah, completing the first transcontinental railroad in the United States." },
+  ],
+  "05-11": [
+    { id: "history:05-11:2", year: 330, zh: "君士坦丁大帝为新都君士坦丁堡举行落成典礼。", en: "Emperor Constantine dedicates his new capital, Constantinople." },
+  ],
+  "05-12": [
+    { id: "history:05-12:2", year: 2008, zh: "四川汶川发生大地震（中国地震局测定面波震级8.0，美国地质调查局测定矩震级7.9），近七万人遇难。", en: "A major earthquake strikes Wenchuan, Sichuan (surface-wave magnitude 8.0 according to CEA; moment magnitude 7.9 according to USGS), killing nearly 70,000 people." },
+  ],
+  "05-13": [
+    { id: "history:05-13:2", year: 1787, zh: "英国第一舰队从朴次茅斯启航，载着囚犯驶向澳大利亚。", en: "Britain's First Fleet sets sail from Portsmouth, carrying convicts to Australia." },
+  ],
+  "05-14": [
+    { id: "history:05-14:2", year: 1796, zh: "英国医生詹纳为一名男孩接种牛痘，开创了疫苗接种。", en: "English physician Edward Jenner inoculates a boy with cowpox, pioneering vaccination." },
+  ],
+  "05-15": [
+    { id: "history:05-15:2", year: 1940, zh: "麦当劳兄弟在加州圣贝纳迪诺开出第一家麦当劳餐厅。", en: "The McDonald brothers open the first McDonald's restaurant in San Bernardino, California." },
+  ],
+  "05-16": [
+    { id: "history:05-16:2", year: 1960, zh: "梅曼在加州休斯研究实验室让世界上第一台激光器发出光束。", en: "Theodore Maiman fires the world's first working laser at Hughes Research Laboratories in California." },
+  ],
+  "05-17": [
+    { id: "history:05-17:2", year: 1792, zh: "24名经纪人在纽约签订《梧桐树协议》，为纽约证券交易所的建立奠定基础。", en: "Twenty-four brokers in New York sign the Buttonwood Agreement, laying the foundation for the New York Stock Exchange." },
+  ],
+  "05-18": [
+    { id: "history:05-18:2", year: 1872, zh: "哲学家罗素出生于威尔士，后来获得诺贝尔文学奖。", en: "Philosopher Bertrand Russell is born in Wales; he will later win the Nobel Prize in Literature." },
+  ],
+  "05-19": [
+    { id: "history:05-19:2", year: 1536, zh: "英王亨利八世的第二任王后安妮·博林在伦敦塔被处决。", en: "Anne Boleyn, second wife of Henry VIII, is executed at the Tower of London." },
+  ],
+  "05-20": [
+    { id: "history:05-20:2", year: 1873, zh: "雅各布·戴维斯与利维·施特劳斯公司获得用金属铆钉加固口袋开口的专利，标志着现代牛仔裤的诞生。", en: "Jacob Davis and Levi Strauss & Co. receive a patent for reinforcing pocket openings with metal rivets, marking the birth of modern blue jeans." },
+  ],
+  "05-21": [
+    { id: "history:05-21:2", year: 1881, zh: "克拉拉·巴顿创立美国红十字会。", en: "Clara Barton founds the American Red Cross." },
+  ],
+  "05-22": [
+    { id: "history:05-22:2", year: 1813, zh: "作曲家瓦格纳出生于莱比锡。", en: "Composer Richard Wagner is born in Leipzig." },
+  ],
+  "05-23": [
+    { id: "history:05-23:2", year: 1785, zh: "富兰克林在一封信中描述了他发明的双焦眼镜。", en: "Benjamin Franklin describes his invention of bifocal spectacles in a letter." },
+  ],
+  "05-24": [
+    { id: "history:05-24:2", year: 1883, zh: "纽约布鲁克林大桥通车，当时是世界上最长的悬索桥。", en: "The Brooklyn Bridge opens in New York, then the longest suspension bridge in the world." },
+  ],
+  "05-25": [
+    { id: "history:05-25:2", year: 1977, zh: "电影《星球大战》在美国上映。", en: "Star Wars opens in American cinemas." },
+  ],
+  "05-26": [
+    { id: "history:05-26:2", year: 1897, zh: "布拉姆·斯托克的小说《德古拉》在伦敦出版。", en: "Bram Stoker's novel Dracula is published in London." },
+  ],
+  "05-27": [
+    { id: "history:05-27:2", year: 1703, zh: "彼得大帝在涅瓦河口建城，圣彼得堡由此诞生。", en: "Peter the Great founds Saint Petersburg at the mouth of the Neva." },
+  ],
+  "05-28": [
+    { id: "history:05-28:2", year: 1937, zh: "德国大众汽车公司成立，「大众」意即「人民的汽车」。", en: "Volkswagen is founded in Germany; its name means 'the people's car'." },
+  ],
+  "05-29": [
+    { id: "history:05-29:2", year: 1453, zh: "奥斯曼军队攻陷君士坦丁堡，延续千年的拜占庭帝国灭亡。", en: "Ottoman forces capture Constantinople, ending the thousand-year Byzantine Empire." },
+  ],
+  "05-30": [
+    { id: "history:05-30:2", year: 1431, zh: "圣女贞德在法国鲁昂被处以火刑，年仅 19 岁。", en: "Joan of Arc is burned at the stake in Rouen, France, aged 19." },
+  ],
+  "05-31": [
+    { id: "history:05-31:2", year: 1859, zh: "伦敦威斯敏斯特宫的大钟「大本钟」开始走时。", en: "The great clock of Big Ben at the Palace of Westminster begins keeping time." },
+  ],
+  "06-01": [
+    { id: "history:06-01:2", year: 1869, zh: "爱迪生获得第一项专利：电动投票记录器，但这项发明最终未被立法机构采用。", en: "Thomas Edison receives his first patent, for an electric vote recorder that ultimately fails to gain adoption by legislatures." },
+  ],
+  "06-02": [
+    { id: "history:06-02:2", year: 1896, zh: "马可尼在英国申请无线电报专利。", en: "Guglielmo Marconi applies for a British patent for wireless telegraphy." },
+  ],
+  "06-03": [
+    { id: "history:06-03:2", year: 1839, zh: "林则徐在虎门开始当众销毁鸦片，历时二十多天。", en: "Lin Zexu begins publicly destroying confiscated opium at Humen, a task that will take over twenty days." },
+  ],
+  "06-04": [
+    { id: "history:06-04:2", year: 1783, zh: "孟格菲兄弟在法国阿诺奈首次公开放飞热气球。", en: "The Montgolfier brothers give the first public demonstration of a hot-air balloon in Annonay, France." },
+  ],
+  "06-05": [
+    { id: "history:06-05:2", year: 1947, zh: "美国国务卿马歇尔在哈佛大学演讲，提出援助欧洲重建的「马歇尔计划」。", en: "U.S. Secretary of State George Marshall proposes the plan to rebuild Europe in a speech at Harvard." },
+  ],
+  "06-06": [
+    { id: "history:06-06:2", year: 1844, zh: "基督教青年会（YMCA）在伦敦成立。", en: "The Young Men's Christian Association (YMCA) is founded in London." },
+  ],
+  "06-07": [
+    { id: "history:06-07:2", year: 1494, zh: "西班牙和葡萄牙签订《托尔德西里亚斯条约》，沿一条经线瓜分欧洲以外的新发现土地。", en: "Spain and Portugal sign the Treaty of Tordesillas, dividing newly found lands outside Europe along a meridian." },
+  ],
+  "06-08": [
+    { id: "history:06-08:2", year: 1867, zh: "建筑师弗兰克·劳埃德·赖特出生于美国威斯康星州。", en: "Architect Frank Lloyd Wright is born in Wisconsin." },
+  ],
+  "06-09": [
+    { id: "history:06-09:2", year: 1928, zh: "金斯福德·史密斯及其机组共四人抵达澳大利亚布里斯班，完成首次跨太平洋飞行。", en: "Charles Kingsford Smith and his three fellow crew members land in Brisbane, completing the first transpacific flight." },
+  ],
+  "06-10": [
+    { id: "history:06-10:2", year: 1935, zh: "「匿名戒酒会」在美国俄亥俄州阿克伦成立。", en: "Alcoholics Anonymous is founded in Akron, Ohio." },
+  ],
+  "06-11": [
+    { id: "history:06-11:2", year: 1776, zh: "大陆会议任命包括杰斐逊、富兰克林在内的五人委员会起草《独立宣言》。", en: "The Continental Congress appoints a committee of five, including Jefferson and Franklin, to draft the Declaration of Independence." },
+  ],
+  "06-12": [
+    { id: "history:06-12:2", year: 1898, zh: "菲律宾宣布脱离西班牙独立。", en: "The Philippines declares independence from Spain." },
+  ],
+  "06-13": [
+    { id: "history:06-13:2", year: 1865, zh: "爱尔兰诗人叶芝出生于都柏林，后来获得诺贝尔文学奖。", en: "Irish poet W. B. Yeats is born in Dublin; he will later win the Nobel Prize in Literature." },
+  ],
+  "06-14": [
+    { id: "history:06-14:2", year: 1951, zh: "为美国人口普查局研制的 UNIVAC I 在费城举行正式启用仪式，它是最早的商用电子计算机之一。", en: "A dedication ceremony for the U.S. Census Bureau's UNIVAC I, one of the earliest commercial electronic computers, is held in Philadelphia." },
+  ],
+  "06-15": [
+    { id: "history:06-15:2", year: 1844, zh: "固特异获得橡胶硫化法的专利，橡胶从此不再遇热发黏、遇冷变脆。", en: "Charles Goodyear patents vulcanised rubber, which no longer turns sticky in heat or brittle in cold." },
+  ],
+  "06-16": [
+    { id: "history:06-16:2", year: 1903, zh: "福特汽车公司在美国底特律成立。", en: "The Ford Motor Company is incorporated in Detroit." },
+  ],
+  "06-17": [
+    { id: "history:06-17:2", year: 1631, zh: "莫卧儿王后慕塔芝·玛哈尔去世，沙贾汗为她修建了泰姬陵。", en: "Mughal empress Mumtaz Mahal dies; Shah Jahan will build the Taj Mahal in her memory." },
+  ],
+  "06-18": [
+    { id: "history:06-18:2", year: 1983, zh: "萨莉·赖德乘挑战者号进入太空，成为第一位美国女航天员。", en: "Sally Ride flies aboard Challenger and becomes the first American woman in space." },
+  ],
+  "06-19": [
+    { id: "history:06-19:2", year: 1623, zh: "帕斯卡出生于法国克莱蒙费朗，他后来造出了早期的机械计算器。", en: "Blaise Pascal is born in Clermont-Ferrand, France; he will build an early mechanical calculator." },
+  ],
+  "06-20": [
+    { id: "history:06-20:2", year: 1837, zh: "18 岁的维多利亚继承英国王位，开始长达 63 年的统治。", en: "Eighteen-year-old Victoria succeeds to the British throne, beginning a reign of 63 years." },
+  ],
+  "06-21": [
+    { id: "history:06-21:2", year: 1788, zh: "新罕布什尔州成为第九个批准美国宪法的州，达到宪法生效所需的批准门槛。", en: "New Hampshire becomes the ninth state to ratify the U.S. Constitution, meeting the threshold required for its establishment among the ratifying states." },
+  ],
+  "06-22": [
+    { id: "history:06-22:2", year: 1633, zh: "伽利略在罗马宗教裁判所被迫放弃日心说。", en: "Galileo is forced by the Roman Inquisition to recant his view that the Earth moves around the Sun." },
+  ],
+  "06-23": [
+    { id: "history:06-23:2", year: 1912, zh: "图灵出生于伦敦，他后来奠定了计算机科学的理论基础。", en: "Alan Turing is born in London; he will lay the theoretical foundations of computer science." },
+  ],
+  "06-24": [
+    { id: "history:06-24:2", year: 1859, zh: "索尔费里诺战役爆发，目睹惨状的杜南后来倡议成立红十字会。", en: "The Battle of Solferino is fought; Henry Dunant, who witnesses its aftermath, will go on to found the Red Cross." },
+  ],
+  "06-25": [
+    { id: "history:06-25:2", year: 1876, zh: "小大角战役中，卡斯特率领的美军骑兵被拉科塔等部族联军全歼。", en: "At the Battle of the Little Bighorn, Lakota and allied warriors wipe out Custer's U.S. cavalry force." },
+  ],
+  "06-26": [
+    { id: "history:06-26:2", year: 1974, zh: "俄亥俄州一家超市第一次用扫描仪读取商品条形码，商品是一包口香糖。", en: "A supermarket in Ohio scans the first product barcode at a checkout: a pack of chewing gum." },
+  ],
+  "06-27": [
+    { id: "history:06-27:2", year: 1967, zh: "世界上第一台自动取款机在伦敦恩菲尔德的巴克莱银行投入使用。", en: "The world's first cash machine goes into service at a Barclays branch in Enfield, London." },
+  ],
+  "06-28": [
+    { id: "history:06-28:2", year: 1919, zh: "协约国与德国签订《凡尔赛和约》，条约于次年 1 月 10 日生效。", en: "The Allied and Associated Powers sign the Treaty of Versailles with Germany; it enters into force on January 10, 1920." },
+  ],
+  "06-29": [
+    { id: "history:06-29:2", year: 1900, zh: "《小王子》作者圣埃克苏佩里出生于法国里昂。", en: "Antoine de Saint-Exupéry, author of The Little Prince, is born in Lyon, France." },
+  ],
+  "06-30": [
+    { id: "history:06-30:2", year: 1859, zh: "法国杂技演员布隆丹走钢丝横跨尼亚加拉大瀑布。", en: "French acrobat Charles Blondin crosses Niagara Falls on a tightrope." },
+  ],
+  "07-01": [
+    { id: "history:07-01:2", year: 1867, zh: "加拿大联邦成立，这一天后来成为加拿大国庆日。", en: "Canadian Confederation takes effect; the day is now celebrated as Canada Day." },
+  ],
+  "07-02": [
+    { id: "history:07-02:2", year: 1937, zh: "女飞行家阿梅莉亚·埃尔哈特在环球飞行途中于太平洋上空失踪。", en: "Aviator Amelia Earhart disappears over the Pacific during her attempt to fly around the world." },
+  ],
+  "07-03": [
+    { id: "history:07-03:2", year: 1883, zh: "作家卡夫卡出生于布拉格。", en: "Writer Franz Kafka is born in Prague." },
+  ],
+  "07-04": [
+    { id: "history:07-04:2", year: 1826, zh: "《独立宣言》发表 50 周年当天，杰斐逊和约翰·亚当斯两位前总统相隔几小时先后去世。", en: "On the fiftieth anniversary of the Declaration of Independence, former presidents Jefferson and John Adams die within hours of each other." },
+  ],
+  "07-05": [
+    { id: "history:07-05:2", year: 1996, zh: "克隆羊多莉在苏格兰出生，她是第一只由成年体细胞克隆的哺乳动物。", en: "Dolly the sheep is born in Scotland, the first mammal cloned from an adult cell." },
+  ],
+  "07-06": [
+    { id: "history:07-06:2", year: 1535, zh: "托马斯·莫尔因拒绝承认亨利八世为英国教会首脑而被处决，他是《乌托邦》的作者。", en: "Thomas More, author of Utopia, is executed for refusing to accept Henry VIII as head of the English church." },
+  ],
+  "07-07": [
+    { id: "history:07-07:2", year: 1928, zh: "美国密苏里州一家面包店首次出售切片面包。", en: "Sliced bread is sold for the first time, by a bakery in Chillicothe, Missouri." },
+  ],
+  "07-08": [
+    { id: "history:07-08:2", year: 1889, zh: "《华尔街日报》在纽约创刊。", en: "The Wall Street Journal publishes its first issue in New York." },
+  ],
+  "07-09": [
+    { id: "history:07-09:2", year: 1877, zh: "第一届温布尔登网球锦标赛开赛。", en: "The first Wimbledon Championships begin." },
+  ],
+  "07-10": [
+    { id: "history:07-10:2", year: 1856, zh: "特斯拉出生于今克罗地亚境内，他后来推动了交流电的普及。", en: "Nikola Tesla is born in what is now Croatia; he will champion alternating current." },
+  ],
+  "07-11": [
+    { id: "history:07-11:2", year: 1405, zh: "郑和率领船队第一次下西洋，这一天后来定为中国航海日。", en: "Zheng He sets out on the first of his great voyages to the Western Oceans; the day is now China's Maritime Day." },
+  ],
+  "07-12": [
+    { id: "history:07-12:2", year: 1817, zh: "梭罗出生于马萨诸塞州康科德，后来写出《瓦尔登湖》。", en: "Henry David Thoreau is born in Concord, Massachusetts; he will write Walden." },
+  ],
+  "07-13": [
+    { id: "history:07-13:2", year: 1793, zh: "法国大革命领袖马拉在浴缸中被夏洛特·科黛刺杀。", en: "French revolutionary Jean-Paul Marat is stabbed to death in his bath by Charlotte Corday." },
+  ],
+  "07-14": [
+    { id: "history:07-14:2", year: 1865, zh: "英国登山家温珀一行首次登上马特洪峰，下山途中四人坠亡。", en: "Edward Whymper's party makes the first ascent of the Matterhorn; four men die on the descent." },
+  ],
+  "07-15": [
+    { id: "history:07-15:2", year: 1606, zh: "画家伦勃朗出生于荷兰莱顿。", en: "Painter Rembrandt van Rijn is born in Leiden, Netherlands." },
+  ],
+  "07-16": [
+    { id: "history:07-16:2", year: 1969, zh: "阿波罗 11 号从佛罗里达发射升空，飞向月球。", en: "Apollo 11 lifts off from Florida, bound for the Moon." },
+  ],
+  "07-17": [
+    { id: "history:07-17:2", year: 1717, zh: "亨德尔的《水上音乐》在泰晤士河上为英王乔治一世首演。", en: "Handel's Water Music is first performed for King George I on the River Thames." },
+  ],
+  "07-18": [
+    { id: "history:07-18:2", year: 1918, zh: "曼德拉出生于南非姆维佐村，他的生日后来被联合国定为「纳尔逊·曼德拉国际日」。", en: "Nelson Mandela is born in Mvezo, South Africa; the UN later makes his birthday Nelson Mandela International Day." },
+  ],
+  "07-19": [
+    { id: "history:07-19:2", year: 1848, zh: "塞尼卡福尔斯会议在纽约州召开，这是美国第一次女性权利大会。", en: "The Seneca Falls Convention opens in New York, the first women's rights convention in the United States." },
+  ],
+  "07-20": [
+    { id: "history:07-20:2", year: 1304, zh: "诗人彼特拉克出生于意大利阿雷佐，他被称为「人文主义之父」。", en: "Poet Petrarch is born in Arezzo, Italy; he will be called the father of humanism." },
+  ],
+  "07-21": [
+    { id: "history:07-21:2", year: 1899, zh: "海明威出生于美国伊利诺伊州橡树园，后来写出《老人与海》。", en: "Ernest Hemingway is born in Oak Park, Illinois; he will write The Old Man and the Sea." },
+  ],
+  "07-22": [
+    { id: "history:07-22:2", year: 1812, zh: "萨拉曼卡战役中，威灵顿率领的英葡联军击败法军。", en: "At the Battle of Salamanca, Wellington's Anglo-Portuguese army defeats the French." },
+  ],
+  "07-23": [
+    { id: "history:07-23:2", year: 1829, zh: "美国人伯特获得「打字机」专利，这是美国最早的打字机专利。", en: "William Austin Burt patents his 'typographer', the first American patent for a typewriter." },
+  ],
+  "07-24": [
+    { id: "history:07-24:2", year: 1847, zh: "摩门教先驱者进入大盐湖谷，在那里建起了盐湖城。", en: "Mormon pioneers enter the Salt Lake Valley, where they will build Salt Lake City." },
+  ],
+  "07-25": [
+    { id: "history:07-25:2", year: 1909, zh: "布莱里奥驾驶单翼机飞越英吉利海峡，用时约 37 分钟。", en: "Louis Blériot flies a monoplane across the English Channel in about 37 minutes." },
+  ],
+  "07-26": [
+    { id: "history:07-26:2", year: 1856, zh: "剧作家萧伯纳出生于都柏林。", en: "Playwright George Bernard Shaw is born in Dublin." },
+  ],
+  "07-27": [
+    { id: "history:07-27:2", year: 1866, zh: "跨大西洋海底电报电缆铺设成功，欧美之间的消息从几天缩短到几分钟。", en: "A transatlantic telegraph cable is successfully completed, cutting news between Europe and America from days to minutes." },
+  ],
+  "07-28": [
+    { id: "history:07-28:2", year: 1976, zh: "河北唐山发生 7.8 级大地震，整座城市几乎被夷为平地。", en: "A magnitude 7.8 earthquake strikes Tangshan, Hebei, levelling most of the city." },
+  ],
+  "07-29": [
+    { id: "history:07-29:2", year: 1836, zh: "巴黎凯旋门落成，距拿破仑下令修建已过去三十年。", en: "The Arc de Triomphe is inaugurated in Paris, thirty years after Napoleon ordered it built." },
+  ],
+  "07-30": [
+    { id: "history:07-30:2", year: 1818, zh: "艾米莉·勃朗特出生于英格兰约克郡，后来写出《呼啸山庄》。", en: "Emily Brontë is born in Yorkshire, England; she will write Wuthering Heights." },
+  ],
+  "07-31": [
+    { id: "history:07-31:2", year: 1790, zh: "美国颁发第一项专利，内容是一种制造钾肥的方法。", en: "The United States issues its first patent, for a method of making potash." },
+  ],
+  "08-01": [
+    { id: "history:08-01:2", year: 1774, zh: "普里斯特利加热氧化汞，分离出一种能让蜡烛烧得更旺的气体：氧气。", en: "Joseph Priestley heats mercuric oxide and isolates a gas that makes candles burn brighter: oxygen." },
+  ],
+  "08-02": [
+    { id: "history:08-02:2", year: 1922, zh: "电话发明家贝尔逝世。8月4日葬礼期间，美国和加拿大的电话系统暂停服务一分钟，以示悼念。", en: "Alexander Graham Bell dies. During his funeral on August 4, telephone service in the United States and Canada falls silent for one minute in tribute." },
+  ],
+  "08-03": [
+    { id: "history:08-03:2", year: 1958, zh: "美国核潜艇「鹦鹉螺号」从冰层下穿过北极点。", en: "The nuclear submarine USS Nautilus passes beneath the ice at the North Pole." },
+  ],
+  "08-04": [
+    { id: "history:08-04:2", year: 1792, zh: "英国诗人雪莱出生于苏塞克斯。", en: "The poet Percy Bysshe Shelley is born in Sussex, England." },
+  ],
+  "08-05": [
+    { id: "history:08-05:2", year: 1930, zh: "尼尔·阿姆斯特朗出生于美国俄亥俄州，后来成为第一个踏上月球的人。", en: "Neil Armstrong is born in Ohio; he will become the first person to walk on the Moon." },
+  ],
+  "08-06": [
+    { id: "history:08-06:2", year: 1945, zh: "美国向日本广岛投下原子弹，这是人类第一次在战争中使用核武器。", en: "The United States drops an atomic bomb on Hiroshima, the first use of a nuclear weapon in war." },
+  ],
+  "08-07": [
+    { id: "history:08-07:2", year: 1947, zh: "海尔达尔乘木筏「康提基号」漂流 101 天后抵达波利尼西亚的拉罗亚环礁。", en: "Thor Heyerdahl's raft Kon-Tiki reaches Raroia atoll in Polynesia after 101 days at sea." },
+  ],
+  "08-08": [
+    { id: "history:08-08:2", year: 1876, zh: "爱迪生获得一项复印技术专利，后来发展为油印机。", en: "Thomas Edison patents a copying method that will develop into the mimeograph." },
+  ],
+  "08-09": [
+    { id: "history:08-09:2", year: 1945, zh: "美国向日本长崎投下第二颗原子弹。", en: "The United States drops a second atomic bomb, on Nagasaki." },
+  ],
+  "08-10": [
+    { id: "history:08-10:2", year: 1846, zh: "美国国会立法建立史密森学会，经费来自一位从未到过美国的英国科学家的遗赠。", en: "Congress establishes the Smithsonian Institution, funded by the bequest of a British scientist who never visited America." },
+  ],
+  "08-11": [
+    { id: "history:08-11:2", year: 1919, zh: "德国《魏玛宪法》签署，德国成为议会制共和国。", en: "The Weimar Constitution is signed, making Germany a parliamentary republic." },
+  ],
+  "08-12": [
+    { id: "history:08-12:2", year: 1990, zh: "古生物学家苏·亨德里克森在美国南达科他州发现一具保存极为完整的霸王龙化石，后来以她的名字命名为「苏」。", en: "Fossil hunter Sue Hendrickson finds one of the most complete Tyrannosaurus rex skeletons ever, in South Dakota; it is named Sue after her." },
+  ],
+  "08-13": [
+    { id: "history:08-13:2", year: 1913, zh: "英国冶金学家哈里·布雷尔利在谢菲尔德炼出早期不锈钢，为其工业应用奠定基础。", en: "Harry Brearley produces an early stainless steel in Sheffield, England, helping lay the foundation for its industrial use." },
+  ],
+  "08-14": [
+    { id: "history:08-14:2", year: 1959, zh: "美国探险者六号卫星拍下第一张从地球轨道上拍摄的地球照片。", en: "The U.S. satellite Explorer 6 takes the first photograph of Earth from orbit." },
+  ],
+  "08-15": [
+    { id: "history:08-15:2", year: 1947, zh: "印度脱离英国殖民统治获得独立，尼赫鲁发表《与命运的约会》演讲。", en: "India gains independence from British rule, and Nehru gives his 'Tryst with Destiny' speech." },
+  ],
+  "08-16": [
+    { id: "history:08-16:2", year: 1896, zh: "加拿大育空地区的克朗代克河支流发现黄金，引发淘金热。", en: "Gold is discovered in a tributary of the Klondike River in Canada's Yukon, setting off a gold rush." },
+  ],
+  "08-17": [
+    { id: "history:08-17:2", year: 1807, zh: "富尔顿的蒸汽船「克莱蒙特号」从纽约启航，开始在哈德逊河上的首航。", en: "Robert Fulton's steamboat leaves New York on its first voyage up the Hudson River." },
+  ],
+  "08-18": [
+    { id: "history:08-18:2", year: 1850, zh: "法国作家巴尔扎克在巴黎去世，留下九十多部作品组成的《人间喜剧》。", en: "French novelist Honoré de Balzac dies in Paris, leaving more than ninety works of The Human Comedy." },
+  ],
+  "08-19": [
+    { id: "history:08-19:2", year: 1839, zh: "法国政府公开达盖尔银版摄影法，供公众免费使用，但英国因专利保护而例外。", en: "The French government publicly releases the daguerreotype process for free use, except in Britain, where patent protection applies." },
+  ],
+  "08-20": [
+    { id: "history:08-20:2", year: 1968, zh: "华约军队入侵捷克斯洛伐克，「布拉格之春」改革被终止。", en: "Warsaw Pact troops invade Czechoslovakia, ending the reforms of the Prague Spring." },
+  ],
+  "08-21": [
+    { id: "history:08-21:2", year: 1911, zh: "《蒙娜丽莎》从卢浮宫被盗，两年后才在佛罗伦萨找回。", en: "The Mona Lisa is stolen from the Louvre; it will be recovered in Florence two years later." },
+  ],
+  "08-22": [
+    { id: "history:08-22:2", year: 1485, zh: "博斯沃思原野战役中，理查三世战死，都铎王朝开始。", en: "Richard III is killed at the Battle of Bosworth Field, and the Tudor dynasty begins." },
+  ],
+  "08-23": [
+    { id: "history:08-23:2", year: 1305, zh: "苏格兰民族英雄威廉·华莱士在伦敦被处决。", en: "Scottish patriot William Wallace is executed in London." },
+  ],
+  "08-24": [
+    { id: "history:08-24:2", year: 2006, zh: "国际天文学联合会决定将冥王星降级为矮行星，太阳系从此只有八大行星。", en: "The International Astronomical Union reclassifies Pluto as a dwarf planet, leaving the Solar System with eight planets." },
+  ],
+  "08-25": [
+    { id: "history:08-25:2", year: 1609, zh: "伽利略在威尼斯向元老院展示他制作的望远镜。", en: "Galileo demonstrates his telescope to the Venetian Senate." },
+  ],
+  "08-26": [
+    { id: "history:08-26:2", year: 1768, zh: "库克船长乘「奋进号」从英国普利茅斯启航，开始第一次太平洋航行。", en: "Captain Cook sails from Plymouth aboard the Endeavour on his first Pacific voyage." },
+  ],
+  "08-27": [
+    { id: "history:08-27:2", year: 1859, zh: "德雷克在宾夕法尼亚州泰特斯维尔钻出石油，现代石油工业由此开始。", en: "Edwin Drake strikes oil at Titusville, Pennsylvania, starting the modern petroleum industry." },
+  ],
+  "08-28": [
+    { id: "history:08-28:2", year: 1749, zh: "歌德出生于法兰克福。", en: "Johann Wolfgang von Goethe is born in Frankfurt." },
+  ],
+  "08-29": [
+    { id: "history:08-29:2", year: 1842, zh: "中英签订《南京条约》，中国割让香港岛，开放五处通商口岸。", en: "China and Britain sign the Treaty of Nanking; China cedes Hong Kong Island and opens five treaty ports." },
+  ],
+  "08-30": [
+    { id: "history:08-30:2", year: 1797, zh: "玛丽·雪莱出生于伦敦，她 20 岁时出版了《弗兰肯斯坦》。", en: "Mary Shelley is born in London; she will publish Frankenstein at the age of 20." },
+  ],
+  "08-31": [
+    { id: "history:08-31:2", year: 1928, zh: "布莱希特与魏尔的《三分钱歌剧》在柏林首演。", en: "Brecht and Weill's The Threepenny Opera premieres in Berlin." },
+  ],
+  "09-01": [
+    { id: "history:09-01:2", year: 1923, zh: "日本关东大地震发生，东京和横滨遭受严重破坏。", en: "The Great Kantō earthquake devastates Tokyo and Yokohama." },
+  ],
+  "09-02": [
+    { id: "history:09-02:2", year: 1666, zh: "伦敦大火从布丁巷一家面包房燃起，烧了四天，烧毁了大半个伦敦城。", en: "The Great Fire of London breaks out in a bakery on Pudding Lane and burns for four days, destroying much of the City." },
+  ],
+  "09-03": [
+    { id: "history:09-03:2", year: 1939, zh: "英国和法国对德国宣战。", en: "Britain and France declare war on Germany." },
+  ],
+  "09-04": [
+    { id: "history:09-04:2", year: 1882, zh: "爱迪生的纽约珍珠街发电站开始供电，这是他在美国的第一座中心发电站。", en: "Edison's Pearl Street Station in New York begins supplying power, his first central generating station in the United States." },
+  ],
+  "09-05": [
+    { id: "history:09-05:2", year: 1882, zh: "纽约举行第一次劳工节游行，约有一万名工人参加。", en: "The first Labor Day parade is held in New York, with some 10,000 workers marching." },
+  ],
+  "09-06": [
+    { id: "history:09-06:2", year: 1620, zh: "五月花号从英国普利茅斯启航（旧历9月6日，公历9月16日），载着移民前往北美。", en: "The Mayflower sails from Plymouth, England (September 6 Old Style, September 16 Gregorian), carrying settlers to North America." },
+  ],
+  "09-07": [
+    { id: "history:09-07:2", year: 1940, zh: "德国空军开始对伦敦进行持续轰炸，即「伦敦大轰炸」。", en: "The German air force begins the Blitz, its sustained bombing of London." },
+  ],
+  "09-08": [
+    { id: "history:09-08:2", year: 1504, zh: "米开朗基罗的大卫像在佛罗伦萨领主广场揭幕。", en: "Michelangelo's David is unveiled in Florence's Piazza della Signoria." },
+  ],
+  "09-09": [
+    { id: "history:09-09:2", year: 1828, zh: "托尔斯泰出生于俄国图拉附近的亚斯纳亚·波利亚纳庄园。", en: "Leo Tolstoy is born on the estate of Yasnaya Polyana near Tula, Russia." },
+  ],
+  "09-10": [
+    { id: "history:09-10:2", year: 1846, zh: "伊莱亚斯·豪获得缝纫机专利。", en: "Elias Howe is granted a patent for his sewing machine." },
+  ],
+  "09-11": [
+    { id: "history:09-11:2", year: 1297, zh: "斯特灵桥战役中，威廉·华莱士和安德鲁·莫雷率领苏格兰军队击败英格兰军队。", en: "At the Battle of Stirling Bridge, Scottish forces led by William Wallace and Andrew Moray defeat the English army." },
+  ],
+  "09-12": [
+    { id: "history:09-12:2", year: 1940, zh: "四个少年在法国拉斯科发现洞穴，里面有一万七千年前的壁画。", en: "Four teenagers in France discover the Lascaux cave and its paintings, some 17,000 years old." },
+  ],
+  "09-13": [
+    { id: "history:09-13:2", year: 1916, zh: "作家罗尔德·达尔出生于威尔士，后来写出《查理和巧克力工厂》。", en: "Writer Roald Dahl is born in Wales; he will write Charlie and the Chocolate Factory." },
+  ],
+  "09-14": [
+    { id: "history:09-14:2", year: 1752, zh: "英国改用格里高利历：前一天还是 9 月 2 日，这一天就成了 9 月 14 日。", en: "Britain adopts the Gregorian calendar: yesterday was 2 September, and today is 14 September." },
+  ],
+  "09-15": [
+    { id: "history:09-15:2", year: 1830, zh: "利物浦—曼彻斯特铁路通车，这是第一条完全依靠蒸汽机车运营的城际铁路。", en: "The Liverpool and Manchester Railway opens, the first intercity line run entirely by steam locomotives." },
+  ],
+  "09-16": [
+    { id: "history:09-16:2", year: 1908, zh: "通用汽车公司在美国成立。", en: "General Motors is founded in the United States." },
+  ],
+  "09-17": [
+    { id: "history:09-17:2", year: 1630, zh: "波士顿建城。", en: "The city of Boston is founded." },
+  ],
+  "09-18": [
+    { id: "history:09-18:2", year: 1931, zh: "日军制造柳条湖事件，九一八事变爆发，日本开始侵占中国东北。", en: "Japanese troops stage the Mukden Incident and begin the occupation of northeast China." },
+  ],
+  "09-19": [
+    { id: "history:09-19:2", year: 1991, zh: "两名登山者在阿尔卑斯山的冰雪中发现距今约5300年的「冰人」奥茨。", en: "Two hikers discover Ötzi the Iceman, about 5,300 years old, in the ice and snow of the Alps." },
+  ],
+  "09-20": [
+    { id: "history:09-20:2", year: 1946, zh: "第一届戛纳电影节开幕。", en: "The first Cannes Film Festival opens." },
+  ],
+  "09-21": [
+    { id: "history:09-21:2", year: 1866, zh: "科幻作家赫伯特·乔治·威尔斯出生于英国，后来写出《时间机器》。", en: "Science-fiction writer H. G. Wells is born in England; he will write The Time Machine." },
+  ],
+  "09-22": [
+    { id: "history:09-22:2", year: 1791, zh: "法拉第出生于伦敦，铁匠之子，后来发现了电磁感应。", en: "Michael Faraday, a blacksmith's son, is born in London; he will discover electromagnetic induction." },
+  ],
+  "09-23": [
+    { id: "history:09-23:2", year: 1889, zh: "任天堂在日本京都成立，最初以制作花札纸牌为业。", en: "Nintendo is founded in Kyoto, Japan, originally making hanafuda playing cards." },
+  ],
+  "09-24": [
+    { id: "history:09-24:2", year: 1896, zh: "菲茨杰拉德出生于美国明尼苏达州，后来写出《了不起的盖茨比》。", en: "F. Scott Fitzgerald is born in Minnesota; he will write The Great Gatsby." },
+  ],
+  "09-25": [
+    { id: "history:09-25:2", year: 1066, zh: "斯坦福桥战役中，英王哈罗德二世击败挪威国王哈拉尔，三周后他将战死在黑斯廷斯。", en: "At Stamford Bridge, Harold II of England defeats the Norwegian king; three weeks later he will fall at Hastings." },
+  ],
+  "09-26": [
+    { id: "history:09-26:2", year: 1580, zh: "德雷克率「金鹿号」回到英国普利茅斯，完成环球航行。", en: "Francis Drake sails the Golden Hind back into Plymouth, completing his circumnavigation." },
+  ],
+  "09-27": [
+    { id: "history:09-27:2", year: 1905, zh: "《物理学年鉴》收到爱因斯坦阐述质能关系的论文，这一关系后来以 E = mc² 闻名。", en: "Annalen der Physik receives Einstein's paper on mass–energy equivalence, a relationship later expressed as E = mc²." },
+  ],
+  "09-28": [
+    { id: "history:09-28:2", year: 1895, zh: "巴斯德在巴黎附近去世。", en: "Louis Pasteur dies near Paris." },
+  ],
+  "09-29": [
+    { id: "history:09-29:2", year: 1758, zh: "英国海军将领纳尔逊出生于诺福克。", en: "Admiral Horatio Nelson is born in Norfolk, England." },
+  ],
+  "09-30": [
+    { id: "history:09-30:2", year: 1938, zh: "英、法、德、意签订《慕尼黑协定》，捷克斯洛伐克被迫割让苏台德地区。", en: "Britain, France, Germany and Italy sign the Munich Agreement, forcing Czechoslovakia to cede the Sudetenland." },
+  ],
+  "10-01": [
+    { id: "history:10-01:2", year: 1908, zh: "福特 T 型车上市，它让汽车成为普通家庭买得起的东西。", en: "Ford introduces the Model T, the car that ordinary families could afford." },
+  ],
+  "10-02": [
+    { id: "history:10-02:2", year: 1869, zh: "甘地出生于印度波尔班达尔，这一天后来被联合国定为国际非暴力日。", en: "Mahatma Gandhi is born in Porbandar, India; his birthday is now the International Day of Non-Violence." },
+  ],
+  "10-03": [
+    { id: "history:10-03:2", year: 1942, zh: "德国 V-2 火箭首次成功发射，它是后来航天运载火箭的先驱。", en: "The German V-2 rocket makes its first successful launch; it is a forerunner of the rockets that will later carry people into space." },
+  ],
+  "10-04": [
+    { id: "history:10-04:2", year: 1883, zh: "东方快车从巴黎开出第一班列车，驶向君士坦丁堡方向。", en: "The Orient Express makes its first run from Paris toward Constantinople." },
+  ],
+  "10-05": [
+    { id: "history:10-05:2", year: 1969, zh: "英国喜剧节目《蒙提·派森的飞行马戏团》在 BBC 首播。", en: "Monty Python's Flying Circus is first broadcast on the BBC." },
+  ],
+  "10-06": [
+    { id: "history:10-06:2", year: 1889, zh: "红磨坊在巴黎开业。", en: "The Moulin Rouge opens in Paris." },
+  ],
+  "10-07": [
+    { id: "history:10-07:2", year: 1849, zh: "爱伦·坡在巴尔的摩去世，年仅 40 岁，死因至今成谜。", en: "Edgar Allan Poe dies in Baltimore at the age of 40; the cause remains a mystery." },
+  ],
+  "10-08": [
+    { id: "history:10-08:2", year: 1956, zh: "唐·拉森在世界大赛中投出完全比赛，至今仍是世界大赛历史上唯一的一场。", en: "Don Larsen pitches a perfect game in the World Series, still the only one in its history." },
+  ],
+  "10-09": [
+    { id: "history:10-09:2", year: 1604, zh: "天文学家首次观测到后来被称为开普勒超新星的天体，开普勒本人于10月17日开始观测。", en: "Astronomers first observe the object later known as Kepler's supernova; Kepler himself begins observing it on October 17." },
+  ],
+  "10-10": [
+    { id: "history:10-10:2", year: 1846, zh: "英国天文学家拉塞尔发现海王星最大的卫星海卫一。", en: "Astronomer William Lassell discovers Triton, the largest moon of Neptune." },
+  ],
+  "10-11": [
+    { id: "history:10-11:2", year: 1962, zh: "梵蒂冈第二次大公会议开幕，天主教会开始了一系列改革。", en: "The Second Vatican Council opens, beginning a series of reforms in the Catholic Church." },
+  ],
+  "10-12": [
+    { id: "history:10-12:2", year: 1892, zh: "纽约市学生在哥伦布日纪念活动中率先集体朗诵《效忠誓词》，全国性学校庆典随后于 10 月 21 日举行。", en: "New York City students are the first large group to recite the Pledge of Allegiance; the nationwide school celebration follows on October 21." },
+  ],
+  "10-13": [
+    { id: "history:10-13:2", year: 1792, zh: "美国总统官邸白宫奠基。", en: "The cornerstone of the White House is laid in Washington." },
+  ],
+  "10-14": [
+    { id: "history:10-14:2", year: 1066, zh: "黑斯廷斯战役中，诺曼底公爵威廉击败英王哈罗德二世，诺曼人征服英格兰。", en: "At the Battle of Hastings, William of Normandy defeats Harold II, beginning the Norman Conquest of England." },
+  ],
+  "10-15": [
+    { id: "history:10-15:2", year: 2003, zh: "杨利伟乘神舟五号飞船进入太空，中国成为第三个独立将人送入太空的国家。", en: "Yang Liwei flies aboard Shenzhou 5, making China the third country to send a person into space on its own." },
+  ],
+  "10-16": [
+    { id: "history:10-16:2", year: 1846, zh: "波士顿麻省总医院公开演示手术中的乙醚麻醉，这次试验成为现代麻醉发展史上的重要里程碑。", en: "Ether anaesthesia is publicly demonstrated during surgery at Massachusetts General Hospital, a milestone in the development of modern anaesthesia." },
+  ],
+  "10-17": [
+    { id: "history:10-17:2", year: 1931, zh: "芝加哥黑帮头目阿尔·卡彭因逃税被判有罪。", en: "Chicago gangster Al Capone is convicted of tax evasion." },
+  ],
+  "10-18": [
+    { id: "history:10-18:2", year: 1922, zh: "英国广播公司（BBC）成立。", en: "The British Broadcasting Company, the BBC, is founded." },
+  ],
+  "10-19": [
+    { id: "history:10-19:2", year: 1987, zh: "「黑色星期一」：道琼斯指数单日暴跌 22.6%，至今仍是历史最大单日跌幅。", en: "Black Monday: the Dow Jones falls 22.6% in a single day, still its largest one-day percentage drop." },
+  ],
+  "10-20": [
+    { id: "history:10-20:2", year: 1818, zh: "英美签订条约，以北纬 49 度线作为两国在西部的大部分边界。", en: "Britain and the United States agree on the 49th parallel as much of their western border." },
+  ],
+  "10-21": [
+    { id: "history:10-21:2", year: 1805, zh: "特拉法尔加海战中，纳尔逊率领英国舰队击败法西联合舰队，自己却中弹身亡。", en: "At the Battle of Trafalgar, Nelson's fleet defeats the French and Spanish, but Nelson himself is killed." },
+  ],
+  "10-22": [
+    { id: "history:10-22:2", year: 1797, zh: "法国人加尔纳兰在巴黎上空从充氢气球进行降落伞下降，完成首次成功的气球跳伞。", en: "André-Jacques Garnerin makes the first successful parachute descent from a balloon, using a hydrogen balloon over Paris." },
+  ],
+  "10-23": [
+    { id: "history:10-23:2", year: 2001, zh: "苹果公司推出第一代 iPod，「把一千首歌装进口袋」。", en: "Apple introduces the first iPod: '1,000 songs in your pocket'." },
+  ],
+  "10-24": [
+    { id: "history:10-24:2", year: 1945, zh: "《联合国宪章》生效，联合国正式成立，这一天后来定为联合国日。", en: "The UN Charter comes into force and the United Nations is born; the day is now United Nations Day." },
+  ],
+  "10-25": [
+    { id: "history:10-25:2", year: 1971, zh: "联合国大会通过第2758号决议，恢复中华人民共和国在联合国的权利，并确认其政府代表为中国在联合国的唯一合法代表。", en: "The UN General Assembly adopts Resolution 2758, restoring the rights of the People's Republic of China and recognizing its government representatives as the only legitimate representatives of China to the United Nations." },
+  ],
+  "10-26": [
+    { id: "history:10-26:2", year: 1881, zh: "美国亚利桑那州墓碑镇发生 O.K. 畜栏枪战，前后大约只有 30 秒。", en: "The Gunfight at the O.K. Corral takes place in Tombstone, Arizona; it lasts about thirty seconds." },
+  ],
+  "10-27": [
+    { id: "history:10-27:2", year: 1858, zh: "西奥多·罗斯福出生于纽约，泰迪熊的名字就来自他。", en: "Theodore Roosevelt is born in New York; the teddy bear is named after him." },
+  ],
+  "10-28": [
+    { id: "history:10-28:2", year: 1636, zh: "马萨诸塞湾殖民地议会投票拨款建立学院，即后来的哈佛大学。", en: "The Massachusetts Bay Colony votes to fund a college, which will become Harvard University." },
+  ],
+  "10-29": [
+    { id: "history:10-29:2", year: 1923, zh: "土耳其共和国成立，凯末尔当选为第一任总统。", en: "The Republic of Turkey is proclaimed, with Mustafa Kemal as its first president." },
+  ],
+  "10-30": [
+    { id: "history:10-30:2", year: 1938, zh: "奥森·威尔斯在广播中演出《世界大战》，一些听众误以为火星人真的入侵了。", en: "Orson Welles broadcasts The War of the Worlds on radio, and some listeners believe Martians have really landed." },
+  ],
+  "10-31": [
+    { id: "history:10-31:2", year: 1926, zh: "魔术师胡迪尼在底特律去世。", en: "Escape artist Harry Houdini dies in Detroit." },
+  ],
+  "11-01": [
+    { id: "history:11-01:2", year: 1755, zh: "里斯本大地震发生，随后的海啸和大火几乎摧毁了整座城市。", en: "The Lisbon earthquake strikes; the tsunami and fires that follow almost destroy the city." },
+  ],
+  "11-02": [
+    { id: "history:11-02:2", year: 1920, zh: "美国匹兹堡 KDKA 电台开播，第一次广播的内容是总统选举结果。", en: "Radio station KDKA in Pittsburgh begins commercial broadcasting, reporting the presidential election results." },
+  ],
+  "11-03": [
+    { id: "history:11-03:2", year: 1903, zh: "巴拿马宣布脱离哥伦比亚独立。", en: "Panama declares independence from Colombia." },
+  ],
+  "11-04": [
+    { id: "history:11-04:2", year: 1879, zh: "詹姆斯·里蒂获得收银机的专利，据说是为了防止酒吧伙计偷钱。", en: "James Ritty patents the cash register, reportedly to stop his saloon staff from pocketing money." },
+  ],
+  "11-05": [
+    { id: "history:11-05:2", year: 1872, zh: "苏珊·安东尼在纽约罗切斯特参加总统选举投票，随后因「非法投票」被捕。", en: "Susan B. Anthony votes in the presidential election in Rochester, New York, and is later arrested for 'illegal voting'." },
+  ],
+  "11-06": [
+    { id: "history:11-06:2", year: 1869, zh: "罗格斯大学与普林斯顿大学举行首场美国大学间橄榄球比赛，当时规则更接近现代足球。", en: "Rutgers and Princeton play the first intercollegiate American football game, under rules closer to modern soccer." },
+  ],
+  "11-07": [
+    { id: "history:11-07:2", year: 1867, zh: "居里夫人出生于华沙，她后来成为第一位两次获得诺贝尔奖的人。", en: "Marie Curie is born in Warsaw; she will become the first person to win two Nobel Prizes." },
+  ],
+  "11-08": [
+    { id: "history:11-08:2", year: 1960, zh: "肯尼迪当选美国总统，43 岁的他是当选总统中最年轻的一位。", en: "John F. Kennedy is elected U.S. president; at 43 he is the youngest person ever elected to the office." },
+  ],
+  "11-09": [
+    { id: "history:11-09:2", year: 1918, zh: "德国宣布德皇威廉二世退位，德意志共和国宣告成立。", en: "Germany announces the abdication of Kaiser Wilhelm II, and a German republic is proclaimed." },
+  ],
+  "11-10": [
+    { id: "history:11-10:2", year: 1483, zh: "马丁·路德出生于德国艾斯莱本，后来掀起宗教改革。", en: "Martin Luther is born in Eisleben, Germany; he will spark the Reformation." },
+  ],
+  "11-11": [
+    { id: "history:11-11:2", year: 1821, zh: "陀思妥耶夫斯基出生于莫斯科，后来写出《罪与罚》。", en: "Fyodor Dostoevsky is born in Moscow; he will write Crime and Punishment." },
+  ],
+  "11-12": [
+    { id: "history:11-12:2", year: 1866, zh: "孙中山出生于广东香山县翠亨村。", en: "Sun Yat-sen is born in Cuiheng village, Xiangshan county, Guangdong." },
+  ],
+  "11-13": [
+    { id: "history:11-13:2", year: 1850, zh: "作家史蒂文森出生于爱丁堡，后来写出《金银岛》。", en: "Robert Louis Stevenson is born in Edinburgh; he will write Treasure Island." },
+  ],
+  "11-14": [
+    { id: "history:11-14:2", year: 1840, zh: "印象派画家莫奈出生于巴黎。", en: "Impressionist painter Claude Monet is born in Paris." },
+  ],
+  "11-15": [
+    { id: "history:11-15:2", year: 1971, zh: "英特尔推出 4004，这是第一款商用微处理器。", en: "Intel introduces the 4004, the first commercially available microprocessor." },
+  ],
+  "11-16": [
+    { id: "history:11-16:2", year: 1532, zh: "皮萨罗在卡哈马卡俘虏印加皇帝阿塔瓦尔帕。", en: "Francisco Pizarro captures the Inca emperor Atahualpa at Cajamarca." },
+  ],
+  "11-17": [
+    { id: "history:11-17:2", year: 1558, zh: "伊丽莎白一世继承英格兰王位，开启了「伊丽莎白时代」。", en: "Elizabeth I succeeds to the throne of England, beginning the Elizabethan age." },
+  ],
+  "11-18": [
+    { id: "history:11-18:2", year: 1883, zh: "美国和加拿大的铁路采用标准时区，各地不再各用各的地方时。", en: "Railways in the U.S. and Canada adopt standard time zones, ending a patchwork of local times." },
+  ],
+  "11-19": [
+    { id: "history:11-19:2", year: 1493, zh: "哥伦布第二次航行中登上波多黎各岛。", en: "On his second voyage, Columbus lands on the island of Puerto Rico." },
+  ],
+  "11-20": [
+    { id: "history:11-20:2", year: 1945, zh: "纽伦堡审判开庭，纳粹德国主要战犯接受国际军事法庭审判。", en: "The Nuremberg trials open, putting leading Nazi war criminals before an international tribunal." },
+  ],
+  "11-21": [
+    { id: "history:11-21:2", year: 1783, zh: "罗齐尔和达尔朗德乘孟格菲热气球在巴黎上空飞行，这是人类第一次自由载人飞行。", en: "Pilâtre de Rozier and the Marquis d'Arlandes fly over Paris in a Montgolfier balloon, the first free flight by humans." },
+  ],
+  "11-22": [
+    { id: "history:11-22:2", year: 1718, zh: "海盗「黑胡子」在北卡罗来纳海岸外被英国海军击毙。", en: "The pirate Blackbeard is killed off the coast of North Carolina by a Royal Navy force." },
+  ],
+  "11-23": [
+    { id: "history:11-23:2", year: 1889, zh: "旧金山一家酒吧装上了投币式留声机，这是最早的点唱机。", en: "A coin-operated phonograph is installed in a San Francisco saloon, the first jukebox." },
+  ],
+  "11-24": [
+    { id: "history:11-24:2", year: 1874, zh: "格利登获得带刺铁丝网的专利，美国西部的开放牧场从此逐渐被围了起来。", en: "Joseph Glidden patents barbed wire, which will fence in the open range of the American West." },
+  ],
+  "11-25": [
+    { id: "history:11-25:2", year: 1952, zh: "阿加莎·克里斯蒂的舞台剧《捕鼠器》在伦敦开演，后来成为世界上演出历史最长的戏剧，曾因疫情短暂停演。", en: "Agatha Christie's play The Mousetrap opens in London and becomes the world's longest-running play, with a later interruption during the COVID-19 pandemic." },
+  ],
+  "11-26": [
+    { id: "history:11-26:2", year: 1789, zh: "美国举行第一个由总统宣布的全国感恩节。", en: "The United States observes the first national Thanksgiving proclaimed by a president." },
+  ],
+  "11-27": [
+    { id: "history:11-27:2", year: 1701, zh: "瑞典天文学家摄尔修斯出生，摄氏温标就以他命名。", en: "Swedish astronomer Anders Celsius is born; the Celsius temperature scale bears his name." },
+  ],
+  "11-28": [
+    { id: "history:11-28:2", year: 1757, zh: "英国诗人、画家布莱克出生于伦敦。", en: "Poet and painter William Blake is born in London." },
+  ],
+  "11-29": [
+    { id: "history:11-29:2", year: 1929, zh: "伯德和他的机组首次驾机飞越南极点。", en: "Richard Byrd and his crew make the first flight over the South Pole." },
+  ],
+  "11-30": [
+    { id: "history:11-30:2", year: 1835, zh: "马克·吐温出生于美国密苏里州，那年哈雷彗星正好经过地球附近。", en: "Mark Twain is born in Missouri, in a year when Halley's Comet passes near Earth." },
+  ],
+  "12-01": [
+    { id: "history:12-01:2", year: 1913, zh: "福特公司在高地公园工厂启用移动式装配线，一辆 T 型车的装配时间从十几个小时缩短到约一个半小时。", en: "Ford starts its moving assembly line at Highland Park, cutting the time to build a Model T from over twelve hours to about ninety minutes." },
+  ],
+  "12-02": [
+    { id: "history:12-02:2", year: 1804, zh: "拿破仑在巴黎圣母院加冕为法国皇帝，他在教皇面前亲手把皇冠戴到自己头上。", en: "Napoleon is crowned Emperor of the French in Notre-Dame, placing the crown on his own head as the Pope looks on." },
+  ],
+  "12-03": [
+    { id: "history:12-03:2", year: 1992, zh: "一位英国工程师用电脑向同事的手机发出「Merry Christmas」，这是世界上第一条SMS短信。", en: "A British engineer sends 'Merry Christmas' from a computer to a colleague's phone: the world's first SMS message." },
+  ],
+  "12-04": [
+    { id: "history:12-04:2", year: 1791, zh: "英国《观察家报》创刊，是世界上历史最悠久的星期日报纸。", en: "The Observer is first published in Britain; it is the world's oldest Sunday newspaper." },
+  ],
+  "12-05": [
+    { id: "history:12-05:2", year: 1791, zh: "莫扎特在维也纳去世，年仅 35 岁，《安魂曲》没能写完。", en: "Mozart dies in Vienna at 35, leaving his Requiem unfinished." },
+  ],
+  "12-06": [
+    { id: "history:12-06:2", year: 1240, zh: "蒙古军队攻陷基辅。", en: "Mongol forces capture and sack Kyiv." },
+  ],
+  "12-07": [
+    { id: "history:12-07:2", year: 1787, zh: "特拉华州第一个批准美国宪法，因此被称为「第一州」。", en: "Delaware becomes the first state to ratify the U.S. Constitution, earning the name 'the First State'." },
+  ],
+  "12-08": [
+    { id: "history:12-08:2", year: 1980, zh: "约翰·列侬在纽约寓所外遭枪杀，年仅 40 岁。", en: "John Lennon is shot dead outside his apartment building in New York, aged 40." },
+  ],
+  "12-09": [
+    { id: "history:12-09:2", year: 1608, zh: "英国诗人弥尔顿出生于伦敦，后来在双目失明后口述完成《失乐园》。", en: "John Milton is born in London; blind in later life, he will dictate Paradise Lost." },
+  ],
+  "12-10": [
+    { id: "history:12-10:2", year: 1815, zh: "艾达·洛夫莱斯出生于伦敦，她为分析机写下的算法被视为最早的计算机程序。", en: "Ada Lovelace is born in London; her algorithm for the Analytical Engine is regarded as the first computer program." },
+  ],
+  "12-11": [
+    { id: "history:12-11:2", year: 1936, zh: "英王爱德华八世为与辛普森夫人结婚而宣布退位。", en: "King Edward VIII abdicates in order to marry Wallis Simpson." },
+  ],
+  "12-12": [
+    { id: "history:12-12:2", year: 1821, zh: "法国作家福楼拜出生于鲁昂，后来写出《包法利夫人》。", en: "French writer Gustave Flaubert is born in Rouen; he will write Madame Bovary." },
+  ],
+  "12-13": [
+    { id: "history:12-13:2", year: 1937, zh: "侵华日军攻占南京，随后制造了南京大屠杀。这一天后来定为南京大屠杀死难者国家公祭日。", en: "Japanese troops capture Nanjing and begin the Nanjing Massacre; the date is now China's national day of remembrance for its victims." },
+  ],
+  "12-14": [
+    { id: "history:12-14:2", year: 1799, zh: "乔治·华盛顿在弗吉尼亚弗农山庄去世。", en: "George Washington dies at Mount Vernon, Virginia." },
+  ],
+  "12-15": [
+    { id: "history:12-15:2", year: 1939, zh: "电影《乱世佳人》在亚特兰大首映。", en: "Gone with the Wind premieres in Atlanta." },
+  ],
+  "12-16": [
+    { id: "history:12-16:2", year: 1775, zh: "简·奥斯汀出生于英格兰汉普郡斯蒂文顿。", en: "Jane Austen is born in Steventon, Hampshire, England." },
+  ],
+  "12-17": [
+    { id: "history:12-17:2", year: 1790, zh: "墨西哥城中央广场出土阿兹特克太阳石。", en: "The Aztec Sun Stone is unearthed in the main square of Mexico City." },
+  ],
+  "12-18": [
+    { id: "history:12-18:2", year: 1978, zh: "中共十一届三中全会在北京开幕，会议确定了改革开放的方针。", en: "The Third Plenum of the 11th Central Committee opens in Beijing, setting China on the course of reform and opening up." },
+  ],
+  "12-19": [
+    { id: "history:12-19:2", year: 1972, zh: "阿波罗 17 号返回地球，这是迄今为止人类最后一次登月任务。", en: "Apollo 17 splashes down, ending the last crewed mission to the Moon to date." },
+  ],
+  "12-20": [
+    { id: "history:12-20:2", year: 1946, zh: "电影《生活多美好》在纽约首映。", en: "It's a Wonderful Life premieres in New York." },
+  ],
+  "12-21": [
+    { id: "history:12-21:2", year: 1968, zh: "阿波罗 8 号发射，三名宇航员成为第一批绕月飞行的人类。", en: "Apollo 8 launches; its three astronauts will be the first humans to orbit the Moon." },
+  ],
+  "12-22": [
+    { id: "history:12-22:2", year: 1808, zh: "贝多芬的第五和第六交响曲在维也纳的同一场音乐会上首演。", en: "Beethoven's Fifth and Sixth Symphonies premiere at the same concert in Vienna." },
+  ],
+  "12-23": [
+    { id: "history:12-23:2", year: 1823, zh: "诗歌《圣诞前夜》在纽约一家报纸上匿名发表，塑造了今天圣诞老人的形象。", en: "The poem 'A Visit from St. Nicholas' is published anonymously in a New York paper, shaping the modern Santa Claus." },
+  ],
+  "12-24": [
+    { id: "history:12-24:2", year: 1968, zh: "阿波罗 8 号宇航员在环月轨道上拍下《地出》：地球从月平线上升起。", en: "Apollo 8 astronauts photograph Earthrise: the Earth rising over the lunar horizon." },
+  ],
+  "12-25": [
+    { id: "history:12-25:2", year: 800, zh: "查理曼在罗马圣彼得大教堂由教皇加冕为皇帝。", en: "Charlemagne is crowned emperor by the Pope in St Peter's Basilica, Rome." },
+  ],
+  "12-26": [
+    { id: "history:12-26:2", year: 1776, zh: "华盛顿率军于25日夜间至26日凌晨渡过特拉华河，随后在特伦顿取得突袭胜利。", en: "Washington's army crosses the Delaware River overnight on December 25–26 and wins a surprise victory at Trenton." },
+  ],
+  "12-27": [
+    { id: "history:12-27:2", year: 1571, zh: "开普勒出生于德国魏尔，后来发现了行星运动三定律。", en: "Johannes Kepler is born in Weil der Stadt, Germany; he will discover the three laws of planetary motion." },
+  ],
+  "12-28": [
+    { id: "history:12-28:2", year: 1612, zh: "伽利略在观测木星时记下了海王星的位置，却把它当成了一颗恒星。", en: "Galileo records the position of Neptune while observing Jupiter, but takes it for a fixed star." },
+  ],
+  "12-29": [
+    { id: "history:12-29:2", year: 1170, zh: "坎特伯雷大主教贝克特在大教堂内被刺杀。", en: "Archbishop Thomas Becket is murdered inside Canterbury Cathedral." },
+  ],
+  "12-30": [
+    { id: "history:12-30:2", year: 1865, zh: "吉卜林出生于印度孟买，后来写出《丛林之书》。", en: "Rudyard Kipling is born in Bombay, India; he will write The Jungle Book." },
+  ],
+  "12-31": [
+    { id: "history:12-31:2", year: 1600, zh: "英国东印度公司获得伊丽莎白一世颁发的特许状成立。", en: "The English East India Company is chartered by Elizabeth I." },
+  ],
+};
+
 /* ---------- Thoughts (bilingual pairs) ---------- */
 const THOUGHTS = [
   { id: "thought:001", zh: "你以为你在回忆，其实你每回忆一次，就重写了一次记忆。", en: "You think you are remembering. Each time you recall something, you rewrite the memory a little." },
@@ -991,6 +2498,76 @@ const THOUGHTS = [
   { id: "thought:048", zh: "你总说等有时间再做。其实时间从来不是等来的，是从别的事情里让出来的。", en: "You keep saying you will do it when you have time. Time is never found waiting. It is yielded by other things." },
   { id: "thought:049", zh: "小概率事件乘以足够多的次数，就会变成必然。活得久了，谁都会遇上几次奇迹和几次意外。", en: "A small probability, multiplied by enough trials, becomes a certainty. Live long enough and everyone meets a few miracles and a few accidents." },
   { id: "thought:050", zh: "判断一个人，不是看他顺境里说什么，是看他无聊的时候做什么。无聊时段，最暴露一个人。", en: "Do not judge a person by what they say in good times. Watch what they do when bored. Boredom is the most revealing hour." },
+  { id: "thought:051", zh: "想弄懂一件事，最快的办法常常是试着把它讲给一个外行听。", en: "The fastest way to understand something is often to try explaining it to someone outside the field." },
+  { id: "thought:052", zh: "你最常走的那条路，往往看得最少。熟悉会让眼睛自动熄灯。", en: "The road you walk most is often the road you see least. Familiarity switches the eyes off." },
+  { id: "thought:053", zh: "运气好的人，很多只是尝试的次数多。抛的硬币多了，正面自然也多。", en: "Many lucky people have simply tried more often. Toss more coins and you will see more heads." },
+  { id: "thought:054", zh: "判断一个决定好不好，不能只看结果。好决定也会碰上坏运气，坏决定也会撞上好结果。", en: "Judge a decision by more than its outcome. Good decisions meet bad luck, and bad ones sometimes stumble into good results." },
+  { id: "thought:055", zh: "事后回看，一切似乎早有征兆。后见之明让过去显得比当时更可预测。", en: "Looking back, everything seems to have been foreshadowed. Hindsight makes the past look more predictable than it ever was." },
+  { id: "thought:056", zh: "无知最大的特点，是它感觉起来不像无知。", en: "The defining feature of ignorance is that it does not feel like ignorance." },
+  { id: "thought:057", zh: "你对一件事越熟，就越难想起不会它时的感觉。这就是专家常常讲不清楚的原因。", en: "The better you know something, the harder it is to remember not knowing it. That is why experts often explain badly." },
+  { id: "thought:058", zh: "拖延很少是因为懒，更多是想躲开开始时那一点点不舒服。", en: "Procrastination is rarely laziness. More often it is dodging the small discomfort of starting." },
+  { id: "thought:059", zh: "事情一旦开始，通常没有想象中难。难的部分，大多发生在开始之前的脑子里。", en: "Once begun, most tasks are easier than imagined. The hard part mostly happens in your head before you start." },
+  { id: "thought:060", zh: "一个习惯坚持不下去，多半不是意志太弱，而是它太大了。把它切小，小到不可能失败。", en: "When a habit will not stick, it is usually too big rather than you too weak. Shrink it until failure is impossible." },
+  { id: "thought:061", zh: "你今天觉得理所当然的东西，曾经是别人许过的愿。", en: "Things you take for granted today were once someone's wish." },
+  { id: "thought:062", zh: "安静不是没有声音，而是没有声音在争夺你。", en: "Quiet is not the absence of sound. It is the absence of sounds competing for you." },
+  { id: "thought:063", zh: "如果你连续三天都在想同一件事，它就不再是一个念头，而是一个信号。", en: "If you have thought about the same thing three days running, it is no longer a passing thought. It is a signal." },
+  { id: "thought:064", zh: "不确定让人不安，可也正是它，让明天值得等待。", en: "Uncertainty unsettles us, yet it is exactly what makes tomorrow worth waiting for." },
+  { id: "thought:065", zh: "真正的休息不是什么都不做，而是做一件不再拉扯注意力的事。", en: "Real rest is not doing nothing. It is doing something that stops tugging at your attention." },
+  { id: "thought:066", zh: "工作会膨胀，直到填满为它留出的全部时间。期限给得越宽，事情就拖得越长。", en: "Work expands to fill the time allowed for it. The looser the deadline, the longer the task." },
+  { id: "thought:067", zh: "一次只做一件事，听起来像退步，其实常常最快。切换任务的代价总被低估。", en: "Doing one thing at a time sounds like a step backwards but is often fastest. The cost of switching tasks is routinely underestimated." },
+  { id: "thought:068", zh: "你害怕的那件事，在脑子里预演的次数，通常比它真正发生的次数多得多。", en: "The thing you fear is usually rehearsed in your head far more often than it ever happens." },
+  { id: "thought:069", zh: "道歉最难的部分不是说「对不起」，而是忍住不急着解释。", en: "The hardest part of an apology is not saying sorry. It is resisting the urge to explain." },
+  { id: "thought:070", zh: "倾听的时候，很多人其实只是在等着轮到自己说话。", en: "While listening, many people are really just waiting for their turn to speak." },
+  { id: "thought:071", zh: "复利不只发生在钱上。每天进步一点点，十年后的差距大到难以想象。", en: "Compounding is not only for money. A little progress each day becomes an unimaginable gap after ten years." },
+  { id: "thought:072", zh: "随机里藏着一种公平：骰子不认识任何人。", en: "There is a fairness in randomness: dice know nobody." },
+  { id: "thought:073", zh: "抽签让人安心，是因为它把选择的责任交给了偶然。", en: "Drawing lots is reassuring because it hands the responsibility for choosing to chance." },
+  { id: "thought:074", zh: "犹豫不决时抛一枚硬币。硬币落地之前，你通常已经知道自己盼着哪一面。", en: "When torn, toss a coin. Before it lands, you usually know which side you are hoping for." },
+  { id: "thought:075", zh: "我们总以为别人比自己更确定。其实大家都在边走边猜。", en: "We assume others are more certain than we are. In truth everyone is guessing as they go." },
+  { id: "thought:076", zh: "情绪来的时候，给它起个名字。说出「我在焦虑」，焦虑就往后退了一步。", en: "When an emotion arrives, give it a name. Saying 'I am anxious' moves the anxiety back a step." },
+  { id: "thought:077", zh: "第一印象几秒钟就形成了，改变它却要很久。", en: "A first impression forms in seconds and takes a long time to change." },
+  { id: "thought:078", zh: "你所说的「性格」，有不少是环境长期塑造的结果。换个环境，人也常常换了个样子。", en: "Much of what you call personality is your surroundings at work over time. Change the setting and people often change too." },
+  { id: "thought:079", zh: "每一次「再等等」，都在悄悄替你做决定。", en: "Every 'let's wait a bit' quietly makes the decision for you." },
+  { id: "thought:080", zh: "想知道一个人看重什么，看他的日程表，而不是听他的愿望。", en: "To learn what someone values, look at their calendar, not their wishes." },
+  { id: "thought:081", zh: "很多烦恼都来自一个假设：事情本该是另一个样子。", en: "Much distress grows from a single assumption: that things should have been otherwise." },
+  { id: "thought:082", zh: "你在意什么，决定了你会注意到什么。买了一辆红车，满街都是红车。", en: "What you care about decides what you notice. Buy a red car and the streets fill with red cars." },
+  { id: "thought:083", zh: "数据能告诉你发生了什么，却很少告诉你为什么。", en: "Data can tell you what happened, but rarely why." },
+  { id: "thought:084", zh: "相关不等于因果。冰淇淋卖得多的时候溺水的人也多，只因为都是夏天。", en: "Correlation is not causation. Ice-cream sales and drownings rise together only because both rise in summer." },
+  { id: "thought:085", zh: "我们只听得到成功者的故事，因为失败者很少有机会开口。这叫幸存者偏差。", en: "We hear the winners' stories because the losers rarely get the microphone. That is survivorship bias." },
+  { id: "thought:086", zh: "平均数会骗人：头在烤箱里、脚在冰柜里，平均下来体温正好。", en: "Averages can deceive: head in the oven, feet in the freezer, and on average you are perfectly comfortable." },
+  { id: "thought:087", zh: "人对损失的感受，大约是同等收益的两倍。丢掉一百元的难受，比捡到一百元的高兴更持久。", en: "A loss is felt roughly twice as strongly as an equal gain. Losing a hundred stings longer than finding a hundred pleases." },
+  { id: "thought:088", zh: "我们会为已经投入的东西继续投入，哪怕它已不再值得。这叫沉没成本。", en: "We keep investing in what we have already invested in, even when it is no longer worth it. That is the sunk cost." },
+  { id: "thought:089", zh: "越急着找一样东西，越找不到。放松下来，它常常就在眼前。", en: "The harder you hunt for something, the less you find it. Relax, and it is often right in front of you." },
+  { id: "thought:090", zh: "规律的日子让人安心，偶然的一刻让人记住。", en: "Regular days bring comfort; a chance moment is what you remember." },
+  { id: "thought:091", zh: "一年有 525,600 分钟。这一分钟，你打算怎么过？", en: "A year has 525,600 minutes. How will you spend this one?" },
+  { id: "thought:092", zh: "时钟每一圈都走得一样，可你每一圈都不一样。", en: "The clock goes round the same way every time. You are different on every lap." },
+  { id: "thought:093", zh: "很多年后，你会回头看现在这一刻。那时的你，会希望此刻的你在做什么？", en: "Years from now you will look back at this moment. What will you wish you had been doing?" },
+  { id: "thought:094", zh: "同一首歌，十七岁听和三十七岁听，是两首歌。", en: "The same song heard at seventeen and at thirty-seven is two different songs." },
+  { id: "thought:095", zh: "你没法同时既着急又专注。", en: "You cannot be hurried and fully attentive at the same time." },
+  { id: "thought:096", zh: "疲惫时做的决定，往往是替疲惫做的决定。", en: "Decisions made while exhausted are often made on exhaustion's behalf." },
+  { id: "thought:097", zh: "睡一觉再决定，往往不是逃避，而是让大脑在后台接着工作。", en: "Sleeping on a decision is not always avoidance. Often it lets the brain keep working in the background." },
+  { id: "thought:098", zh: "人很少被困难本身打败，更多是被「它会一直这样」的念头打败。", en: "People are seldom beaten by difficulty itself, more often by the thought that it will always be like this." },
+  { id: "thought:099", zh: "你此刻读到的这句话，是这一分钟的偶然。下一分钟，它就会被另一张卡片替换。", en: "The line you are reading is this minute's chance. In a minute, another card will take its place." },
+  { id: "thought:100", zh: "小事做得好，是因为没人看的时候也照样做。", en: "Small things are done well when they are done the same way with nobody watching." },
+  { id: "thought:101", zh: "简单不是想得少，而是想得够多之后，把多余的去掉。", en: "Simplicity is not thinking less. It is thinking enough, then taking away what is extra." },
+  { id: "thought:102", zh: "能坦然说「我不知道」的人，说「我知道」时才更可信。", en: "People who can say 'I don't know' are more believable when they say 'I know'." },
+  { id: "thought:103", zh: "一旦开始被记录，事情就会变：开始数步数，你就会多走几步。", en: "Measuring changes what is measured: start counting your steps and you take a few more." },
+  { id: "thought:104", zh: "你乐意为之「浪费」时间的事，才是你真正热爱的事。", en: "The things you are glad to 'waste' time on are the things you truly love." },
+  { id: "thought:105", zh: "生活里最好的东西，常常不在计划之内。", en: "The best things in life are often the ones nobody planned." },
+  { id: "thought:106", zh: "你无法决定下一分钟会发生什么，但可以决定用什么心情迎接它。", en: "You cannot decide what the next minute brings, but you can decide the mood in which you meet it." },
+  { id: "thought:107", zh: "改变别人很难，改变自己和他相处的方式要容易得多。", en: "Changing other people is hard. Changing how you deal with them is far easier." },
+  { id: "thought:108", zh: "重要的话，并肩走路时往往比面对面更容易说出口。", en: "Important things are often easier to say walking side by side than sitting face to face." },
+  { id: "thought:109", zh: "等到觉得准备好了再开始，可能就永远开始不了。", en: "If you wait until you feel ready to start, you may never start." },
+  { id: "thought:110", zh: "一个问题换个问法，常常就有了答案。", en: "Ask a question a different way and it often answers itself." },
+  { id: "thought:111", zh: "你记得的童年，有一部分是照片替你记住的。", en: "Part of the childhood you remember was remembered for you by photographs." },
+  { id: "thought:112", zh: "把手机放到另一个房间，注意力就回来了一半。", en: "Put your phone in another room and half your attention comes back." },
+  { id: "thought:113", zh: "降水概率 30%，不是说会下 30% 的雨，而是在相似的天气里，十次大约有三次会下雨。", en: "A 30% chance of rain does not mean 30% of the rain. It means that in similar weather, it rains about three times in ten." },
+  { id: "thought:114", zh: "没做完的事比做完的事更难忘。未完成的念头会一直在脑子里敲门。", en: "Unfinished tasks are harder to forget than finished ones. An open loop keeps knocking." },
+  { id: "thought:115", zh: "年纪越大，一年显得越短，部分原因是每一年在你人生中占的比例越来越小。", en: "Years feel shorter as you age partly because each one is a smaller share of the life you have lived." },
+  { id: "thought:116", zh: "在人群里，人更容易说「是」。只要有一个人先开口反对，其他人往往也敢说话了。", en: "In a group people say yes more easily. Once one person voices disagreement, others often find the courage to speak." },
+  { id: "thought:117", zh: "真正的耐心不是等待，而是在等待时还能保持好的状态。", en: "Real patience is not just waiting. It is staying well while you wait." },
+  { id: "thought:118", zh: "别人的一句随口评价，你可能记了十年；你的一句随口评价，也可能被别人记十年。", en: "You may remember someone's offhand remark for ten years. Someone may remember yours just as long." },
+  { id: "thought:119", zh: "最好的时机常常不是最舒服的时机。", en: "The best moment is often not the most comfortable one." },
+  { id: "thought:120", zh: "生活里有很多时间花在路上、排队和等待里。安放好这些零碎的时间，也就安放了人生很大的一块。", en: "Much of life is spent in transit, in queues and in waiting. Make peace with those fragments and you have claimed a large piece of your life." },
 ];
 
 /* ---------- Memory prompts (bilingual, reflection only) ---------- */
@@ -1036,6 +2613,21 @@ const MEMORY_PROMPTS = [
   { id: "memory:039", zh: "想一种你小时候常闻到、现在很少闻到的气味。它出现在哪里，又是怎么消失的？", en: "Think of a smell you often encountered as a child and rarely do now. Where did it live, and how did it vanish?" },
   { id: "memory:040", zh: "你有没有一句口头禅，是从某个人那里学来的？每次说出口，那个人就短暂地回来了一下。", en: "Do you have a catchphrase you picked up from someone? Every time you say it, that person briefly returns." },
   { id: "memory:041", zh: "今天的日落你看到了吗？如果没看到，上一次认真看日落是什么时候，和谁一起？", en: "Did you see today's sunset? If not, when did you last watch one properly, and who was with you?" },
+  { id: "memory:042", zh: "你学会骑自行车那天，是谁在后面扶着？那个人是什么时候悄悄松的手？", en: "When you learned to ride a bike, who held the back of the seat? When did they quietly let go?" },
+  { id: "memory:043", zh: "你拥有的第一个属于自己的房间，门开在左边还是右边？", en: "In the first room that was truly yours, was the door on the left or the right?" },
+  { id: "memory:044", zh: "你第一次自己做的一顿饭是什么？味道还记得吗？", en: "What was the first meal you cooked on your own? Do you remember how it tasted?" },
+  { id: "memory:045", zh: "有没有一个夏天，你至今觉得特别漫长？那年你几岁？", en: "Is there one summer that still feels unusually long? How old were you?" },
+  { id: "memory:046", zh: "小时候你最常被夸的是哪件事？现在还会吗？", en: "What were you most often praised for as a child? Can you still do it?" },
+  { id: "memory:047", zh: "上一次手写一封信或一张卡片给别人，是什么时候？写给谁？", en: "When did you last handwrite a letter or a card for someone? Who was it for?" },
+  { id: "memory:048", zh: "你第一次独自在外过夜，是在哪里？那晚睡得好吗？", en: "Where did you first spend a night away from home on your own? Did you sleep well?" },
+  { id: "memory:049", zh: "有没有一个下雨天，你到现在还记得？雨里发生了什么？", en: "Is there a rainy day you still remember? What happened while it rained?" },
+  { id: "memory:050", zh: "小时候你以为自己长大会做什么工作？这个念头是从哪儿来的？", en: "What job did you think you would do when you grew up? Where did that idea come from?" },
+  { id: "memory:051", zh: "你第一次看见大海，或者一座真正的高山，是什么时候？第一眼是什么感觉？", en: "When did you first see the sea, or a truly high mountain? What did you feel at first sight?" },
+  { id: "memory:052", zh: "有没有一个陌生人帮过你，你却没来得及好好道谢？", en: "Has a stranger ever helped you before you had the chance to thank them properly?" },
+  { id: "memory:053", zh: "一年前的这个季节，你每天早上醒来做的第一件事是什么？", en: "In this season a year ago, what was the first thing you did each morning?" },
+  { id: "memory:054", zh: "你书架上或手机里留得最久的一本书是哪本？当初为什么买下它？", en: "Which book has stayed longest on your shelf or in your phone? Why did you get it in the first place?" },
+  { id: "memory:055", zh: "想一样你小时候害怕、现在已经不怕的东西。那份害怕是怎么消失的？", en: "Think of something you feared as a child and no longer do. How did the fear fade?" },
+  { id: "memory:056", zh: "你能背下来的第一个电话号码，是谁的？", en: "Whose was the first phone number you knew by heart?" },
 ];
 
 
@@ -1199,7 +2791,7 @@ const CLASSICS = [
 const QUOTES_ZH = [
   { id: "quotes:zh:001", text: "哪里有天才，我是把别人喝咖啡的工夫都用在工作上的。", author: "鲁迅" },
   { id: "quotes:zh:002", text: "其实地上本没有路，走的人多了，也便成了路。", author: "鲁迅《故乡》" },
-  { id: "quotes:zh:003", text: "无端空耗别人的时间，其实是无异于谋财害命的。", author: "鲁迅" },
+  { id: "quotes:zh:003", text: "无端的空耗别人的时间，其实是无异于谋财害命的。", author: "鲁迅《门外文谈》" },
   { id: "quotes:zh:004", text: "横眉冷对千夫指，俯首甘为孺子牛。", author: "鲁迅《自嘲》" },
   { id: "quotes:zh:005", text: "时间就像海绵里的水，只要愿挤，总还是有的。", author: "鲁迅" },
   { id: "quotes:zh:006", text: "人类的悲欢并不相通，我只觉得他们吵闹。", author: "鲁迅《小杂感》" },
@@ -1230,12 +2822,11 @@ const QUOTES_ZH = [
   { id: "quotes:zh:031", text: "知识就是力量。", author: "培根" },
   { id: "quotes:zh:032", text: "读史使人明智，读诗使人灵秀。", author: "培根《论读书》" },
   { id: "quotes:zh:033", text: "如果冬天来了，春天还会远吗？", author: "雪莱《西风颂》" },
-  { id: "quotes:zh:034", text: "走自己的路，让别人说去吧。", author: "但丁" },
+  { id: "quotes:zh:034", text: "走你的路，让人们去说罢！", author: "马克思《资本论》第一版序言（化用但丁）" },
   { id: "quotes:zh:035", text: "幸福的家庭都是相似的，不幸的家庭各有各的不幸。", author: "托尔斯泰《安娜·卡列尼娜》" },
   { id: "quotes:zh:036", text: "一个人可以被毁灭，但不能被打败。", author: "海明威《老人与海》" },
   { id: "quotes:zh:037", text: "世界上只有一种英雄主义，那就是在认清生活的真相之后依然热爱生活。", author: "罗曼·罗兰" },
   { id: "quotes:zh:038", text: "人最宝贵的是生命。生命对人来说只有一次。", author: "奥斯特洛夫斯基《钢铁是怎样炼成的》" },
-  { id: "quotes:zh:039", text: "冬天从这里夺去的，春天会交还给你。", author: "海涅" },
   { id: "quotes:zh:040", text: "存在先于本质。", author: "萨特" },
   { id: "quotes:zh:041", text: "勿以恶小而为之，勿以善小而不为。", author: "刘备（见《三国志》）" },
   { id: "quotes:zh:042", text: "非淡泊无以明志，非宁静无以致远。", author: "诸葛亮《诫子书》" },
@@ -1245,7 +2836,7 @@ const QUOTES_ZH = [
   { id: "quotes:zh:046", text: "业精于勤，荒于嬉；行成于思，毁于随。", author: "韩愈《进学解》" },
   { id: "quotes:zh:047", text: "少年易老学难成，一寸光阴不可轻。", author: "朱熹《偶成》" },
   { id: "quotes:zh:048", text: "问渠那得清如许？为有源头活水来。", author: "朱熹《观书有感》" },
-  { id: "quotes:zh:049", text: "书山有路勤为径，学海无涯苦作舟。", author: "韩愈" },
+  { id: "quotes:zh:049", text: "书山有路勤为径，学海无涯苦作舟。", author: "古联（旧传韩愈作）" },
   { id: "quotes:zh:050", text: "宝剑锋从磨砺出，梅花香自苦寒来。", author: "《警世贤文》" },
   { id: "quotes:zh:051", text: "世上无难事，只怕有心人。", author: "民间谚语" },
   { id: "quotes:zh:052", text: "路遥知马力，日久见人心。", author: "民间谚语" },
@@ -1262,32 +2853,64 @@ const QUOTES_ZH = [
   { id: "quotes:zh:063", text: "生活就像骑自行车，要保持平衡，你必须不断前进。", author: "爱因斯坦" },
   { id: "quotes:zh:064", text: "宇宙中最难以理解的是，宇宙居然是可以被理解的。", author: "爱因斯坦" },
   { id: "quotes:zh:065", text: "天才就是百分之一的灵感，加上百分之九十九的汗水。", author: "爱迪生" },
-  { id: "quotes:zh:066", text: "我没有失败，我只是发现了一万种行不通的方法。", author: "爱迪生" },
+  { id: "quotes:zh:066", text: "结果？我已经得到了很多结果！我知道了几千种行不通的东西。", author: "爱迪生" },
   { id: "quotes:zh:067", text: "如果我看得更远，那是因为我站在巨人的肩膀上。", author: "牛顿" },
   { id: "quotes:zh:068", text: "数学是科学的女王。", author: "高斯" },
   { id: "quotes:zh:069", text: "万物皆数。", author: "毕达哥拉斯学派" },
-  { id: "quotes:zh:070", text: "时间是最伟大的作者，总会写出完美的结局。", author: "卓别林" },
+  { id: "quotes:zh:070", text: "时间是最伟大的作者，总会写出完美的结局。", author: "卓别林《舞台春秋》" },
   { id: "quotes:zh:071", text: "人生近看是悲剧，远看是喜剧。", author: "卓别林" },
-  { id: "quotes:zh:072", text: "简单是终极的复杂。", author: "达·芬奇" },
   { id: "quotes:zh:073", text: "求知若饥，虚心若愚。", author: "乔布斯（引自《全球概览》）" },
   { id: "quotes:zh:074", text: "你的时间有限，不要浪费于重复别人的生活。", author: "乔布斯" },
   { id: "quotes:zh:075", text: "设计不只是外观和感觉，设计是它如何工作。", author: "乔布斯" },
   { id: "quotes:zh:076", text: "生命如同故事，重要的不是它有多长，而是它有多好。", author: "塞内卡" },
+  { id: "quotes:zh:077", text: "学而不思则罔，思而不学则殆。", author: "孔子《论语·为政》" },
+  { id: "quotes:zh:078", text: "知之为知之，不知为不知，是知也。", author: "孔子《论语·为政》" },
+  { id: "quotes:zh:079", text: "三人行，必有我师焉。", author: "孔子《论语·述而》" },
+  { id: "quotes:zh:080", text: "己所不欲，勿施于人。", author: "孔子《论语·颜渊》" },
+  { id: "quotes:zh:081", text: "逝者如斯夫，不舍昼夜。", author: "孔子《论语·子罕》" },
+  { id: "quotes:zh:082", text: "岁寒，然后知松柏之后凋也。", author: "孔子《论语·子罕》" },
+  { id: "quotes:zh:083", text: "朝闻道，夕死可矣。", author: "孔子《论语·里仁》" },
+  { id: "quotes:zh:084", text: "知人者智，自知者明。", author: "老子《道德经》" },
+  { id: "quotes:zh:085", text: "上善若水。水善利万物而不争。", author: "老子《道德经》" },
+  { id: "quotes:zh:086", text: "吾生也有涯，而知也无涯。", author: "庄子《庄子·养生主》" },
+  { id: "quotes:zh:087", text: "人生天地之间，若白驹之过郤，忽然而已。", author: "庄子《庄子·知北游》" },
+  { id: "quotes:zh:088", text: "天行健，君子以自强不息。", author: "《周易·象传》" },
+  { id: "quotes:zh:089", text: "路漫漫其修远兮，吾将上下而求索。", author: "屈原《离骚》" },
+  { id: "quotes:zh:090", text: "锲而舍之，朽木不折；锲而不舍，金石可镂。", author: "荀子《劝学》" },
+  { id: "quotes:zh:091", text: "生于忧患，死于安乐。", author: "《孟子·告子下》" },
+  { id: "quotes:zh:092", text: "穷则独善其身，达则兼善天下。", author: "《孟子·尽心上》" },
+  { id: "quotes:zh:093", text: "尽信书，则不如无书。", author: "《孟子·尽心下》" },
+  { id: "quotes:zh:094", text: "千丈之堤，以蝼蚁之穴溃。", author: "《韩非子·喻老》" },
+  { id: "quotes:zh:095", text: "人固有一死，或重于泰山，或轻于鸿毛。", author: "司马迁《报任安书》" },
+  { id: "quotes:zh:096", text: "悟已往之不谏，知来者之可追。", author: "陶渊明《归去来兮辞》" },
+  { id: "quotes:zh:097", text: "老当益壮，宁移白首之心？穷且益坚，不坠青云之志。", author: "王勃《滕王阁序》" },
+  { id: "quotes:zh:098", text: "读书破万卷，下笔如有神。", author: "杜甫《奉赠韦左丞丈二十二韵》" },
+  { id: "quotes:zh:099", text: "古之立大事者，不惟有超世之才，亦必有坚忍不拔之志。", author: "苏轼《晁错论》" },
+  { id: "quotes:zh:100", text: "人生如逆旅，我亦是行人。", author: "苏轼《临江仙·送钱穆父》" },
+  { id: "quotes:zh:101", text: "此心安处是吾乡。", author: "苏轼《定风波》" },
+  { id: "quotes:zh:102", text: "为天地立心，为生民立命，为往圣继绝学，为万世开太平。", author: "张载" },
+  { id: "quotes:zh:103", text: "知是行之始，行是知之成。", author: "王阳明《传习录》" },
+  { id: "quotes:zh:104", text: "海纳百川，有容乃大；壁立千仞，无欲则刚。", author: "林则徐" },
+  { id: "quotes:zh:105", text: "少年强则国强。", author: "梁启超《少年中国说》" },
+  { id: "quotes:zh:106", text: "怕什么真理无穷，进一寸有一寸的欢喜。", author: "胡适" },
+  { id: "quotes:zh:107", text: "燕子去了，有再来的时候；杨柳枯了，有再青的时候；桃花谢了，有再开的时候。", author: "朱自清《匆匆》" },
+  { id: "quotes:zh:108", text: "从前的日色变得慢，车，马，邮件都慢，一生只够爱一个人。", author: "木心《从前慢》" },
+  { id: "quotes:zh:109", text: "死是一件不必急于求成的事，死是一个必然会降临的节日。", author: "史铁生《我与地坛》" },
+  { id: "quotes:zh:110", text: "城外的人想冲进去，城里的人想逃出来。", author: "钱钟书《围城》" },
+  { id: "quotes:zh:111", text: "世事洞明皆学问，人情练达即文章。", author: "曹雪芹《红楼梦》" },
+  { id: "quotes:zh:112", text: "假作真时真亦假，无为有处有还无。", author: "曹雪芹《红楼梦》" },
 ];
 
 /* ---------- Quotes: English (original wording) ---------- */
 const QUOTES_EN = [
   { id: "quotes:en:001", text: "I think, therefore I am.", author: "René Descartes" },
-  { id: "quotes:en:002", text: "To be, or not to be, that is the question.", author: "William Shakespeare, Hamlet" },
+  { id: "quotes:en:002", text: "To be, or not to be, that is the question.", author: "William Shakespeare", work: "Hamlet" },
   { id: "quotes:en:003", text: "Knowledge is power.", author: "Francis Bacon" },
   { id: "quotes:en:004", text: "Imagination is more important than knowledge.", author: "Albert Einstein" },
   { id: "quotes:en:005", text: "Life is like riding a bicycle. To keep your balance, you must keep moving.", author: "Albert Einstein" },
   { id: "quotes:en:006", text: "The most incomprehensible thing about the world is that it is comprehensible.", author: "Albert Einstein" },
   { id: "quotes:en:007", text: "Time is money.", author: "Benjamin Franklin" },
-  { id: "quotes:en:008", text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
   { id: "quotes:en:009", text: "Well done is better than well said.", author: "Benjamin Franklin" },
-  { id: "quotes:en:010", text: "By failing to prepare, you are preparing to fail.", author: "Benjamin Franklin" },
-  { id: "quotes:en:011", text: "Whether you think you can or you think you can't, you're right.", author: "Henry Ford" },
   { id: "quotes:en:012", text: "The only true wisdom is in knowing you know nothing.", author: "Socrates" },
   { id: "quotes:en:013", text: "The unexamined life is not worth living.", author: "Socrates" },
   { id: "quotes:en:014", text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", author: "Will Durant, summarizing Aristotle" },
@@ -1295,7 +2918,7 @@ const QUOTES_EN = [
   { id: "quotes:en:016", text: "No man ever steps in the same river twice.", author: "Heraclitus" },
   { id: "quotes:en:017", text: "Man is but a reed, the most feeble thing in nature; but he is a thinking reed.", author: "Blaise Pascal" },
   { id: "quotes:en:018", text: "The heart has its reasons which reason knows nothing of.", author: "Blaise Pascal" },
-  { id: "quotes:en:019", text: "I have not failed. I've just found 10,000 ways that won't work.", author: "Thomas Edison" },
+  { id: "quotes:en:019", text: "Results! Why, man, I have gotten lots of results! I know several thousand things that won't work.", author: "Thomas Edison" },
   { id: "quotes:en:020", text: "Genius is one percent inspiration and ninety-nine percent perspiration.", author: "Thomas Edison" },
   { id: "quotes:en:021", text: "If I have seen further it is by standing on the shoulders of Giants.", author: "Isaac Newton" },
   { id: "quotes:en:022", text: "Stay hungry, stay foolish.", author: "The Whole Earth Catalog" },
@@ -1303,8 +2926,6 @@ const QUOTES_EN = [
   { id: "quotes:en:024", text: "Design is not just what it looks like and feels like. Design is how it works.", author: "Steve Jobs" },
   { id: "quotes:en:025", text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
   { id: "quotes:en:026", text: "You can't connect the dots looking forward; you can only connect them looking backwards.", author: "Steve Jobs" },
-  { id: "quotes:en:027", text: "Simplicity is the ultimate sophistication.", author: "Leonardo da Vinci" },
-  { id: "quotes:en:028", text: "Learning never exhausts the mind.", author: "Leonardo da Vinci" },
   { id: "quotes:en:029", text: "A man who dares to waste one hour of time has not discovered the value of life.", author: "Charles Darwin" },
   { id: "quotes:en:030", text: "The best way to predict the future is to invent it.", author: "Alan Kay" },
   { id: "quotes:en:031", text: "If winter comes, can spring be far behind?", author: "Percy Bysshe Shelley" },
@@ -1317,10 +2938,7 @@ const QUOTES_EN = [
   { id: "quotes:en:038", text: "Not all those who wander are lost.", author: "J. R. R. Tolkien" },
   { id: "quotes:en:039", text: "It is no use going back to yesterday, because I was a different person then.", author: "Lewis Carroll" },
   { id: "quotes:en:040", text: "Who in the world am I? Ah, that's the great puzzle.", author: "Lewis Carroll" },
-  { id: "quotes:en:041", text: "We think too much and feel too little.", author: "Charlie Chaplin, The Great Dictator" },
-  { id: "quotes:en:042", text: "A day without laughter is a day wasted.", author: "Charlie Chaplin" },
-  { id: "quotes:en:043", text: "Happiness is not something ready made. It comes from your own actions.", author: "Dalai Lama XIV" },
-  { id: "quotes:en:044", text: "Be kind whenever possible. It is always possible.", author: "Dalai Lama XIV" },
+  { id: "quotes:en:041", text: "We think too much and feel too little.", author: "Charlie Chaplin", work: "The Great Dictator" },
   { id: "quotes:en:045", text: "Darkness cannot drive out darkness; only light can do that. Hate cannot drive out hate; only love can do that.", author: "Martin Luther King Jr." },
   { id: "quotes:en:046", text: "Injustice anywhere is a threat to justice everywhere.", author: "Martin Luther King Jr." },
   { id: "quotes:en:047", text: "The time is always right to do what is right.", author: "Martin Luther King Jr." },
@@ -1329,25 +2947,73 @@ const QUOTES_EN = [
   { id: "quotes:en:050", text: "We choose to go to the Moon, not because it is easy, but because it is hard.", author: "John F. Kennedy" },
   { id: "quotes:en:051", text: "The only thing we have to fear is fear itself.", author: "Franklin D. Roosevelt" },
   { id: "quotes:en:052", text: "Government of the people, by the people, for the people, shall not perish from the earth.", author: "Abraham Lincoln" },
-  { id: "quotes:en:053", text: "Whatever you are, be a good one.", author: "Abraham Lincoln" },
   { id: "quotes:en:054", text: "Education is the most powerful weapon which you can use to change the world.", author: "Nelson Mandela" },
-  { id: "quotes:en:055", text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
   { id: "quotes:en:056", text: "The journey of a thousand miles begins with a single step.", author: "Lao Tzu" },
   { id: "quotes:en:057", text: "He who has a why to live can bear almost any how.", author: "Friedrich Nietzsche" },
   { id: "quotes:en:058", text: "That which does not kill us makes us stronger.", author: "Friedrich Nietzsche" },
   { id: "quotes:en:059", text: "Without music, life would be a mistake.", author: "Friedrich Nietzsche" },
   { id: "quotes:en:060", text: "Man is condemned to be free.", author: "Jean-Paul Sartre" },
-  { id: "quotes:en:061", text: "Hell is other people.", author: "Jean-Paul Sartre, No Exit" },
+  { id: "quotes:en:061", text: "Hell is other people.", author: "Jean-Paul Sartre", work: "No Exit" },
   { id: "quotes:en:062", text: "One is not born, but rather becomes, a woman.", author: "Simone de Beauvoir" },
-  { id: "quotes:en:063", text: "Wonder is the beginning of wisdom.", author: "Socrates" },
+  { id: "quotes:en:063", text: "Philosophy begins in wonder.", author: "Plato", work: "Theaetetus" },
   { id: "quotes:en:064", text: "If you hear a voice within you say 'you cannot paint,' then by all means paint, and that voice will be silenced.", author: "Vincent van Gogh" },
   { id: "quotes:en:065", text: "Great things are done by a series of small things brought together.", author: "Vincent van Gogh" },
   { id: "quotes:en:066", text: "We suffer more often in imagination than in reality.", author: "Seneca" },
-  { id: "quotes:en:067", text: "Luck is what happens when preparation meets opportunity.", author: "Seneca" },
   { id: "quotes:en:068", text: "If a man knows not to which port he sails, no wind is favorable.", author: "Seneca" },
   { id: "quotes:en:069", text: "As is a tale, so is life: not how long it is, but how good it is, is what matters.", author: "Seneca" },
-  { id: "quotes:en:070", text: "It is never too late to be what you might have been.", author: "George Eliot" },
-  { id: "quotes:en:071", text: "There are no strangers here; only friends you haven't yet met.", author: "W. B. Yeats" },
+  { id: "quotes:en:072", text: "Not everything that is faced can be changed, but nothing can be changed until it is faced.", author: "James Baldwin" },
+  { id: "quotes:en:073", text: "I have measured out my life with coffee spoons.", author: "T. S. Eliot, 'The Love Song of J. Alfred Prufrock'" },
+  { id: "quotes:en:074", text: "We shall not cease from exploration, and the end of all our exploring will be to arrive where we started and know the place for the first time.", author: "T. S. Eliot, 'Little Gidding'" },
+  { id: "quotes:en:075", text: "So we beat on, boats against the current, borne back ceaselessly into the past.", author: "F. Scott Fitzgerald", work: "The Great Gatsby" },
+  { id: "quotes:en:076", text: "It was the best of times, it was the worst of times.", author: "Charles Dickens", work: "A Tale of Two Cities" },
+  { id: "quotes:en:077", text: "The past is a foreign country; they do things differently there.", author: "L. P. Hartley", work: "The Go-Between" },
+  { id: "quotes:en:078", text: "Time is the longest distance between two places.", author: "Tennessee Williams", work: "The Glass Menagerie" },
+  { id: "quotes:en:079", text: "Lost time is never found again.", author: "Benjamin Franklin" },
+  { id: "quotes:en:080", text: "The two most powerful warriors are patience and time.", author: "Leo Tolstoy", work: "War and Peace" },
+  { id: "quotes:en:081", text: "How we spend our days is, of course, how we spend our lives.", author: "Annie Dillard", work: "The Writing Life" },
+  { id: "quotes:en:082", text: "The important thing is not to stop questioning.", author: "Albert Einstein" },
+  { id: "quotes:en:083", text: "I, at any rate, am convinced that He does not throw dice.", author: "Albert Einstein, letter to Max Born" },
+  { id: "quotes:en:084", text: "We are a way for the cosmos to know itself.", author: "Carl Sagan", work: "Cosmos" },
+  { id: "quotes:en:085", text: "If you wish to make an apple pie from scratch, you must first invent the universe.", author: "Carl Sagan", work: "Cosmos" },
+  { id: "quotes:en:086", text: "Chance favours only the prepared mind.", author: "Louis Pasteur" },
+  { id: "quotes:en:087", text: "The first principle is that you must not fool yourself, and you are the easiest person to fool.", author: "Richard Feynman" },
+  { id: "quotes:en:088", text: "What I cannot create, I do not understand.", author: "Richard Feynman" },
+  { id: "quotes:en:089", text: "In the long run we are all dead.", author: "John Maynard Keynes" },
+  { id: "quotes:en:090", text: "Whereof one cannot speak, thereof one must be silent.", author: "Ludwig Wittgenstein", work: "Tractatus Logico-Philosophicus" },
+  { id: "quotes:en:091", text: "The limits of my language mean the limits of my world.", author: "Ludwig Wittgenstein", work: "Tractatus Logico-Philosophicus" },
+  { id: "quotes:en:092", text: "Life can only be understood backwards; but it must be lived forwards.", author: "Søren Kierkegaard" },
+  { id: "quotes:en:093", text: "Anxiety is the dizziness of freedom.", author: "Søren Kierkegaard", work: "The Concept of Anxiety" },
+  { id: "quotes:en:094", text: "One must imagine Sisyphus happy.", author: "Albert Camus", work: "The Myth of Sisyphus" },
+  { id: "quotes:en:095", text: "In the depth of winter, I finally learned that within me there lay an invincible summer.", author: "Albert Camus, 'Return to Tipasa'" },
+  { id: "quotes:en:096", text: "Real generosity toward the future lies in giving all to the present.", author: "Albert Camus", work: "The Rebel" },
+  { id: "quotes:en:097", text: "There is nothing either good or bad, but thinking makes it so.", author: "William Shakespeare", work: "Hamlet" },
+  { id: "quotes:en:098", text: "The fault, dear Brutus, is not in our stars, but in ourselves.", author: "William Shakespeare", work: "Julius Caesar" },
+  { id: "quotes:en:099", text: "What's past is prologue.", author: "William Shakespeare", work: "The Tempest" },
+  { id: "quotes:en:100", text: "Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.", author: "Samuel Beckett", work: "Worstward Ho" },
+  { id: "quotes:en:101", text: "The world breaks everyone and afterward many are strong at the broken places.", author: "Ernest Hemingway", work: "A Farewell to Arms" },
+  { id: "quotes:en:102", text: "The best way out is always through.", author: "Robert Frost, 'A Servant to Servants'" },
+  { id: "quotes:en:103", text: "Tell me, what is it you plan to do with your one wild and precious life?", author: "Mary Oliver, 'The Summer Day'" },
+  { id: "quotes:en:104", text: "Attention is the rarest and purest form of generosity.", author: "Simone Weil" },
+  { id: "quotes:en:105", text: "I am not afraid of storms, for I am learning how to sail my ship.", author: "Louisa May Alcott", work: "Little Women" },
+  { id: "quotes:en:106", text: "It does not do to dwell on dreams and forget to live.", author: "J. K. Rowling", work: "Harry Potter and the Philosopher's Stone" },
+  { id: "quotes:en:107", text: "Some day you will be old enough to start reading fairy tales again.", author: "C. S. Lewis", work: "The Lion, the Witch and the Wardrobe" },
+  { id: "quotes:en:108", text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius", work: "Meditations" },
+  { id: "quotes:en:109", text: "Very little is needed to make a happy life.", author: "Marcus Aurelius", work: "Meditations" },
+  { id: "quotes:en:110", text: "Begin at once to live, and count each separate day as a separate life.", author: "Seneca", work: "Letters to Lucilius" },
+  { id: "quotes:en:111", text: "Man is the measure of all things.", author: "Protagoras" },
+  { id: "quotes:en:112", text: "The most wasted of all days is one without laughter.", author: "Nicolas Chamfort" },
+  { id: "quotes:en:113", text: "I have no special talents. I am only passionately curious.", author: "Albert Einstein, letter to Carl Seelig" },
+  { id: "quotes:en:114", text: "Nothing will come of nothing.", author: "William Shakespeare", work: "King Lear" },
+  { id: "quotes:en:115", text: "We know what we are, but know not what we may be.", author: "William Shakespeare", work: "Hamlet" },
+  { id: "quotes:en:116", text: "Habit is habit, and not to be flung out of the window by any man, but coaxed down-stairs a step at a time.", author: "Mark Twain", work: "Pudd'nhead Wilson" },
+  { id: "quotes:en:117", text: "I can resist everything except temptation.", author: "Oscar Wilde", work: "Lady Windermere's Fan" },
+  { id: "quotes:en:118", text: "We are all in the gutter, but some of us are looking at the stars.", author: "Oscar Wilde", work: "Lady Windermere's Fan" },
+  { id: "quotes:en:119", text: "Reading is to the mind what exercise is to the body.", author: "Richard Steele", work: "The Tatler" },
+  { id: "quotes:en:120", text: "All animals are equal, but some animals are more equal than others.", author: "George Orwell", work: "Animal Farm" },
+  { id: "quotes:en:121", text: "It is never too late to give up our prejudices.", author: "Henry David Thoreau", work: "Walden" },
+  { id: "quotes:en:122", text: "I went to the woods because I wished to live deliberately, to front only the essential facts of life.", author: "Henry David Thoreau", work: "Walden" },
+  { id: "quotes:en:123", text: "The only true voyage of discovery, the only fountain of Eternal Youth, would be not to visit strange lands but to possess other eyes.", author: "Marcel Proust", work: "The Captive" },
+  { id: "quotes:en:124", text: "Nothing great was ever achieved without enthusiasm.", author: "Ralph Waldo Emerson, 'Circles'" },
 ];
 
 /* ---------- Science (bilingual pairs) ---------- */
@@ -1472,6 +3138,31 @@ const SCIENCE = [
   { id: "science:118", zh: "蜂蜜几乎不会腐坏：它含水量极低、酸性较强，还含有微量过氧化氢，细菌很难在里面存活。考古学家在古埃及墓葬中发现的蜂蜜，据报道历经约三千年，仍然可以食用。", en: "Honey almost never spoils: it holds very little water, is fairly acidic and contains traces of hydrogen peroxide, so bacteria struggle to survive in it. Honey found in ancient Egyptian tombs has reportedly remained edible after some three thousand years." },
   { id: "science:119", zh: "微波炉加热靠的是水分子：微波让食物中的水分子高速振动、摩擦生热。但微波只能穿透食物表面约几厘米，再深处要靠热传导慢慢带热，所以大块食物的中心总是热得最慢。", en: "A microwave oven heats through water: its waves make water molecules in food vibrate furiously and generate heat by friction. But microwaves penetrate only a few centimetres, so deeper parts warm by slow conduction — which is why the centre of a large portion always heats last." },
   { id: "science:120", zh: "海拔越高，气压越低，水的沸点也越低。在拉萨，水约 88 摄氏度就沸腾了，米饭容易夹生。高压锅的原理正是反其道而行：把锅内气压顶上去，硬把沸点抬回 100 摄氏度以上。", en: "The higher you go, the lower the air pressure and the lower water's boiling point. In Lhasa, water boils at about 88 degrees Celsius, and rice easily stays half-raw. A pressure cooker works in reverse: it raises the pressure inside to force the boiling point back above 100." },
+  { id: "science:121", zh: "香蕉有一点点放射性：它富含钾，其中极少一部分是放射性的钾-40。不过要吃上几百万根，才会有危险。", en: "Bananas are very slightly radioactive: they are rich in potassium, a tiny fraction of which is radioactive potassium-40. You would need to eat millions for it to matter." },
+  { id: "science:122", zh: "缓步动物俗称水熊虫，不到一毫米长。2007 年，科学家把它们送进太空暴露在真空中，回来后不少还活着，甚至产了卵。", en: "Tardigrades, or water bears, are less than a millimetre long. In 2007 scientists exposed them to the vacuum of space, and many survived the trip; some even laid eggs afterwards." },
+  { id: "science:123", zh: "乌鸦能记住人脸。研究者戴着面具抓过乌鸦，几年后再戴同一副面具出现，附近的乌鸦还会聚过来大声骂他，连没被抓过的乌鸦也跟着骂。", en: "Crows remember human faces. Researchers who caught crows while wearing a particular mask were scolded by crows years later whenever they wore it again, including by crows that had never been caught." },
+  { id: "science:124", zh: "树懒动作慢到毛发里长出了藻类，让它们带上一层绿色，在树冠里更难被发现。它们一周大约只下树一次去排便。", en: "Sloths move so slowly that algae grow in their fur, tinting them green and helping them hide in the canopy. They come down from the trees only about once a week, to relieve themselves." },
+  { id: "science:125", zh: "猫尝不出甜味：它们缺少能正常工作的甜味受体基因。作为纯粹的食肉动物，它们本来也用不着。", en: "Cats cannot taste sweetness: the gene for a working sweet receptor is broken in them. As strict carnivores, they never needed it." },
+  { id: "science:126", zh: "海豚睡觉时可以一半大脑休息、另一半保持清醒，好记得浮上水面换气，也能留意危险。睡着的那一侧，对应的眼睛是闭着的。", en: "Dolphins can sleep with one half of the brain at a time, keeping the other half awake to surface for air and watch for danger. The eye opposite the sleeping half stays closed." },
+  { id: "science:127", zh: "水星离太阳最近，最热的行星却是金星：浓厚的二氧化碳大气把热量牢牢锁住，表面温度约 465 摄氏度，热得能熔化铅。", en: "Mercury is closest to the Sun, yet the hottest planet is Venus: its thick carbon dioxide atmosphere traps heat, keeping the surface around 465 degrees Celsius, hot enough to melt lead." },
+  { id: "science:128", zh: "海王星上的风速可达每小时约 2,000 公里，是太阳系里最快的风。它离太阳那么远，风却刮得最猛。", en: "Winds on Neptune reach about 2,000 kilometres per hour, the fastest in the Solar System. The planet farthest from the Sun has the fiercest weather." },
+  { id: "science:129", zh: "火星上的奥林匹斯山高约 22 公里，约是珠穆朗玛峰的两倍半，底座面积和法国差不多。站在山脚，你看不见山顶，它被火星的弧度藏了起来。", en: "Olympus Mons on Mars rises about 22 kilometres, roughly two and a half times the height of Everest, with a base about the size of France. Standing at its foot, you could not see the summit over the curve of the planet." },
+  { id: "science:130", zh: "1977 年发射的旅行者 1 号如今离地球已超过 250 亿公里。从地球发出的信号，要走 23 个多小时才能到达它。", en: "Voyager 1, launched in 1977, is now more than 25 billion kilometres from Earth. A signal sent from here takes over 23 hours to reach it." },
+  { id: "science:131", zh: "太阳核心产生的能量，要在太阳内部辗转数万年甚至更久，才能到达表面；离开表面后，只需约 8 分钟就到了地球。", en: "Energy made in the Sun's core wanders through its interior for tens of thousands of years or more before reaching the surface. From there, it takes only about eight minutes to reach Earth." },
+  { id: "science:132", zh: "胃里的胃酸能溶解金属，胃却不会消化自己：胃壁上的黏液层保护着它，胃黏膜细胞几天就更新一次。", en: "Stomach acid can dissolve metal, yet the stomach does not digest itself: a layer of mucus protects it, and its lining cells are replaced every few days." },
+  { id: "science:133", zh: "起鸡皮疙瘩是祖先留下的反应：毛发竖起，可以让体毛更蓬松保暖，或者让自己看起来更大。我们的体毛少了，反应还在。", en: "Goosebumps are an ancestral reflex: raising the hairs fluffed up fur for warmth or made an animal look bigger. We lost most of our fur, but kept the reflex." },
+  { id: "science:134", zh: "地球表面约 71% 被水覆盖，但其中只有约 2.5% 是淡水，而淡水的大部分还冻在冰川和冰盖里。", en: "About 71 percent of Earth's surface is water, yet only about 2.5 percent of all water is fresh, and most of that is frozen in glaciers and ice sheets." },
+  { id: "science:135", zh: "全世界平均每秒大约有 40 多次闪电击中地面或在云间闪烁。你读完这句话的工夫，地球上已经打了几百次闪电。", en: "Worldwide, lightning flashes about 40 to 50 times every second. In the time it takes to read this sentence, Earth has seen hundreds of them." },
+  { id: "science:136", zh: "「闪电不会两次劈中同一个地方」并不对。纽约帝国大厦每年要被闪电击中二十多次。高耸的尖顶，正是闪电最爱的路径。", en: "Lightning certainly does strike the same place twice. The Empire State Building is hit around twenty times a year; a tall spire is exactly the path lightning prefers." },
+  { id: "science:137", zh: "光在真空中每秒约 30 万公里，进入玻璃后会慢到每秒约 20 万公里。透镜能聚焦，靠的就是光在不同材料里速度不同。", en: "Light travels about 300,000 kilometres per second in a vacuum, but slows to about 200,000 in glass. Lenses work precisely because light changes speed between materials." },
+  { id: "science:138", zh: "你血液里的铁、骨骼里的钙，都诞生于早已死去的恒星内部。宇宙里的较重元素，大多是在恒星和超新星中锻造出来的。", en: "The iron in your blood and the calcium in your bones were made inside stars that died long ago. Most of the universe's heavier elements were forged in stars and their explosions." },
+  { id: "science:139", zh: "企鹅几乎都生活在南半球。离北方最近的是加拉帕戈斯企鹅，有一小部分活动在赤道稍北的海域。北极熊和企鹅，一辈子见不到面。", en: "Almost all penguins live in the Southern Hemisphere; the most northerly, the Galápagos penguin, ranges just north of the equator. Polar bears and penguins never meet in the wild." },
+  { id: "science:140", zh: "鸭嘴兽是会产卵的哺乳动物，雄性后脚上有毒刺，它的嘴还能感知猎物肌肉发出的微弱电信号。第一批标本送到英国时，有人以为是拼凑出来的假货。", en: "The platypus is a mammal that lays eggs; males carry venomous spurs, and its bill senses the faint electric signals of its prey's muscles. When the first specimen reached Britain, some suspected it was a fake stitched together." },
+  { id: "science:141", zh: "蝴蝶用脚尝味道：它们的脚上有味觉感受器。雌蝴蝶落在叶子上踩一踩，就知道这片叶子适不适合产卵。", en: "Butterflies taste with their feet, which carry taste receptors. A female lands on a leaf and drums it with her feet to check whether it suits her eggs." },
+  { id: "science:142", zh: "我们呼吸的氧气，有相当大一部分来自海洋里的浮游植物，而不只是陆地上的森林。地球上大约一半的光合作用发生在海里。", en: "A large share of the oxygen we breathe comes from tiny phytoplankton in the sea, not only from forests. About half of all photosynthesis on Earth happens in the ocean." },
+  { id: "science:143", zh: "一光年约 9.46 万亿公里，是光走一年的距离。说的是长度，不是时间。离太阳最近的恒星比邻星，约 4.2 光年远。", en: "A light-year, about 9.46 trillion kilometres, is the distance light travels in a year: a length, not a time. Proxima Centauri, the nearest star to the Sun, is about 4.2 light-years away." },
+  { id: "science:144", zh: "我们看到的星光，有的出发于几百、几千年前。你此刻仰望的夜空，是一张由不同年代的光拼成的照片。", en: "Some of the starlight we see set out hundreds or thousands of years ago. The night sky above you is a photograph assembled from light of many different ages." },
+  { id: "science:145", zh: "人的鼻子能分辨的气味种类极多，嗅觉还和记忆连得特别紧：一股气味，常常比照片更快地把人带回某个旧时刻。", en: "The human nose can tell apart a vast number of odours, and smell is wired unusually closely to memory: a scent often carries you back to a moment faster than a photograph can." },
 ];
 
 /* ---------- Land & People (bilingual) ---------- */
@@ -1536,6 +3227,56 @@ const LAND = [
   { id: "land:058", zh: "西班牙布尼奥尔镇的番茄大战在每年 8 月的最后一个星期三：上百吨过熟的番茄被运进小镇，上万人互砸一个小时。规矩只有一条要紧：开砸之前，先把番茄捏软——尽兴，但不许伤人。", en: "La Tomatina, in the Spanish town of Buñol, falls on the last Wednesday of August: over a hundred tonnes of overripe tomatoes are trucked in, and thousands pelt one another for an hour. One rule matters above all — squash each tomato before you throw it: total abandon, but nobody gets hurt." },
   { id: "land:059", zh: "苏格兰人过除夕有个“第一脚”的讲究：午夜之后第一个跨进家门的人，最好随身带着煤、面包和威士忌——分别象征温暖、丰足和欢乐。第一个客人带什么进门，像是一年的预兆。", en: "Scotland's Hogmanay keeps the custom of 'first-footing': the first person to cross your threshold after midnight should carry coal, bread and whisky — standing for warmth, plenty and good cheer. What the first guest brings in is taken as an omen for the year." },
   { id: "land:060", zh: "加拿大的枫糖季在冬末春初：夜里上冻、白天回暖，枫树的汁液才开始流动。仅魁北克一省，就产出全球约七成的枫糖浆——加拿大人把春天熬成了甜的。", en: "Canada's maple season comes at the end of winter: only when nights freeze and days thaw does the sap begin to run. Quebec alone produces about 70 percent of the world's maple syrup — Canadians boil the spring down into sweetness." },
+  { id: "land:061", zh: "委内瑞拉的天使瀑布落差约 979 米，是世界上最高的瀑布。它的英文名来自 1933 年飞过它的美国飞行员吉米·安杰尔——当地人早就知道它，世界却等一个飞行员来命名。", en: "Venezuela's Angel Falls drops about 979 metres, the highest waterfall on Earth. Its English name comes from Jimmie Angel, the American pilot who flew over it in 1933. Local people had always known it; the wider world waited for a pilot to name it." },
+  { id: "land:062", zh: "维多利亚瀑布在当地语言里叫「莫西奥图尼亚」，意思是「轰鸣的烟雾」：旱季之外，水雾能升到几百米高，几十公里外都看得见。名字里有声音，也有画面。", en: "In the local language Victoria Falls is Mosi-oa-Tunya, 'the smoke that thunders': outside the dry season its spray rises hundreds of metres and can be seen from tens of kilometres away. The name holds both the sound and the sight." },
+  { id: "land:063", zh: "智利的阿塔卡马沙漠是地球上最干的非极地沙漠，有些气象站几十年都没测到过一场像样的雨。科学家在这里测试火星车，因为它最像另一颗星球。", en: "Chile's Atacama is the driest non-polar desert on Earth; some weather stations there have gone decades without recording meaningful rain. Scientists test Mars rovers there, because it is the closest thing to another planet." },
+  { id: "land:064", zh: "珠穆朗玛峰海拔最高；夏威夷的冒纳凯阿火山从海底量起最高；厄瓜多尔的钦博拉索山峰顶离地心最远，因为它坐在赤道的「鼓肚子」上。「最高」取决于你从哪里量。", en: "Everest has the highest summit above sea level; Hawaii's Mauna Kea is tallest measured from the sea floor; Ecuador's Chimborazo has the peak farthest from Earth's centre, because it sits on the equatorial bulge. 'Highest' depends on where you measure from." },
+  { id: "land:065", zh: "的的喀喀湖横跨秘鲁和玻利维亚，湖面海拔约 3,810 米，常被称为世界上海拔最高的可通航大湖。湖上的乌罗斯人至今住在用芦苇编成的浮岛上。", en: "Lake Titicaca, shared by Peru and Bolivia, lies about 3,810 metres up and is often called the highest navigable large lake in the world. The Uros people still live there on floating islands woven from reeds." },
+  { id: "land:066", zh: "玻利维亚的乌尤尼盐沼面积约一万平方公里，是世界上最大的盐沼，又平又亮，卫星常用它来校准测高仪器。雨季积一层薄水，它就成了一面望不到边的镜子。", en: "Bolivia's Salar de Uyuni covers about 10,000 square kilometres, the largest salt flat in the world, so flat and bright that satellites use it to calibrate their altimeters. After rain, a thin film of water turns it into a mirror with no edge." },
+  { id: "land:067", zh: "加拿大的芬迪湾潮差可达约 16 米，世界之最。一天两次，海水涨落的高度相当于一栋五层楼。渔船早上停在水里，下午就搁在泥滩上。", en: "The Bay of Fundy in Canada has the highest tides on Earth, with a range of up to about 16 metres. Twice a day the sea rises and falls the height of a five-storey building; a boat afloat in the morning sits on the mud by afternoon." },
+  { id: "land:068", zh: "澳大利亚的大堡礁绵延约 2,300 公里，是生物建造的最大结构，由无数珊瑚虫一代代堆积而成。建造者每个只有几毫米大。", en: "Australia's Great Barrier Reef stretches about 2,300 kilometres, the largest structure built by living things, raised generation after generation by countless coral polyps. Each builder is only a few millimetres long." },
+  { id: "land:069", zh: "俄罗斯本土横跨 11 个时区。东边的人吃早饭时，西边的人可能还没睡觉——一个国家，同时活在白天和黑夜里。", en: "Russia spans eleven time zones. When people in the east sit down to breakfast, people in the west may not yet have gone to bed — one country living in daylight and darkness at once." },
+  { id: "land:070", zh: "中国东西跨约五个地理时区，却统一使用北京时间。在新疆西部，夏天晚上十点多太阳还没下山，当地生活也常按「新疆时间」晚两小时安排。", en: "China spans about five geographic time zones but runs on a single Beijing Time. In western Xinjiang the summer sun sets after ten at night, and daily life often follows an unofficial 'Xinjiang time' two hours behind." },
+  { id: "land:071", zh: "梵蒂冈面积约 0.44 平方公里，是世界上最小的国家，比北京故宫还小。它有自己的邮票、电台和卫队，卫队是穿着文艺复兴式制服的瑞士近卫队。", en: "Vatican City covers about 0.44 square kilometres, the smallest country in the world, smaller than Beijing's Forbidden City. It has its own stamps, radio and army: the Swiss Guard, in Renaissance-style uniforms." },
+  { id: "land:072", zh: "莱索托被南非完全包围，全境海拔都在 1,400 米以上，是世界上「最低点最高」的国家。它被称为「天空中的王国」。", en: "Lesotho is entirely surrounded by South Africa, and every part of it lies above 1,400 metres, giving it the highest lowest point of any country. It is called the Kingdom in the Sky." },
+  { id: "land:073", zh: "印度尼西亚由约一万七千个岛屿组成，横跨的距离比美国本土东西还宽。很多岛至今没有名字。", en: "Indonesia is made up of about 17,000 islands, spread across a distance wider than the continental United States. Many of those islands still have no names." },
+  { id: "land:074", zh: "芬兰有约十八万个湖泊，被称为「千湖之国」，其实「千」说少了。冰川退去时在地面刮出的坑洼，积满了水。", en: "Finland has around 188,000 lakes. It is called the land of a thousand lakes, which undersells it: the hollows scraped out by retreating glaciers all filled with water." },
+  { id: "land:075", zh: "西藏的冈仁波齐峰海拔六千六百多米，被四种宗教视为圣山，至今没有人登顶。许多人选择绕山转一圈，一圈约 52 公里。", en: "Mount Kailash in Tibet, over 6,600 metres high, is sacred to four religions and has never been climbed. Instead, pilgrims walk around it: one circuit is about 52 kilometres." },
+  { id: "land:076", zh: "黄河之「黄」来自黄土高原：河水裹挟大量泥沙，自古有「一碗水半碗泥」的说法。泥沙在下游沉积，把河床抬得比两岸地面还高，成了「地上悬河」。", en: "The Yellow River takes its colour from the Loess Plateau: it carries so much silt that an old saying calls it 'one bowl of water, half a bowl of mud'. Silt settling downstream has raised the riverbed above the surrounding land." },
+  { id: "land:077", zh: "京杭大运河北起北京、南到杭州，全长约 1,800 公里，是世界上最长的人工运河。它最早的河段开凿于两千五百多年前。", en: "The Grand Canal runs about 1,800 kilometres from Beijing to Hangzhou, the longest artificial waterway in the world. Its earliest sections were dug more than 2,500 years ago." },
+  { id: "land:078", zh: "吐鲁番盆地最低处约低于海平面 154 米，是中国陆地最低点，夏天酷热。当地人挖坎儿井，把天山雪水从地下引来，避开了蒸发。", en: "The Turpan Depression sinks about 154 metres below sea level, the lowest land in China, and its summers are fierce. Local people dug karez tunnels to bring Tianshan snowmelt underground, out of reach of evaporation." },
+  { id: "land:079", zh: "富士山是一座活火山，最近一次喷发在 1707 年，火山灰落到了一百公里外的江户。那座完美的圆锥，只是暂时安静。", en: "Mount Fuji is an active volcano. It last erupted in 1707, dropping ash on Edo a hundred kilometres away. That perfect cone is only resting." },
+  { id: "land:080", zh: "南极洲是地球上最大的沙漠：沙漠看的是降水，不是温度。它广阔的内陆高原，一年的降水只有几十毫米，大多还是被风吹来的雪。", en: "Antarctica is the largest desert on Earth: deserts are defined by precipitation, not heat. Its vast interior plateau receives only a few tens of millimetres a year, much of it snow blown in by the wind." },
+  { id: "land:081", zh: "撒哈拉并非一直是沙漠。大约一万一千年到五千年前，那里有湖泊、草原、河马和长颈鹿，岩画里还画着游泳的人。", en: "The Sahara was not always a desert. Between about 11,000 and 5,000 years ago it held lakes, grasslands, hippos and giraffes, and its rock art even shows people swimming." },
+  { id: "land:082", zh: "伊斯坦布尔被博斯普鲁斯海峡一分为二，是世界上少有的横跨亚欧两洲的大城市。很多人每天坐渡轮在两个大洲之间上下班。", en: "Istanbul is divided by the Bosphorus, one of very few great cities that spans two continents. Many residents commute between Europe and Asia by ferry every day." },
+  { id: "land:083", zh: "澳大利亚东西宽约 4,000 公里，比月球的直径还宽：月球直径约 3,474 公里。一张地图上的国家，比夜空里那轮月亮更「大」。", en: "Australia is about 4,000 kilometres wide from east to west, wider than the Moon, whose diameter is about 3,474 kilometres." },
+  { id: "land:084", zh: "挪威斯瓦尔巴群岛的朗伊尔城，几十年来不再在当地土葬：永久冻土让遗体无法分解。病重的人通常会被送回大陆。", en: "In Longyearbyen, on Norway's Svalbard, burials have not been allowed for decades: the permafrost keeps bodies from decomposing. The seriously ill are usually sent to the mainland." },
+  { id: "land:085", zh: "不丹用「国民幸福总值」衡量发展，宪法规定国土至少六成要保持森林覆盖。它是世界上少数吸收的二氧化碳多于排放的国家之一。", en: "Bhutan measures progress by Gross National Happiness, and its constitution requires at least 60 percent of the country to remain forested. It is one of the few nations that absorbs more carbon dioxide than it emits." },
+  { id: "land:086", zh: "世界最高峰有好几个名字：藏语叫珠穆朗玛，意为「大地之母」一类的女神；尼泊尔语叫萨加玛塔；英语用的是一位测量局长的姓，埃佛勒斯本人从未见过它。", en: "The world's highest mountain has several names: Qomolangma in Tibetan, often glossed as a mother goddess of the earth; Sagarmatha in Nepali; and in English the surname of a survey chief, George Everest, who never saw it." },
+  { id: "land:087", zh: "俄罗斯奥伊米亚康村曾测到零下 67.7 摄氏度，是有人常住的最冷地方之一。冬天村民让汽车引擎整天开着，一熄火就再也打不着了。", en: "The Russian village of Oymyakon has recorded −67.7 degrees Celsius, one of the coldest permanently inhabited places on Earth. In winter, villagers leave car engines running all day: once switched off, they may not start again." },
+  { id: "land:088", zh: "美国死亡谷在 1913 年测到 56.7 摄氏度，至今仍是官方承认的地球最高气温纪录。在那里，地面温度还要更高。", en: "Death Valley in California recorded 56.7 degrees Celsius in 1913, still the highest air temperature officially accepted for Earth. The ground there gets hotter still." },
+  { id: "land:089", zh: "印度梅加拉亚邦的乞拉朋齐和毛辛拉姆轮流保持「地球最湿之地」的纪录，年降雨量超过一万毫米。当地人出门背着用竹子和叶子编成的「雨伞斗篷」。", en: "Cherrapunji and Mawsynram in India's Meghalaya trade the title of wettest place on Earth, with more than 10,000 millimetres of rain a year. Locals walk about under knups, full-body umbrellas woven from bamboo and leaves." },
+  { id: "land:090", zh: "亚马孙河干流上没有一座桥。它流经的大多是雨林和稀疏的城镇，河岸每年随雨季涨落，造桥既难，也少有道路需要连接。", en: "Not a single bridge crosses the main stem of the Amazon. It runs mostly through rainforest and scattered towns, its banks shift with the floods each year, and few roads need joining." },
+  { id: "land:091", zh: "苏必利尔湖是世界上面积最大的淡水湖，约 8.2 万平方公里，和奥地利差不多大。它的水足以把南北美洲都淹上约 30 厘米。", en: "Lake Superior is the largest freshwater lake by area, about 82,000 square kilometres, roughly the size of Austria. It holds enough water to cover North and South America about 30 centimetres deep." },
+  { id: "land:092", zh: "博茨瓦纳的奥卡万戈河一路向内陆流，最后没有入海，而是在卡拉哈里沙漠里散成一片三角洲，消失在蒸发和沙地里。一条河，把终点留给了沙漠。", en: "Botswana's Okavango River flows inland and never reaches the sea: it spreads into a delta in the Kalahari and vanishes into evaporation and sand. A river that gives its ending to a desert." },
+  { id: "land:093", zh: "加拉帕戈斯群岛离厄瓜多尔大陆约 1,000 公里。1835 年达尔文到访，注意到不同岛上的嘲鸫各不相同；后来鸟类学家又发现，他带回的雀鸟也分成了好几个物种。这些线索把他引向了演化论。", en: "The Galápagos lie about 1,000 kilometres off mainland Ecuador. Visiting in 1835, Darwin noticed that mockingbirds differed from island to island; later an ornithologist showed his finches were several distinct species. These clues led him toward evolution." },
+  { id: "land:094", zh: "日本气象部门每年春天发布樱花开花预报，「樱花前线」从南方的冲绳一路北上到北海道，前后约四个月。全国人跟着一条线安排赏花。", en: "Each spring Japanese forecasters publish a cherry blossom forecast, and the 'sakura front' travels north from Okinawa to Hokkaido over about four months. A whole country plans its picnics around a moving line." },
+  { id: "land:095", zh: "中国春运被称为人类规模最大的周期性迁徙：春节前后约四十天里，旅客出行可达数十亿人次。所有的票，都指向同一个词——回家。", en: "China's Spring Festival travel season is called the largest recurring human migration on Earth: over about forty days, journeys number in the billions. Every ticket points to the same word: home." },
+  { id: "land:096", zh: "2016 年，「二十四节气」被列入联合国教科文组织人类非物质文化遗产代表作名录。它把一年按太阳的位置切成 24 段，至今仍指导着农事和饮食。", en: "In 2016 the Twenty-Four Solar Terms were inscribed on UNESCO's list of the Intangible Cultural Heritage of Humanity. They divide the year into 24 parts by the Sun's position and still guide farming and food." },
+  { id: "land:097", zh: "豆腐脑该放糖还是放酱油？中国北方多吃咸的，南方不少地方吃甜的，这场「咸甜之争」每年都要在网上吵一回。同一块豆腐，养出两种口味。", en: "Should tofu pudding be sweet or savoury? Much of northern China eats it with soy and savoury toppings, much of the south with syrup, and the 'sweet versus salty' debate flares online every year. One tofu, two loyalties." },
+  { id: "land:098", zh: "西班牙地理上和英国处在同一经度，却用中欧时间，时钟比太阳早了约一小时。这也是西班牙人晚上九十点才吃晚饭的原因之一。", en: "Spain lies at the same longitude as Britain but runs on Central European Time, so its clocks are about an hour ahead of the Sun. It is one reason Spaniards often dine at nine or ten at night." },
+  { id: "land:099", zh: "希腊人除了生日，还过「命名日」：每个名字对应一位圣人的纪念日。到了那天，所有叫这个名字的人都会接到祝福，有时比过生日还热闹。", en: "Greeks celebrate not only birthdays but name days: each name belongs to a saint's feast. On that day everyone with the name receives good wishes, sometimes with more fuss than a birthday." },
+  { id: "land:100", zh: "俄罗斯的谢肉节在大斋期前一周举行，人们天天吃象征太阳的圆薄饼，最后烧掉一个草扎的冬天人偶。冬天被吃掉，也被烧掉。", en: "Russia's Maslenitsa comes the week before Lent: people eat round blini, symbols of the sun, every day, then burn a straw effigy of winter. Winter is eaten and burned away." },
+  { id: "land:101", zh: "诺鲁孜节是波斯新年，在春分那一刻开始，已有三千多年历史。家家摆出「七样 S」桌，七样东西的波斯语名字都以 S 开头，象征新一年的愿望。", en: "Nowruz, the Persian New Year, begins at the exact moment of the spring equinox and is over three thousand years old. Families set a haft-sin table of seven items whose Persian names begin with S, each a wish for the year." },
+  { id: "land:102", zh: "2023 年 6 月，韩国正式在法律和行政中统一采用国际通行的「满岁」计算年龄。一夜之间，很多韩国人「年轻」了一到两岁。", en: "In June 2023, South Korea officially switched its legal and administrative age counting to the international system. Overnight, many Koreans became a year or two younger on paper." },
+  { id: "land:103", zh: "中国茶按加工和发酵程度大致分为六类：绿茶、白茶、黄茶、青茶（乌龙）、红茶和黑茶。同一株茶树的叶子，做法不同，就成了不同的茶。", en: "Chinese tea is broadly divided into six types by processing and oxidation: green, white, yellow, oolong, red (what the West calls black) and dark. Leaves from the same bush become different teas through different hands." },
+  { id: "land:104", zh: "在意大利，站在吧台边喝浓缩咖啡通常比坐下来喝便宜，有时便宜一半以上。意大利人的一杯咖啡，往往一两分钟就喝完了。", en: "In Italy an espresso drunk standing at the bar is usually cheaper than one taken at a table, sometimes by more than half. For many Italians, coffee is a one- or two-minute ritual." },
+  { id: "land:105", zh: "冰岛人大多没有家族姓氏，而是用父亲（有时是母亲）的名字加「儿子」或「女儿」。所以冰岛电话簿按名排序，连总统也被直呼其名。", en: "Most Icelanders have no family surname: they take a parent's first name plus 'son' or 'daughter'. So Iceland's phone book is sorted by first name, and even the president is addressed by first name." },
+  { id: "land:106", zh: "在德国许多地方，星期日是法定的安静日：商店基本关门，按法规不宜修草坪、钻墙。一周里有一天，城市被允许安静下来。", en: "In much of Germany Sunday is a legally protected day of rest: most shops close, and rules discourage mowing lawns or drilling walls. One day a week, cities are permitted to be quiet." },
+  { id: "land:107", zh: "丹麦语「hygge」很难翻译，大致是烛光、毛毯、热饮和好朋友在一起时的那种温暖自在。丹麦的冬天又长又暗，人们就在室内把光点亮。", en: "The Danish word hygge is hard to translate: roughly the warm ease of candlelight, blankets, hot drinks and good company. Danish winters are long and dark, so people make their own light indoors." },
+  { id: "land:108", zh: "挪威法律保障「自由通行权」：人们可以在大多数未开垦的私有土地上徒步、露营，只要保持距离、不留痕迹。山野被当作所有人的。", en: "Norwegian law guarantees allemannsretten, the right to roam: people may hike and camp on most uncultivated land, even if privately owned, as long as they keep their distance and leave no trace. The wild is treated as everyone's." },
+  { id: "land:109", zh: "日本的盂兰盆节在夏天，人们相信祖先的灵魂会回家：先点迎火迎接，节末再点送火，有的地方把灯笼放到河里，送他们回去。", en: "During Japan's summer Obon festival, ancestors' spirits are believed to return home. Families light welcoming fires, then sending-off fires at the end, and in some places float lanterns down rivers to guide the spirits back." },
+  { id: "land:110", zh: "摩洛哥人倒薄荷茶时，会把茶壶举得很高，让茶水拉成一条细线落进小玻璃杯里。这样能起泡、降温，也是待客的礼数。", en: "In Morocco mint tea is poured from a teapot held high, so the tea falls in a long thin stream into small glasses. It froths the tea, cools it, and is part of the courtesy of welcome." },
 ];
 
 /* ---------- Mathematics (bilingual) ---------- */
@@ -1580,6 +3321,46 @@ const MATH = [
   { id: "math:038", zh: "埃尔德什一生没有固定住所，提着箱子在数学家之间流浪，敲开门就说：“我的大脑敞开了。”他与五百多人合著过论文，数学界用“埃尔德什数”衡量一个人与他的远近。他说，数学家是把咖啡变成定理的机器。", en: "Paul Erdős owned no home; he drifted between mathematicians with a suitcase, knocking on doors with 'My brain is open.' He co-authored papers with more than five hundred people, and the field measures distance from him by one's 'Erdős number'. A mathematician, he said, is a machine for turning coffee into theorems." },
   { id: "math:039", zh: "玛雅人独立发明了 0，还用二十进制记数：数到 19 之后进位，历法计算精密得惊人。在美洲的丛林里，数学走了一条与旧大陆完全不同的路——好的想法，不止一个出生地。", en: "The Maya independently invented zero, and counted in base twenty, carrying over after 19; their calendar calculations were astonishingly precise. In the jungles of the Americas, mathematics took a road entirely separate from the Old World's — good ideas have more than one birthplace." },
   { id: "math:040", zh: "我们今天写的数字源起印度，经阿拉伯世界西传。1202 年，斐波那契在《计算之书》里向欧洲力荐这套记数法，可佛罗伦萨 1299 年还下令禁止银行使用“0”，怕人篡改。新记数法赢下旧世界，用了几百年。", en: "The digits we write today began in India and travelled west through the Arab world. In 1202 Fibonacci championed them to Europe in his Liber Abaci — yet Florence still banned banks from using '0' in 1299, fearing forgery. The new notation took centuries to win over the old world." },
+  { id: "math:041", zh: "每一年都至少有一个「13 号星期五」，最多有三个。", en: "Every calendar year contains at least one Friday the 13th, and at most three." },
+  { id: "math:042", zh: "欧几里得两千多年前就证明了质数有无穷多个：把已知的质数全部相乘再加一，得到的数要么本身是新质数，要么含有新的质因数。", en: "Over two thousand years ago Euclid proved there are infinitely many primes: multiply all the known primes and add one, and the result is either a new prime or has a new prime factor." },
+  { id: "math:043", zh: "0.999…（9 无限循环）恰好等于 1。它们不是「非常接近」，而是同一个数的两种写法。", en: "0.999… with the 9s repeating forever is exactly equal to 1. Not very close: the same number written two ways." },
+  { id: "math:044", zh: "斐波那契数列 1, 1, 2, 3, 5, 8, 13…，相邻两项之比越来越接近黄金比 1.618。向日葵花盘上的螺旋数，常常正是相邻的两个斐波那契数，比如 34 和 55。", en: "In the Fibonacci sequence 1, 1, 2, 3, 5, 8, 13…, the ratio of neighbours approaches the golden ratio 1.618. The spirals on a sunflower head often come in neighbouring Fibonacci numbers, such as 34 and 55." },
+  { id: "math:045", zh: "「杨辉三角」载于南宋杨辉 1261 年的《详解九章算法》，他注明此法出自更早的贾宪，比欧洲的「帕斯卡三角」早了约四百年。", en: "The triangle of binomial coefficients appears in Yang Hui's 1261 commentary, credited to the earlier Jia Xian, some four hundred years before Pascal." },
+  { id: "math:046", zh: "《孙子算经》问：一个数被 3 除余 2，被 5 除余 3，被 7 除余 2，这个数是多少？答案是 23。由此发展出的方法，今天叫「中国剩余定理」。", en: "The ancient Chinese Sunzi Suanjing asks: what number leaves remainder 2 when divided by 3, remainder 3 by 5, and remainder 2 by 7? The answer is 23, and the method behind it is now called the Chinese remainder theorem." },
+  { id: "math:047", zh: "一张 0.1 毫米厚的纸，如果能对折 42 次，厚度将超过 40 万公里，比地球到月球的距离还远。", en: "If a sheet of paper 0.1 mm thick could be folded 42 times, it would be over 400,000 km thick, farther than the distance to the Moon." },
+  { id: "math:048", zh: "传说中，国王答应在棋盘第一格放 1 粒麦子，以后每格翻倍。64 格加起来是 2⁶⁴−1 粒，比全世界许多年的小麦产量还多。", en: "In the old tale, a king agrees to put one grain of wheat on the first square of a chessboard and double it on each square. The total, 2⁶⁴ − 1 grains, exceeds many years of the world's entire wheat harvest." },
+  { id: "math:049", zh: "各面都是同样的正多边形、每个顶点也都一样的凸多面体只有五种：正四面体、正六面体、正八面体、正十二面体和正二十面体。", en: "There are exactly five convex solids whose faces are identical regular polygons meeting the same way at every corner: the tetrahedron, cube, octahedron, dodecahedron and icosahedron." },
+  { id: "math:050", zh: "数一数任何凸多面体的顶点、棱和面：顶点数减棱数加面数，永远等于 2。这是欧拉发现的。", en: "For any convex polyhedron, vertices minus edges plus faces always equals 2. Euler noticed it." },
+  { id: "math:051", zh: "把一副 52 张的牌认真洗一次，得到的顺序几乎肯定是历史上从未出现过的：所有可能的排列有 52! 种，约 8×10⁶⁷。", en: "Shuffle a 52-card deck thoroughly and the order is almost certainly one that has never existed before: there are 52!, about 8 × 10⁶⁷, possible arrangements." },
+  { id: "math:052", zh: "2003 年，佩雷尔曼证明了困扰数学界近百年的庞加莱猜想，随后谢绝了菲尔兹奖和一百万美元的克雷千禧年奖。", en: "Grigori Perelman proved the century-old Poincaré conjecture in 2003, then declined both the Fields Medal and the Clay Institute's million-dollar prize." },
+  { id: "math:053", zh: "无穷也分大小。康托尔证明：实数无法与自然数一一对应，实数的「无穷」比自然数的更大。", en: "Infinities come in sizes. Cantor proved that the real numbers cannot be paired off with the natural numbers: there are more of them." },
+  { id: "math:054", zh: "高尔顿板上，小球一路碰撞钉子随机向左或向右，落到底部时会堆成一座钟形的小山，这就是正态分布。", en: "On a Galton board, balls bounce randomly left or right off pegs and pile up at the bottom in a bell shape: the normal distribution." },
+  { id: "math:055", zh: "在许多真实数据里，比如河流长度、城市人口、账目金额，首位数字是 1 的约占 30%，是 9 的不到 5%。这叫本福特定律，常被用来查假账。", en: "In many real data sets, from river lengths to populations to accounts, about 30% of numbers start with 1 and under 5% with 9. This is Benford's law, and auditors use it to spot fabricated figures." },
+  { id: "math:056", zh: "1963 年，数学家乌拉姆在一次无聊的报告会上随手把整数排成螺旋，并圈出质数，结果发现质数倾向于沿斜线排列。", en: "In 1963 Stanisław Ulam, bored at a talk, doodled the integers in a spiral and circled the primes. They tended to line up along diagonals." },
+  { id: "math:057", zh: "克莱因瓶只有一个面，没有里外之分。在三维空间里，没法不让它自己穿过自己就把它做出来。", en: "A Klein bottle has only one side and no inside or outside. It cannot be built in three-dimensional space without passing through itself." },
+  { id: "math:058", zh: "阿基米德用圆的内接和外切 96 边形，算出圆周率介于 3又10/71 和 3又1/7 之间。", en: "Using polygons of 96 sides inside and outside a circle, Archimedes showed that pi lies between 3 10/71 and 3 1/7." },
+  { id: "math:059", zh: "两千多年前，埃拉托色尼比较同一天正午亚历山大城和赛伊尼的影子角度，算出了地球的周长，误差不大。", en: "Over two thousand years ago, Eratosthenes compared noon shadows in Alexandria and Syene on the same day and worked out the Earth's circumference with remarkable accuracy." },
+  { id: "math:060", zh: "一小时 60 分、一分 60 秒、一圆 360 度，都是古巴比伦六十进制留下的遗产。", en: "Sixty minutes in an hour, sixty seconds in a minute, 360 degrees in a circle: all are legacies of Babylonian base-60 counting." },
+  { id: "math:061", zh: "1931 年，哥德尔证明：任何足够强大且自洽的数学体系里，都存在既无法证明、也无法否定的命题。", en: "In 1931 Kurt Gödel proved that any consistent mathematical system rich enough for arithmetic contains statements it can neither prove nor disprove." },
+  { id: "math:062", zh: "罗马数字里没有零。MMXXVI 是 2026，可要记下「什么都没有」，只能写一个词，比如拉丁文 nulla。", en: "Roman numerals have no zero. MMXXVI is 2026, but to record nothing at all, a word such as the Latin nulla had to do." },
+  { id: "math:063", zh: "「鸡兔同笼」出自《孙子算经》：上有三十五头，下有九十四足。答案是鸡 23 只、兔 12 只。", en: "The famous pheasants-and-rabbits puzzle comes from the Sunzi Suanjing: 35 heads and 94 feet. The answer is 23 pheasants and 12 rabbits." },
+  { id: "math:064", zh: "蜜蜂用六边形筑巢。用等面积的格子铺满平面，六边形用的边最省，这个「蜂巢猜想」直到 1999 年才被黑尔斯证明。", en: "Bees build in hexagons. That hexagons divide a plane into equal cells with the least total wall was conjectured in antiquity and proved by Thomas Hales only in 1999." },
+  { id: "math:065", zh: "开普勒在 1611 年猜测：堆橙子最省空间的方法，就是水果摊上常见的那种。这个猜想直到 1998 年才被黑尔斯借助计算机证明。", en: "In 1611 Kepler guessed that the densest way to stack oranges is the one greengrocers already use. Thomas Hales proved it, with computer help, in 1998." },
+  { id: "math:066", zh: "在一条直线或一个平面上随机游走，几乎一定会回到起点；在三维空间里却不一定。有人说：喝醉的人总能走回家，喝醉的鸟却可能永远迷路。", en: "A random walk on a line or a plane is almost certain to return to its start; in three dimensions it is not. As one mathematician put it, a drunk man will find his way home, but a drunk bird may be lost forever." },
+  { id: "math:067", zh: "如果要在一串候选人中挑最好的一个，且不能回头：先看前大约 37% 只观察不选，之后遇到比前面都好的就立刻选，成功率最高。", en: "To pick the best of a line of candidates with no going back, watch the first 37% or so without choosing, then take the first one better than all before. No strategy does better." },
+  { id: "math:068", zh: "一个房间里只要有 23 个人，两人生日相同的概率就超过一半。到了 70 人，几乎可以肯定。", en: "In a room of just 23 people, the chance that two share a birthday is over one half. With 70, it is almost certain." },
+  { id: "math:069", zh: "一副 52 张的牌，连续做 8 次完美的「外洗」（每张牌严格交替），会回到最初的顺序。", en: "A 52-card deck given eight perfect out-shuffles, interleaving the halves exactly, returns to its original order." },
+  { id: "math:070", zh: "北美的周期蝉每 13 年或 17 年才集体出土一次。一种解释是：质数周期让天敌很难与它们同步。", en: "North American periodical cicadas emerge every 13 or 17 years. One explanation is that prime cycles make it hard for predators to synchronise with them." },
+  { id: "math:071", zh: "法国数学家索菲·热尔曼曾以男性化名「勒布朗先生」与高斯通信，直到高斯得知真相后对她更加敬佩。", en: "French mathematician Sophie Germain corresponded with Gauss under the male pseudonym Monsieur LeBlanc; when he learned the truth, his admiration only grew." },
+  { id: "math:072", zh: "南北朝时，祖冲之之子祖暅提出「幂势既同，则积不容异」：截面处处相等的两个立体体积相等，比意大利的卡瓦列里早了一千多年。", en: "Zu Geng, son of Zu Chongzhi, stated that solids with equal cross-sections at every height have equal volumes, more than a thousand years before Cavalieri." },
+  { id: "math:073", zh: "欧拉晚年几乎完全失明，却在失明后的十几年里写出了他一生大约一半的论文。", en: "Euler was almost totally blind in his final years, yet produced roughly half of his life's work after losing his sight." },
+  { id: "math:074", zh: "池塘里的睡莲每天面积翻倍，第 30 天铺满整个池塘。那么第 29 天，它只铺满了一半。指数增长的大部分，都发生在最后。", en: "Lilies on a pond double in area each day and cover it on day 30. On day 29 they cover only half. Most of exponential growth happens at the end." },
+  { id: "math:075", zh: "1 不算质数，不是因为它不够格，而是为了让「每个整数只有一种质因数分解」这条规则成立。", en: "1 is not counted as a prime, not for lack of merit, but so that every whole number has exactly one prime factorisation." },
+  { id: "math:076", zh: "π 的前一百万位里，0 到 9 每个数字出现的次数都差不多。但 π 是否真的在所有数位上均匀分布，至今没人能证明。", en: "In the first million digits of pi, each digit 0 to 9 appears about equally often. Whether pi is truly evenly distributed in all its digits remains unproved." },
+  { id: "math:077", zh: "一个圆的周长和直径之比，在任何大小的圆里都一样。古人很早就注意到这一点，却花了两千年才算准它。", en: "The ratio of a circle's circumference to its diameter is the same for every circle. People noticed early, and spent two thousand years pinning it down." },
+  { id: "math:078", zh: "把一根绳子绕地球赤道一圈，再加长 1 米并均匀撑起，绳子会离地约 16 厘米。离地高度与地球大小无关。", en: "Wrap a rope around the equator, add one metre and lift it evenly: it stands about 16 cm off the ground. The gap does not depend on the size of the Earth." },
+  { id: "math:079", zh: "三个数字 3、4、5 能组成直角三角形，5、12、13 也能，8、15、17 也能。这样的整数组有无穷多个。", en: "3, 4, 5 make a right triangle, and so do 5, 12, 13 and 8, 15, 17. There are infinitely many such whole-number triples." },
+  { id: "math:080", zh: "任何正整数都能写成最多四个平方数之和，比如 7 = 4 + 1 + 1 + 1。这是拉格朗日在 1770 年证明的。", en: "Every positive whole number is the sum of at most four squares, such as 7 = 4 + 1 + 1 + 1. Lagrange proved it in 1770." },
 ];
 /* ---------- Masterpieces (bilingual) ---------- */
 const ART = [
@@ -1643,6 +3424,56 @@ const ART = [
   { id: "art:058", zh: "青花瓷的蓝来自钴料：元代景德镇的工匠发现，从西域来的钴在白瓷上烧出稳定的蓝。从此青花走遍世界，欧洲王室以藏青花为荣——中国瓷器的英文 china，小写的瓷器和大写的中国，是同一个词。", en: "Blue-and-white porcelain takes its blue from cobalt: Yuan-dynasty potters at Jingdezhen found that cobalt from the western regions fired into a steady blue on white porcelain. From there it travelled the world, and European royalty prized it — in English, china the ware and China the country are the same word." },
   { id: "art:059", zh: "金缕玉衣是汉代帝王的葬服：两千多片玉片用金丝编缀成人形。古人相信玉能防腐保身，穿着它下葬，就能不朽。玉衣没能留住肉身，却留住了那个时代手艺的顶点——两千多年后，它仍完好如初。", en: "The jade burial suit, sewn with gold thread, was the funeral dress of Han emperors: over two thousand jade plaques linked into human form. The ancients believed jade preserved the body from decay, and that to be buried in it was to be incorruptible. The suit failed to keep the flesh — but it kept the summit of its age's craftsmanship, intact after two thousand years." },
   { id: "art:060", zh: "《思想者》本是《地狱之门》顶部的一个小人物：罗丹原想让他代表诗人但丁，俯瞰门里的众生。后来它被放大成独立雕塑，成了全人类思考的通用姿势——一个配角，长成了主角。", en: "The Thinker began as a small figure atop The Gates of Hell: Rodin meant him to be Dante, gazing down at the souls below. Enlarged into a free-standing sculpture, he became the universal posture of human thought — a supporting character who grew into the lead." },
+  { id: "art:061", zh: "伦勃朗的《夜巡》画的其实是白天：一支民兵队出发的场面。几百年里画面上的清漆越来越暗，人们才以为是夜里，「夜巡」这个名字也是后来起的。", en: "Rembrandt's Night Watch actually shows a daytime scene: a militia company setting out. Over centuries its varnish darkened until people assumed it was night, and the name came later." },
+  { id: "art:062", zh: "委拉斯开兹的《宫娥》里，画家把自己也画了进去，手执画笔看着我们；国王和王后只出现在后墙的一面小镜子里。看画的人，站在了国王的位置上。", en: "In Velázquez's Las Meninas, the painter includes himself, brush in hand, looking out at us; the king and queen appear only in a small mirror on the back wall. Whoever looks at the painting stands where the royal couple stood." },
+  { id: "art:063", zh: "葛饰北斋的《神奈川冲浪里》是《富岳三十六景》中的一幅，创作时他已年过七十。画中浓烈的蓝色是刚传入日本的普鲁士蓝。", en: "Hokusai's Great Wave off Kanagawa is one print in his Thirty-six Views of Mount Fuji, made when he was past seventy. Its intense blue is Prussian blue, then newly imported to Japan." },
+  { id: "art:064", zh: "克里姆特的《吻》里用了真正的金箔。那段时期被称为他的「黄金时期」，灵感部分来自他在意大利拉文纳看到的拜占庭镶嵌画。", en: "Klimt's The Kiss uses real gold leaf. It belongs to his 'golden phase', inspired partly by the Byzantine mosaics he saw in Ravenna." },
+  { id: "art:065", zh: "修拉的《大碗岛的星期天下午》由无数小色点组成，他画了约两年。走近只见点，退后才见人——眼睛替画家完成了混色。", en: "Seurat's A Sunday Afternoon on the Island of La Grande Jatte is built from countless dots of colour and took him about two years. Up close you see dots; step back and you see people. Your eye does the mixing." },
+  { id: "art:066", zh: "马格利特画了一只烟斗，下面写着「这不是一只烟斗」。他说得没错：那是一幅烟斗的画，你没法往里面装烟丝。", en: "Magritte painted a pipe and wrote beneath it: 'This is not a pipe.' He was right. It is a picture of a pipe; you cannot fill it with tobacco." },
+  { id: "art:067", zh: "1917 年，杜尚把一个小便池签上「R. Mutt」送去参展，取名《泉》。展览拒绝了它，艺术史却从此多了一个问题：什么才算艺术？", en: "In 1917 Duchamp signed a urinal 'R. Mutt', titled it Fountain and submitted it to an exhibition. It was rejected, and art history gained a question it still argues over: what counts as art?" },
+  { id: "art:068", zh: "1962 年，沃霍尔展出了 32 幅金宝汤罐头，每幅一种口味。超市货架上的东西，第一次被这样郑重地挂上了画廊的墙。", en: "In 1962 Warhol exhibited 32 paintings of Campbell's soup cans, one for each flavour. Supermarket shelves had never before been hung on gallery walls with such seriousness." },
+  { id: "art:069", zh: "霍珀的《夜游者》画的是深夜街角的一家餐馆，透过大玻璃能看见几个沉默的客人。仔细看，画里找不到餐馆的门——孤独被画得严丝合缝。", en: "Hopper's Nighthawks shows a late-night corner diner, a few silent customers seen through the great window. Look closely: the diner has no visible door. The loneliness is sealed in." },
+  { id: "art:070", zh: "弗里达·卡罗一生画了五十多幅自画像。车祸重伤后她长期卧床，母亲在床顶装了一面镜子，她就画镜子里的自己。", en: "Frida Kahlo painted more than fifty self-portraits. Bedridden for long stretches after a bus accident, she had a mirror fixed above her bed by her mother, and painted the face she saw in it." },
+  { id: "art:071", zh: "莫奈画了三十多幅鲁昂大教堂，几乎都是同一个角度，只是时辰和天气不同。他想画的不是教堂，而是落在教堂上的光。", en: "Monet painted Rouen Cathedral more than thirty times, nearly always from the same angle, at different hours and in different weather. His subject was not the cathedral but the light falling on it." },
+  { id: "art:072", zh: "塞尚说：「我要用一只苹果震惊巴黎。」他一生画了无数静物苹果，把它们画得像山一样稳重。后来的立体主义，就是从这些苹果里长出来的。", en: "Cézanne said he wanted to astonish Paris with an apple. He painted apples all his life, giving them the weight of mountains, and Cubism grew out of them." },
+  { id: "art:073", zh: "颜真卿的《祭侄文稿》是在悲愤中写成的草稿，涂改的痕迹都还留在纸上，却被誉为「天下第二行书」。真情，有时比工整更动人。", en: "Yan Zhenqing's Draft of a Requiem for My Nephew was written in grief and rage, its crossings-out still on the page, yet it is hailed as the second-greatest running script under heaven. Feeling can move more than neatness." },
+  { id: "art:074", zh: "苏轼被贬黄州时写下《寒食帖》，字随心情忽大忽小，被誉为「天下第三行书」。排在前面的，是王羲之和颜真卿。", en: "Exiled to Huangzhou, Su Shi wrote the Cold Food Observance scroll, its characters swelling and shrinking with his mood. It is called the third-greatest running script, after Wang Xizhi and Yan Zhenqing." },
+  { id: "art:075", zh: "八大山人画的鱼和鸟，眼珠常常点在眼眶一角，翻着白眼看人。这位明朝宗室后裔，把一生的孤傲都画进了一只眼睛里。", en: "The fish and birds of Bada Shanren often have pupils pushed into the corner of the eye, glaring sideways. A descendant of the fallen Ming royal house, he put a lifetime's defiance into a single eye." },
+  { id: "art:076", zh: "1941 年起，张大千带着弟子在敦煌临摹壁画两年多，画了两百多幅。很多人正是从这些摹本，第一次认识了敦煌。", en: "From 1941, Zhang Daqian spent more than two years copying the Dunhuang murals with his students, producing over two hundred copies. For many people, those copies were their first sight of Dunhuang." },
+  { id: "art:077", zh: "唐代画家吴道子画人物衣带，线条飘逸，好像被风吹起，后人称为「吴带当风」。他被尊为「画圣」。", en: "The Tang painter Wu Daozi drew robes and sashes with lines so fluid they seemed lifted by the wind; later critics called it 'Wu's sashes in the breeze'. He is revered as the Sage of Painting." },
+  { id: "art:078", zh: "宋徽宗是个失败的皇帝，却是一流的艺术家。他创造的「瘦金体」笔画细硬如金丝，至今一眼就能认出。", en: "Emperor Huizong of Song was a failure as a ruler but a first-rate artist. His 'slender gold' calligraphy, with strokes as thin and hard as gold wire, is still recognisable at a glance." },
+  { id: "art:079", zh: "唐三彩是用铅釉烧成的陶器，黄、绿、白三色在窑火中流淌交融。它们大多是随葬品，是给另一个世界准备的器物。", en: "Tang sancai is lead-glazed earthenware whose yellows, greens and whites run together in the kiln. Most pieces were burial goods: objects made for another world." },
+  { id: "art:080", zh: "宋代汝窑存世的完整器不足百件。它的釉色被形容为「雨过天青云破处」，而汝窑烧造的时间只有短短二十年左右。", en: "Fewer than a hundred intact pieces of Song-dynasty Ru ware survive. Its glaze is likened to the sky after rain, where the clouds break, and the kilns produced it for only about twenty years." },
+  { id: "art:081", zh: "苏州园林讲究「移步换景」：走一步，窗框、假山和花木就组成一幅新画。园子不大，却让人觉得走不完。", en: "Suzhou's classical gardens are built so the view changes with every step: each pace frames a new picture of windows, rocks and trees. The gardens are small, yet feel endless." },
+  { id: "art:082", zh: "山西五台山的佛光寺东大殿建于唐大中十一年（857 年），是梁思成和林徽因 1937 年找到的。在此之前，日本学者曾断言中国已没有唐代木构建筑。", en: "The East Hall of Foguang Temple in Shanxi was built in 857, in the Tang dynasty. Liang Sicheng and Lin Huiyin found it in 1937, after Japanese scholars had declared no Tang timber building survived in China." },
+  { id: "art:083", zh: "北京天坛的回音壁是一道圆形围墙，两个人分站两端，对着墙轻声说话，对方能清楚听见。声音沿着光滑的墙面一路绕了过去。", en: "The Echo Wall at Beijing's Temple of Heaven is a circular enclosure: two people standing far apart can whisper into the wall and hear each other clearly, as the sound travels around its smooth curve." },
+  { id: "art:084", zh: "1952 年，约翰·凯奇的《4分33秒》首演：钢琴家坐下，打开琴盖，四分半钟一个音也不弹。观众的咳嗽、风声和雨声，成了这首曲子。", en: "At the 1952 premiere of John Cage's 4'33\", the pianist sat down, opened the lid and played nothing for four and a half minutes. The audience's coughs, the wind and the rain became the piece." },
+  { id: "art:085", zh: "巴赫去世后几十年里几乎被遗忘。1829 年，20 岁的门德尔松在柏林重新指挥上演《马太受难曲》，巴赫才重新回到人们耳边。", en: "For decades after his death, Bach was largely forgotten. In 1829 the 20-year-old Mendelssohn conducted the St Matthew Passion in Berlin, and Bach returned to the world's ears." },
+  { id: "art:086", zh: "亨德尔写《弥赛亚》只用了大约 24 天。这部两个多小时的清唱剧，至今每年圣诞前后都会在世界各地上演。", en: "Handel wrote Messiah in about 24 days. The oratorio, over two hours long, is still performed around the world every Christmas season." },
+  { id: "art:087", zh: "拉威尔的《波莱罗》只有一个旋律和一个节奏，反复约 18 次，只是乐器越来越多、声音越来越大。拉威尔自己说，这是「一首没有音乐的管弦乐曲」。", en: "Ravel's Boléro has one melody over one rhythm, repeated about eighteen times as the orchestra grows louder and fuller. Ravel himself called it a piece for orchestra without music." },
+  { id: "art:088", zh: "舒伯特的《第八交响曲》只有两个完整乐章，被称为「未完成交响曲」。他写下这两个乐章六年后去世，乐谱直到 1865 年才首次上演。", en: "Schubert's Symphony No. 8 has only two complete movements and is known as the Unfinished. He set it aside six years before his death, and it was not performed until 1865." },
+  { id: "art:089", zh: "1913 年，斯特拉文斯基的芭蕾舞剧《春之祭》在巴黎首演，怪异的节奏和舞步引得观众哄闹、互相叫骂。如今它被视为二十世纪最重要的作品之一。", en: "At the 1913 Paris premiere of Stravinsky's The Rite of Spring, its strange rhythms and steps drove the audience to jeers and shouting matches. Today it is counted among the most important works of the century." },
+  { id: "art:090", zh: "海顿的《告别交响曲》最后一个乐章里，乐手们一个个吹灭蜡烛离场，最后只剩两把小提琴。这是在委婉地提醒亲王：大家该放假回家了。", en: "In the last movement of Haydn's Farewell Symphony, the musicians snuff their candles and leave one by one until two violins remain. It was a polite hint to the prince that everyone needed to go home." },
+  { id: "art:091", zh: "14 岁的莫扎特在梵蒂冈听了一遍阿莱格里的《求主怜悯》，回去就把它凭记忆默写了下来。这部作品当时只许在西斯廷礼拜堂演唱。", en: "At fourteen, Mozart heard Allegri's Miserere once in the Vatican and wrote it out from memory that night. The work was then reserved for performance in the Sistine Chapel." },
+  { id: "art:092", zh: "嵇康临刑前，看了看日影，要来一张琴，弹了一曲《广陵散》。弹完，他叹道：「《广陵散》于今绝矣！」", en: "Before his execution, the poet Ji Kang looked at the shadow of the sun, asked for a qin, and played Guangling San. When he finished he sighed: 'Guangling San ends with me.'" },
+  { id: "art:093", zh: "普契尼的歌剧《图兰朵》以中国为背景，剧中反复出现的旋律，正是中国民歌《茉莉花》。", en: "Puccini's opera Turandot is set in China, and one of its recurring melodies is the Chinese folk song Mo Li Hua, Jasmine Flower." },
+  { id: "art:094", zh: "京剧脸谱的颜色有讲究：红脸多表示忠勇，如关羽；白脸多表示奸诈，如曹操；黑脸多表示刚直，如包公。观众一看脸，就知道这是什么样的人。", en: "Colour on a Peking opera mask carries meaning: red often marks loyalty and courage, as for Guan Yu; white, cunning, as for Cao Cao; black, stern integrity, as for Judge Bao. One look at the face tells you who someone is." },
+  { id: "art:095", zh: "2001 年，昆曲入选联合国教科文组织首批「人类口头和非物质遗产代表作」。这种已有六百多年历史的剧种，被称为「百戏之祖」。", en: "In 2001 Kunqu opera was among the first works proclaimed Masterpieces of the Oral and Intangible Heritage of Humanity by UNESCO. More than six hundred years old, it is called the ancestor of Chinese operas." },
+  { id: "art:096", zh: "2019 年巴黎圣母院大火，烧毁的尖塔是 19 世纪建筑师维奥莱-勒-杜克加上去的。修复后的圣母院在 2024 年 12 月重新开放，尖塔照原样重建。", en: "The spire that fell in the 2019 Notre-Dame fire had been added in the 19th century by the architect Viollet-le-Duc. The restored cathedral reopened in December 2024 with the spire rebuilt as it was." },
+  { id: "art:097", zh: "迪拜的哈利法塔高约 828 米，是世界最高的建筑。在塔顶看日落，再坐电梯下到底层，还能再看一次。", en: "Dubai's Burj Khalifa stands about 828 metres tall, the tallest building in the world. Watch the sunset from the top, ride down to the ground, and you can watch it set again." },
+  { id: "art:098", zh: "约旦的佩特拉城是直接在玫瑰色砂岩山崖上凿出来的，被称为「玫瑰之城」。它最著名的「宝库」其实是一座陵墓。", en: "Jordan's Petra was carved straight into rose-coloured sandstone cliffs and is called the Rose City. Its most famous facade, the Treasury, was in fact a tomb." },
+  { id: "art:099", zh: "马丘比丘的许多石墙不用灰浆，石块切磨得严丝合缝，连刀片都插不进去。这种干砌墙在地震中会微微跳动，然后落回原位。", en: "Many walls at Machu Picchu use no mortar: their stones are cut so precisely that a blade will not fit between them. In earthquakes such walls jostle slightly, then settle back into place." },
+  { id: "art:100", zh: "罗马斗兽场能容纳约五万名观众。天热时，水手们会拉起一张巨大的遮阳篷，盖住观众席——两千年前，已经有了「可开合的屋顶」。", en: "The Colosseum held about 50,000 spectators. On hot days sailors rigged a vast awning, the velarium, over the seating: a retractable roof two thousand years ago." },
+  { id: "art:101", zh: "1997 年，盖里设计的古根海姆博物馆在西班牙毕尔巴鄂落成，让这座衰落的工业城市一跃成为旅游胜地。「毕尔巴鄂效应」从此成了城市规划的专有名词。", en: "When Frank Gehry's Guggenheim Museum opened in Bilbao in 1997, it turned a declining industrial city into a destination. 'The Bilbao effect' entered the vocabulary of urban planning." },
+  { id: "art:102", zh: "卢浮宫的玻璃金字塔由贝聿铭设计，1989 年落成。刚公布方案时，巴黎人大多反对；如今它已是巴黎的标志之一。", en: "The glass pyramid at the Louvre, designed by I. M. Pei, opened in 1989. When the design was unveiled, most Parisians objected; today it is one of the city's emblems." },
+  { id: "art:103", zh: "自由女神像刚竖起时是铜的本色，红棕发亮。几十年里铜在风雨中氧化，长出一层铜绿，到 1920 年前后才变成今天的青绿色。", en: "When the Statue of Liberty was unveiled, it was the colour of new copper, a shining reddish brown. Over decades the weather oxidised it into the green patina we know, complete by around 1920." },
+  { id: "art:104", zh: "1902 年，梅里爱拍出《月球旅行记》：一枚炮弹正中月亮的眼睛。这部十几分钟的短片，被视为最早的科幻电影之一。", en: "In 1902 Georges Méliès made A Trip to the Moon, in which a shell lands right in the Moon's eye. The short film is counted among the very first science-fiction movies." },
+  { id: "art:105", zh: "贝尼尼的大理石雕塑《阿波罗与达芙妮》里，达芙妮的手指正在长出树叶，脚趾扎进泥土变成树根。坚硬的石头，被雕成了正在发生的变化。", en: "In Bernini's marble Apollo and Daphne, leaves sprout from Daphne's fingers and her toes root into the earth. Hard stone is carved into a change still happening." },
+  { id: "art:106", zh: "2018 年，班克斯的《女孩与气球》在伦敦拍卖槌落下的那一刻，画框里暗藏的碎纸机把画切掉了一半。半碎的画被改名《爱在垃圾桶里》，几年后以更高的价格再次拍出。", en: "In 2018, as the hammer fell on Banksy's Girl with Balloon in London, a shredder hidden in the frame sliced half the canvas. Renamed Love is in the Bin, it later sold again for far more." },
+  { id: "art:107", zh: "毕加索的「蓝色时期」始于好友卡萨吉马斯自杀之后。几年里，他画中满是冷冷的蓝色、贫穷的人和消瘦的身体。", en: "Picasso's Blue Period began after the suicide of his friend Carlos Casagemas. For several years his canvases filled with cold blues, the poor and the gaunt." },
+  { id: "art:108", zh: "1515 年，丢勒刻了一幅著名的犀牛版画，可他从没见过犀牛，只凭一封信和一张草图。画里的犀牛像披着铠甲，几百年里欧洲人都以为犀牛就长这样。", en: "In 1515 Dürer made a famous woodcut of a rhinoceros without ever seeing one, working from a letter and a sketch. His beast wears something like armour, and for centuries Europeans believed rhinos looked that way." },
+  { id: "art:109", zh: "新天鹅堡是巴伐利亚国王路德维希二世的童话梦，城堡还没完工他就去世了。后来，它成了迪士尼睡美人城堡的灵感之一。", en: "Neuschwanstein was the fairy-tale dream of King Ludwig II of Bavaria, who died before it was finished. It later helped inspire Disney's Sleeping Beauty Castle." },
+  { id: "art:110", zh: "达利《记忆的永恒》里那几只软塌塌的钟，据他自己说，灵感来自一块在阳光下融化的卡蒙贝尔奶酪。时间，在画里也会变软。", en: "Dalí said the soft, drooping watches in The Persistence of Memory were inspired by a Camembert cheese melting in the sun. In his painting, even time goes soft." },
 ];
 
 /* ---------- Once Upon a Time (bilingual) ---------- */
@@ -1727,6 +3558,36 @@ const TALES = [
   { id: "tales:078", zh: "《阿里巴巴和四十大盗》同样出自迪亚卜讲给加朗的故事，阿拉伯古抄本里也没有。但这个故事真正的主角不是阿里巴巴：是他家的女仆马尔贾娜——强盗在门上做记号，是她发现并抹去；强盗藏进油瓮，是她浇下滚油；最后舞宴上行刺，也是她反手了结。阿里巴巴的运气，全靠一个聪明人的警醒撑着。", en: "Ali Baba and the Forty Thieves also comes from Diyab's tales to Galland, absent from the old Arabic manuscripts. But the story's true hero is not Ali Baba — it is his servant Morgiana. She finds and erases the mark the thieves chalked on the door; she pours boiling oil into the jars where they hide; and at the final banquet it is she who turns the assassin's dance against him. Ali Baba's luck is held up entirely by one clever person's vigilance." },
   { id: "tales:079", zh: "水手辛巴达的七次航海，讲的其实是一个巴格达富翁的回忆录：他把历险讲给一个与他同名的穷挑夫听——你以为我生来富贵？我散尽家财、七次出海，每一次都差点把命留在岛上。鲸鱼背上的岛、巨鹰衔走的钻石谷、食人巨人……这些奇遇的底下，是阿拔斯王朝海上贸易的真实世界影子。", en: "Sinbad's seven voyages are framed as a rich Baghdad merchant's memoir, told to a poor porter who shares his name: you think I was born to wealth? I squandered my inheritance and sailed seven times, nearly leaving my life on an island each time. Islands on a whale's back, a valley of diamonds reached by eagles, man-eating giants — beneath the marvels lies the real maritime world of the Abbasid age." },
   { id: "tales:080", zh: "渔夫第四次撒网，捞起一只所罗门封印的铜瓶，瓶里冒出的魔鬼却说要杀他：魔鬼被关的最初几百年，他许愿让放他出来的人享尽财富；又过几百年，誓言熬成了报复——最后他发誓，谁放他出来，就赐谁一死。渔夫用一句话把他骗回瓶里：“我不信你这么大个子，能装进这只小瓶。”魔鬼为了证明，化作青烟钻了回去。弱者的武器，有时只是一句“我不信”。", en: "On his fourth cast, the fisherman hauled up a copper bottle sealed by Solomon — and the jinni who poured out announced he would kill him. In his first centuries shut in the bottle, the jinni had vowed endless riches to whoever freed him; as the centuries soured, the vow turned to vengeance — at last he swore to kill his rescuer. The fisherman talked him back into the bottle with one sentence: 'I don't believe a great creature like you could ever fit in that little flask.' To prove it, the jinni turned to smoke and slipped inside. The weapon of the weak is sometimes just the words 'I don't believe you'." },
+  { id: "tales:081", zh: "楚国人坐船过江，剑掉进水里。他在船舷上刻个记号：「我的剑是从这儿掉下去的。」船靠岸后，他照着记号下水去找。船在走，剑没走——《吕氏春秋》里的这个人，用旧记号去找已经变了的世界。", en: "A man of Chu dropped his sword overboard while crossing a river. He cut a notch in the gunwale: 'This is where it fell.' When the boat docked, he dived in at the notch. The boat had moved; the sword had not. He searched a changed world with an old mark." },
+  { id: "tales:082", zh: "宋国有个农夫，看见一只兔子撞在树桩上死了，白捡了一顿肉。从此他放下锄头，天天守着树桩等兔子。兔子没再来，田却荒了。这个故事出自《韩非子》，讽刺的是把偶然当成规律的人。", en: "A farmer in Song saw a hare run into a tree stump and die: a free meal. He put down his hoe and waited by the stump every day for another. No hare came, and his fields went to weeds. Han Feizi told it to mock those who mistake chance for a rule." },
+  { id: "tales:083", zh: "边塞上有位老人丢了马，邻居来安慰，他说：「怎么知道不是福呢？」不久马带回一匹骏马。儿子骑马摔断了腿，后来却因此免于征战。祸福相倚，《淮南子》里的塞翁早就看透了。", en: "An old man on the frontier lost his horse. When neighbours consoled him, he said: 'Who knows if this is not luck?' The horse returned leading a fine stallion. His son fell from it and broke a leg, and so was spared from war. Fortune and misfortune lean on each other." },
+  { id: "tales:084", zh: "几个人分一壶酒，约定谁先画好一条蛇谁喝。一人先画完，见别人还没好，就给蛇添上脚。另一人画完夺过酒壶：「蛇本没有脚，你画的不是蛇。」多做一步，反把到手的丢了。", en: "Several men agreed that whoever first drew a snake would win a jug of wine. One finished early and, seeing the others still drawing, added feet. Another finished and seized the jug: 'Snakes have no feet. That is no snake.' One extra stroke lost what he had already won." },
+  { id: "tales:085", zh: "有人想偷一口大钟，背不动，就想砸碎了分块拿。一砸，钟声大作，他怕别人听见，赶紧捂住自己的耳朵。《吕氏春秋》里原本是「盗钟」，后来传成了「盗铃」。", en: "A man tried to steal a great bell but could not carry it, so he struck it to break it into pieces. It rang out, and, afraid someone would hear, he covered his own ears. In the original telling it was a bell; later it shrank to a little bell." },
+  { id: "tales:086", zh: "庄子梦见自己变成一只蝴蝶，翩翩飞舞，快乐自在，忘了自己是庄周。醒来后他恍惚了：是庄周梦见了蝴蝶，还是蝴蝶梦见了庄周？两千多年后，这个问题仍然没人答得干净。", en: "Zhuangzi dreamed he was a butterfly, fluttering happily, forgetting he was Zhuangzi. On waking he wondered: was he Zhuangzi who had dreamed of being a butterfly, or a butterfly now dreaming it was Zhuangzi? Two thousand years later, no one has answered cleanly." },
+  { id: "tales:087", zh: "庄子和惠子在濠水桥上散步。庄子说：「鱼游得多快乐。」惠子问：「你不是鱼，怎么知道鱼快乐？」庄子答：「你不是我，怎么知道我不知道鱼快乐？」一场辩论，问的是人能不能懂得别的生命。", en: "Zhuangzi and Huizi walked on a bridge over the Hao. 'See how happy the fish are,' said Zhuangzi. 'You are not a fish; how do you know?' asked Huizi. 'You are not me; how do you know I don't know?' The debate asks whether we can understand other lives." },
+  { id: "tales:088", zh: "唐代传奇《枕中记》里，书生卢生在邯郸客店借了道士一个枕头睡去，梦中娶妻、做官、享尽荣华，活到八十岁。醒来时，店家蒸的黄粱饭还没熟。", en: "In the Tang tale The World Inside a Pillow, the scholar Lu borrows a Taoist's pillow at an inn in Handan and dreams a whole life: marriage, high office, glory, old age at eighty. He wakes to find the innkeeper's millet not yet cooked." },
+  { id: "tales:089", zh: "燕国有个少年羡慕赵国邯郸人走路好看，专程去学。结果新步法没学会，自己原来怎么走也忘了，只好爬着回家。这个故事出自《庄子》。", en: "A youth from Yan admired the graceful walk of the people of Handan and went there to learn it. He never mastered their step and forgot his own, so he had to crawl home. The story comes from the Zhuangzi." },
+  { id: "tales:090", zh: "《列子》里，杞国有个人整天担心天会塌下来、地会陷下去，愁得吃不下睡不着。有人开导他：天不过是积聚的气，地不过是堆积的土，怎么会塌？「杞人忧天」从此成了多余担忧的代名词。", en: "In the Liezi, a man of Qi worried constantly that the sky would fall and the earth give way, until he could neither eat nor sleep. A friend explained that the sky was only gathered air and the earth piled soil. 'The man of Qi fearing the sky' still names needless worry." },
+  { id: "tales:091", zh: "相传「年」是一头年末出来伤人的怪兽，怕红色、怕火光、怕响声。于是人们贴红纸、点灯火、放爆竹，「过年」就这样过成了热闹的样子。这个说法流传很广，但成形较晚。", en: "A popular legend tells of Nian, a beast that came out at the year's end to prey on people, and feared red, firelight and loud noise. So people pasted red paper, lit lamps and set off firecrackers. The story is widespread, though it took shape fairly late." },
+  { id: "tales:092", zh: "民间传说灶王爷住在每家的灶台边，记下一家人一年的善恶，腊月二十三或二十四上天汇报。人们拿糖瓜供他，据说是要粘住他的嘴，让他「上天言好事」。", en: "Folk belief places the Kitchen God beside every family's stove, recording the household's deeds all year. Late in the twelfth month he ascends to report to heaven, so families offer him sticky malt candy, said to seal his lips so he speaks only good." },
+  { id: "tales:093", zh: "唐代小说《续玄怪录》里，书生韦固在月下遇到一位老人，靠着布袋翻书。老人说，袋里装的红绳，系在谁和谁的脚上，两人无论隔多远，终会成为夫妻。「月下老人」从此掌管人间姻缘。", en: "In a Tang story, the young Wei Gu meets an old man reading by moonlight beside a sack. The sack holds red cords, the old man says: tie two people's feet together and, however far apart, they will marry. The Old Man Under the Moon has ruled matchmaking ever since." },
+  { id: "tales:094", zh: "传说人死后要过奈何桥，桥边的孟婆递上一碗汤，喝下就忘掉前世，干干净净去投胎。人们怕的不是死，是忘记。", en: "In Chinese legend, the dead must cross the Bridge of Helplessness, where Old Lady Meng offers a bowl of soup. Drink it and you forget your past life, to be reborn clean. What people fear, perhaps, is not death but forgetting." },
+  { id: "tales:095", zh: "俄耳甫斯的琴声能让石头落泪。妻子死后，他下到冥府，打动了冥王：可以带她走，但出冥府之前不许回头。就在快到地面时，他忍不住回头看了一眼，妻子永远消失了。", en: "Orpheus played so beautifully that stones wept. When his wife Eurydice died, he went down to the underworld and moved its king: she could follow him, if he did not look back before they reached the light. Near the surface he turned to look, and lost her forever." },
+  { id: "tales:096", zh: "弥达斯国王求神让他碰到的东西都变成金子。愿望实现了，可面包和酒一碰就成了金块，女儿扑进他怀里，也成了金像。他终于求神收回了这份礼物。", en: "King Midas asked the gods that everything he touched turn to gold. The wish was granted, but his bread and wine became metal, and when his daughter ran into his arms she turned to a golden statue. At last he begged the gods to take the gift back." },
+  { id: "tales:097", zh: "西西弗斯因为欺骗诸神，被罚把一块巨石推上山顶，石头一到山顶就滚下来，他只好再推，永无止境。哲学家加缪却写道：我们应当想象西西弗斯是幸福的。", en: "For deceiving the gods, Sisyphus was condemned to push a boulder up a hill, only to watch it roll down each time, forever. Yet the philosopher Camus wrote that we must imagine Sisyphus happy." },
+  { id: "tales:098", zh: "坦塔罗斯在冥府里站在齐颈深的水中，头顶挂着果子。他一低头喝水，水就退去；一伸手摘果，枝条就升高。英语里「逗弄」一词 tantalize 就来自他的名字。", en: "In the underworld Tantalus stands neck-deep in water beneath hanging fruit. When he bends to drink, the water recedes; when he reaches for fruit, the branches rise. The English word tantalise comes from his name." },
+  { id: "tales:099", zh: "石头里插着一把剑，剑上刻着：能拔出它的人，就是英格兰真正的国王。许多骑士都拔不动，少年亚瑟一下就拔了出来。传说没讲力气，只讲命运。", en: "A sword stood in a stone, inscribed: whoever draws it out is the rightful king of England. Knight after knight failed; the boy Arthur drew it out at once. The legend is not about strength, but about who is meant to." },
+  { id: "tales:100", zh: "兔子嘲笑乌龟走得慢，两人赛跑。兔子遥遥领先，就在路边睡了一觉，醒来时乌龟已经到了终点。伊索两千多年前讲的这个故事，今天的孩子还在听。", en: "The hare mocked the tortoise for its slowness, so they raced. Far ahead, the hare lay down for a nap and woke to find the tortoise at the finish. Aesop told the story more than two thousand years ago, and children still hear it today." },
+  { id: "tales:101", zh: "狐狸看见架子上挂着葡萄，跳了几次都够不着，就走开了，边走边说：「这葡萄肯定是酸的。」伊索的这只狐狸，给了我们「酸葡萄」这个说法。", en: "A fox saw grapes hanging high on a vine, jumped for them several times and failed, then walked off saying: 'They were surely sour anyway.' Aesop's fox gave us the phrase 'sour grapes'." },
+  { id: "tales:102", zh: "放羊的孩子觉得无聊，大喊「狼来了」，村民跑来却什么也没有。他喊了几次，大家都被骗了。等狼真的来了，他再喊，就没人信了。伊索说：说谎的人即使说真话，也没人相信。", en: "A bored shepherd boy cried 'Wolf!' and villagers came running to find nothing. He did it again and again. When a wolf really came, he cried out and no one came. Aesop's moral: a liar is not believed even when telling the truth." },
+  { id: "tales:103", zh: "夏天，蚂蚁忙着搬粮食，蚱蜢在一旁唱歌，笑它们太辛苦。冬天来了，蚱蜢饿得发慌，去向蚂蚁讨吃的。蚂蚁问：「夏天你在做什么？」这是伊索寓言里关于准备的故事。", en: "All summer the ants hauled grain while the grasshopper sang and laughed at their toil. When winter came, the hungry grasshopper begged the ants for food. 'What did you do all summer?' they asked. It is Aesop's fable about preparing." },
+  { id: "tales:104", zh: "德国哈默尔恩的吹笛人替小镇赶走了老鼠，镇上却赖掉了报酬。他再次吹起笛子，镇上的孩子跟着他走了，再也没有回来。镇上的老记录里提到 1284 年失踪了 130 个孩子，真相至今成谜。", en: "The Pied Piper rid Hamelin of its rats, and the town refused to pay him. He played again, and the town's children followed him away, never to return. Old town records mention 130 children lost in 1284; what really happened remains a mystery." },
+  { id: "tales:105", zh: "华盛顿·欧文 1819 年的小说里，瑞普·凡·温克尔在山里喝了几口怪人的酒，睡了一觉。醒来下山，二十年过去了，胡子长到腰间，美国已经独立。", en: "In Washington Irving's 1819 story, Rip Van Winkle drinks with strange figures in the mountains and falls asleep. He wakes and walks home to find twenty years gone, his beard at his waist, and America independent." },
+  { id: "tales:106", zh: "斯拉夫民间故事里的芭芭雅嘎是个住在森林里的老巫婆，她的小屋立在一双鸡腿上，会自己转身。她有时吃人，有时又帮助勇敢的人——善恶难分，正是她可怕的地方。", en: "Baba Yaga, the witch of Slavic folk tales, lives deep in the forest in a hut that stands on chicken legs and turns by itself. Sometimes she devours people, sometimes she helps the brave. Not knowing which is what makes her frightening." },
+  { id: "tales:107", zh: "国王每晚娶一个新娘，第二天就将她处死。山鲁佐德自愿嫁给他，每晚讲一个故事，总在最精彩处停下，留到明天。一千零一夜之后，国王再也没有杀她。故事救了一条命。", en: "A king married a new bride each night and had her killed at dawn. Scheherazade volunteered to marry him and told a story every night, always stopping at the best part. After a thousand and one nights, the king spared her. Stories saved a life." },
+  { id: "tales:108", zh: "布拉格的传说里，拉比用河边的泥土捏了一个巨人「戈仑」，在它额头写上「真理」一词，它就活了过来，保护犹太社区。擦掉一个字母，「真理」变成「死亡」，它便倒下了。", en: "In Prague legend, a rabbi shaped a giant golem from river clay and wrote the Hebrew word for truth on its forehead; it came alive to protect the Jewish quarter. Erase one letter and 'truth' becomes 'death', and the golem falls." },
+  { id: "tales:109", zh: "美女为救父亲，住进了野兽的城堡。日子久了，她看见了野兽的温柔。当她终于说出爱他，野兽变回了王子。这个故事最早成书于 1740 年，作者是法国女作家维伦纽夫夫人。", en: "To save her father, Beauty went to live in the Beast's castle. In time she saw his gentleness, and when at last she said she loved him, he became a prince again. The tale was first written down in 1740, by the French novelist Madame de Villeneuve." },
+  { id: "tales:110", zh: "老虎抓住一只狐狸，狐狸说：「天帝派我做百兽之王，你吃我就是违抗天命。不信，跟在我后面走一趟。」百兽见了果然纷纷逃跑，老虎以为它们怕狐狸，其实它们怕的是老虎。这个故事出自《战国策》。", en: "A tiger caught a fox. 'Heaven made me king of the beasts,' said the fox. 'Eat me and you defy heaven. Walk behind me and see.' Every animal fled at the sight, and the tiger believed they feared the fox. They feared the tiger. The story comes from the Strategies of the Warring States." },
 ];
 
 
@@ -1779,6 +3640,54 @@ const PROVERBS = [
   { id: "proverbs:045", text: "Where there's smoke, there's fire.", meaning: "Rumours usually have at least some basis in fact." },
   { id: "proverbs:046", text: "Easy come, easy go.", meaning: "What arrives without effort tends to leave just as easily." },
   { id: "proverbs:047", text: "Lightning never strikes twice in the same place.", meaning: "A rare misfortune is unlikely to repeat in exactly the same way." },
+  { id: "proverbs:048", text: "All that glitters is not gold.", meaning: "Something attractive on the outside may have little real value." },
+  { id: "proverbs:049", text: "Beauty is in the eye of the beholder.", meaning: "What one person finds beautiful, another may not." },
+  { id: "proverbs:050", text: "Necessity is the mother of invention.", meaning: "Real needs push people to find new solutions." },
+  { id: "proverbs:051", text: "Where there's a will, there's a way.", meaning: "Determination will find a path through difficulty." },
+  { id: "proverbs:052", text: "You can lead a horse to water, but you can't make it drink.", meaning: "You can offer someone a chance, but you cannot force them to take it." },
+  { id: "proverbs:053", text: "A bird in the hand is worth two in the bush.", meaning: "Something you already have is worth more than something bigger you might get." },
+  { id: "proverbs:054", text: "The proof of the pudding is in the eating.", meaning: "You can only judge something properly by trying it." },
+  { id: "proverbs:055", text: "People who live in glass houses shouldn't throw stones.", meaning: "Don't criticise others for faults you share." },
+  { id: "proverbs:056", text: "Strike while the iron is hot.", meaning: "Act while conditions are in your favour." },
+  { id: "proverbs:057", text: "Many hands make light work.", meaning: "A job is easier when everyone helps." },
+  { id: "proverbs:058", text: "Every dog has its day.", meaning: "Everyone gets a moment of success sooner or later." },
+  { id: "proverbs:059", text: "Let sleeping dogs lie.", meaning: "Don't stir up an old problem that is causing no trouble now." },
+  { id: "proverbs:060", text: "It takes two to tango.", meaning: "When things go wrong between two people, both usually played a part." },
+  { id: "proverbs:061", text: "Silence is golden.", meaning: "Sometimes saying nothing is the wisest choice." },
+  { id: "proverbs:062", text: "No news is good news.", meaning: "If you have heard nothing, things are probably fine." },
+  { id: "proverbs:063", text: "Knowledge is power.", meaning: "Understanding gives you the ability to act and to choose." },
+  { id: "proverbs:064", text: "Hope for the best, prepare for the worst.", meaning: "Stay optimistic, but be ready if things go badly." },
+  { id: "proverbs:065", text: "If it ain't broke, don't fix it.", meaning: "Leave alone something that already works well." },
+  { id: "proverbs:066", text: "The devil is in the details.", meaning: "Small details can hide the biggest problems." },
+  { id: "proverbs:067", text: "Variety is the spice of life.", meaning: "New and different experiences make life interesting." },
+  { id: "proverbs:068", text: "Laughter is the best medicine.", meaning: "Humour helps us recover from hard times." },
+  { id: "proverbs:069", text: "Patience is a virtue.", meaning: "Being able to wait calmly is a valuable quality." },
+  { id: "proverbs:070", text: "Old habits die hard.", meaning: "Long-standing habits are hard to change." },
+  { id: "proverbs:071", text: "You reap what you sow.", meaning: "Your actions decide what comes back to you." },
+  { id: "proverbs:072", text: "Don't throw the baby out with the bathwater.", meaning: "Don't discard the good along with the bad." },
+  { id: "proverbs:073", text: "A journey of a thousand miles begins with a single step.", meaning: "Even huge tasks start with one small action. The saying comes from the Tao Te Ching." },
+  { id: "proverbs:074", text: "Two wrongs don't make a right.", meaning: "Answering one wrong with another does not make things fair." },
+  { id: "proverbs:075", text: "The apple doesn't fall far from the tree.", meaning: "Children often turn out like their parents." },
+  { id: "proverbs:076", text: "An ounce of prevention is worth a pound of cure.", meaning: "Preventing a problem is far easier than fixing it later." },
+  { id: "proverbs:077", text: "Don't look a gift horse in the mouth.", meaning: "Don't find fault with something you were given freely." },
+  { id: "proverbs:078", text: "Familiarity breeds contempt.", meaning: "Knowing someone or something too well can make you stop respecting it." },
+  { id: "proverbs:079", text: "One man's trash is another man's treasure.", meaning: "What one person throws away, another may value highly." },
+  { id: "proverbs:080", text: "There's no place like home.", meaning: "Nowhere feels as comfortable as your own home." },
+  { id: "proverbs:081", text: "Home is where the heart is.", meaning: "Home is wherever the people and places you love are." },
+  { id: "proverbs:082", text: "Many a true word is spoken in jest.", meaning: "Jokes often carry a serious truth." },
+  { id: "proverbs:083", text: "Hindsight is twenty-twenty.", meaning: "It is easy to see the right choice after the fact." },
+  { id: "proverbs:084", text: "The road to hell is paved with good intentions.", meaning: "Meaning well is not enough; actions and results matter." },
+  { id: "proverbs:085", text: "Fools rush in where angels fear to tread.", meaning: "The inexperienced take risks that the wise avoid." },
+  { id: "proverbs:086", text: "You can't have your cake and eat it too.", meaning: "You cannot keep something and use it up at the same time." },
+  { id: "proverbs:087", text: "Don't make a mountain out of a molehill.", meaning: "Don't treat a small problem as if it were a huge one." },
+  { id: "proverbs:088", text: "A leopard can't change its spots.", meaning: "People's basic nature rarely changes." },
+  { id: "proverbs:089", text: "Better safe than sorry.", meaning: "It is wiser to be careful than to regret taking a risk." },
+  { id: "proverbs:090", text: "Good things come to those who wait.", meaning: "Patience is often rewarded." },
+  { id: "proverbs:091", text: "It's never too late to learn.", meaning: "You can pick up new knowledge at any age." },
+  { id: "proverbs:092", text: "Tomorrow is another day.", meaning: "After a bad day, there is always a fresh start." },
+  { id: "proverbs:093", text: "Well begun is half done.", meaning: "A good start makes the rest of the work much easier." },
+  { id: "proverbs:094", text: "Little strokes fell great oaks.", meaning: "Small, steady efforts can achieve great things." },
+  { id: "proverbs:095", text: "A chain is only as strong as its weakest link.", meaning: "A group or system is limited by its weakest part." },
 ];
 
 /* ---------- Word of the day (en only) ---------- */
@@ -1826,6 +3735,33 @@ const WORDS = [
   { id: "word:041", word: "paradox", pos: "noun", def: "A statement that seems to contradict itself, yet may be true.", example: "It is a paradox: the more time we save, the less we seem to have." },
   { id: "word:042", word: "quiver", pos: "verb", def: "To tremble slightly, often with emotion.", example: "Her voice began to quiver as she read the letter." },
   { id: "word:043", word: "comet", pos: "noun", def: "A body of ice and dust that grows a glowing tail as it nears the sun.", example: "The comet returns to our skies every seventy-six years." },
+  { id: "word:044", word: "gossamer", pos: "noun", def: "A very fine, delicate thread or fabric, like the silk of a spider's web.", example: "Gossamer threads glinted between the branches at dawn." },
+  { id: "word:045", word: "liminal", pos: "adjective", def: "Relating to a threshold or a stage of transition between two states.", example: "The hour before sunrise has a liminal quiet." },
+  { id: "word:046", word: "dappled", pos: "adjective", def: "Marked with spots or patches of light and shade.", example: "We sat in the dappled shade of the plane trees." },
+  { id: "word:047", word: "effervescent", pos: "adjective", def: "Bubbling; also lively and full of enthusiasm.", example: "Her effervescent laugh filled the room." },
+  { id: "word:048", word: "quintessential", pos: "adjective", def: "Being the most perfect or typical example of something.", example: "A rainy afternoon with tea is the quintessential lazy day." },
+  { id: "word:049", word: "verdant", pos: "adjective", def: "Green with grass or other growing plants.", example: "The train wound through verdant valleys." },
+  { id: "word:050", word: "nebula", pos: "noun", def: "A cloud of gas and dust in space, often where new stars form.", example: "Through the telescope, the nebula looked like a faint smudge of light." },
+  { id: "word:051", word: "crepuscular", pos: "adjective", def: "Relating to twilight; active at dawn or dusk.", example: "Rabbits are crepuscular, venturing out as the light fades." },
+  { id: "word:052", word: "ethereal", pos: "adjective", def: "Extremely light and delicate, as if not of this world.", example: "The choir's ethereal voices rose into the dome." },
+  { id: "word:053", word: "epiphany", pos: "noun", def: "A sudden and striking moment of understanding.", example: "Halfway up the hill, she had an epiphany about the problem." },
+  { id: "word:054", word: "cadence", pos: "noun", def: "The rhythm or rise and fall of a voice or of sounds.", example: "The gentle cadence of the waves lulled him to sleep." },
+  { id: "word:055", word: "solitude", pos: "noun", def: "The state of being alone, especially by choice and with contentment.", example: "He walked in the woods to enjoy an hour of solitude." },
+  { id: "word:056", word: "whimsical", pos: "adjective", def: "Playfully unusual or fanciful.", example: "The café was full of whimsical teapots and mismatched chairs." },
+  { id: "word:057", word: "lucid", pos: "adjective", def: "Expressed clearly and easy to understand.", example: "Her lucid explanation made the idea simple." },
+  { id: "word:058", word: "tenacious", pos: "adjective", def: "Holding on firmly; refusing to give up.", example: "The tenacious climber reached the summit on her third attempt." },
+  { id: "word:059", word: "candor", pos: "noun", def: "The quality of being open and honest.", example: "I appreciated the candor of his reply." },
+  { id: "word:060", word: "nocturne", pos: "noun", def: "A dreamy musical piece that evokes the night.", example: "She played a Chopin nocturne as the lamps came on." },
+  { id: "word:061", word: "aplomb", pos: "noun", def: "Calm self-confidence, especially in a difficult situation.", example: "He handled the awkward question with aplomb." },
+  { id: "word:062", word: "felicity", pos: "noun", def: "Great happiness; also a particularly apt choice of words.", example: "The poem was full of small felicities of phrase." },
+  { id: "word:063", word: "panacea", pos: "noun", def: "A supposed remedy for every problem.", example: "There is no single panacea for a busy life." },
+  { id: "word:064", word: "penumbra", pos: "noun", def: "The partly shaded outer region of a shadow.", example: "During the eclipse, the Moon slid into Earth's penumbra." },
+  { id: "word:065", word: "zephyr", pos: "noun", def: "A soft, gentle breeze.", example: "A warm zephyr stirred the curtains." },
+  { id: "word:066", word: "gloaming", pos: "noun", def: "Twilight; the time of fading light after sunset.", example: "They walked home in the gloaming." },
+  { id: "word:067", word: "sanguine", pos: "adjective", def: "Cheerfully optimistic, especially when things are hard.", example: "She remained sanguine about their chances." },
+  { id: "word:068", word: "ubiquitous", pos: "adjective", def: "Seeming to be present everywhere at once.", example: "Phones have become ubiquitous on every train." },
+  { id: "word:069", word: "perennial", pos: "adjective", def: "Lasting a very long time or recurring again and again.", example: "Whether to bring an umbrella is a perennial question." },
+  { id: "word:070", word: "cascade", pos: "noun", def: "A small waterfall, or a series of things that follow one after another.", example: "A cascade of petals fell when the wind rose." },
 ];
 
 /* ---------- Astrology: the twelve signs ---------- */
@@ -2081,6 +4017,86 @@ const POSTCARD_COPY = {
    categories available in the current language (gossip only counts when
    its feed has loaded, and "mine" — the visitor's own notes — only when
    their library is non-empty). */
+/* The 72 pentads (七十二候), after 《月令七十二候集解》. Index i begins when
+   the Sun's apparent longitude reaches 5·i degrees, so entry 0 is the first
+   pentad of 春分 and each solar term (15°) holds three; the order matches
+   SOLAR_TERMS in app.js. Computed per draw from the solar-term solver; not a
+   deck. Ids are permanent. */
+const PENTADS = [
+  { id: "pentad:000", zh: "玄鸟至", en: "Swallows return", noteZh: "玄鸟就是燕子。春分前后，燕子从南方飞回，古人把它看作春天真正到来的信号。", noteEn: "The 'dark bird' is the swallow. Around the spring equinox swallows return from the south, long taken as the sign that spring has truly come." },
+  { id: "pentad:005", zh: "雷乃发声", en: "Thunder finds its voice", noteZh: "天气转暖，云中开始响起雷声。古人认为这是阳气上升、与阴气相激而成。", noteEn: "As the air warms, thunder begins to roll. The ancients saw it as rising yang energy clashing with yin." },
+  { id: "pentad:010", zh: "始电", en: "Lightning first flashes", noteZh: "雷声之后，天上开始看得见闪电。古人说，电是阳气的光。", noteEn: "After the thunder comes visible lightning. Lightning, the ancients said, is the light of yang." },
+  { id: "pentad:015", zh: "桐始华", en: "Paulownia blossoms", noteZh: "泡桐开出一树紫白色的花，「华」就是花。", noteEn: "The paulownia trees open their pale purple flowers." },
+  { id: "pentad:020", zh: "田鼠化为鴽", en: "Field mice become quails", noteZh: "田鼠躲回洞里，鹌鹑一类的小鸟多了起来，古人便以为是鼠化成了鸟。这是古人对季节更替的想象。", noteEn: "Field mice retreat underground just as quail-like birds appear, so the ancients imagined the mice had become birds: an old picture of the turning season." },
+  { id: "pentad:025", zh: "虹始见", en: "Rainbows first appear", noteZh: "雨后空气湿润，天边开始出现彩虹。", noteEn: "With moist air after rain, rainbows begin to appear." },
+  { id: "pentad:030", zh: "萍始生", en: "Duckweed begins to grow", noteZh: "水暖了，浮萍开始在水面上长开。", noteEn: "As the water warms, duckweed spreads across ponds." },
+  { id: "pentad:035", zh: "鸣鸠拂其羽", en: "Turtledoves shake their wings", noteZh: "斑鸠一边鸣叫一边振动翅膀，像在催促农人赶紧播种。", noteEn: "Turtledoves call and flap their wings, as if urging farmers to sow." },
+  { id: "pentad:040", zh: "戴胜降于桑", en: "Hoopoes alight on mulberries", noteZh: "戴胜鸟落在桑树上，正是采桑养蚕的时节。", noteEn: "Hoopoes settle in the mulberry trees, just as silkworm season begins." },
+  { id: "pentad:045", zh: "蝼蝈鸣", en: "Mole crickets chirp", noteZh: "蝼蛄在田间鸣叫，一说是蛙鸣。夏天的声音从这里开始。", noteEn: "Mole crickets, or by another reading frogs, begin calling in the fields. The sound of summer starts here." },
+  { id: "pentad:050", zh: "蚯蚓出", en: "Earthworms surface", noteZh: "地下暖了，蚯蚓钻出地面。", noteEn: "The soil warms and earthworms come up to the surface." },
+  { id: "pentad:055", zh: "王瓜生", en: "Snake gourds climb", noteZh: "王瓜是一种葫芦科的藤本植物，这时快速攀爬生长。", noteEn: "The wang gourd, a climbing vine of the gourd family, grows fast now." },
+  { id: "pentad:060", zh: "苦菜秀", en: "Sow-thistle flowers", noteZh: "苦菜开花茂盛。「秀」就是开花。", noteEn: "Sow-thistle flowers in abundance." },
+  { id: "pentad:065", zh: "靡草死", en: "Delicate grasses wither", noteZh: "喜阴的细软小草，经不住越来越强的阳光，开始枯死。", noteEn: "Fine, shade-loving grasses wither under the strengthening sun." },
+  { id: "pentad:070", zh: "麦秋至", en: "The wheat's autumn arrives", noteZh: "麦子成熟待收。虽是初夏，对麦子来说却是收获的「秋天」。", noteEn: "The wheat ripens for harvest: early summer for us, but autumn for the wheat." },
+  { id: "pentad:075", zh: "螳螂生", en: "Mantises hatch", noteZh: "去年秋天产下的卵，孵出了小螳螂。", noteEn: "Mantis eggs laid last autumn hatch." },
+  { id: "pentad:080", zh: "鵙始鸣", en: "Shrikes begin to call", noteZh: "伯劳鸟开始鸣叫。", noteEn: "Shrikes begin to call." },
+  { id: "pentad:085", zh: "反舌无声", en: "Mimic birds fall silent", noteZh: "能学百鸟叫声的反舌鸟，这时停止鸣叫。", noteEn: "The 'reverse-tongue' bird, which imitates other birds, falls silent." },
+  { id: "pentad:090", zh: "鹿角解", en: "Deer shed their antlers", noteZh: "鹿角开始脱落。古人认为鹿属阳，夏至阴气初生，所以角落。", noteEn: "Deer shed their antlers. The deer, said the ancients, belongs to yang, and at the solstice yin begins to rise." },
+  { id: "pentad:095", zh: "蜩始鸣", en: "Cicadas begin to sing", noteZh: "蝉开始鸣叫，夏天正式热闹起来。", noteEn: "Cicadas start their song, and summer grows loud." },
+  { id: "pentad:100", zh: "半夏生", en: "Pinellia sprouts", noteZh: "药草半夏在仲夏长出，它的名字就来自这个时节：夏天过了一半。", noteEn: "The herb pinellia sprouts. Its Chinese name, banxia, means 'half summer', the time it appears." },
+  { id: "pentad:105", zh: "温风至", en: "Warm winds arrive", noteZh: "风里都带着热气。", noteEn: "Even the wind now carries heat." },
+  { id: "pentad:110", zh: "蟋蟀居壁", en: "Crickets shelter in the walls", noteZh: "蟋蟀躲到墙壁阴凉处避暑。《诗经》说：「七月在野，八月在宇。」", noteEn: "Crickets hide in the shade of walls. The Book of Songs follows them: in the fields in the seventh month, under the eaves in the eighth." },
+  { id: "pentad:115", zh: "鹰始挚", en: "Young hawks learn to strike", noteZh: "小鹰开始学习搏击和捕猎。", noteEn: "Young hawks begin to practise hunting." },
+  { id: "pentad:120", zh: "腐草为萤", en: "Rotting grass becomes fireflies", noteZh: "萤火虫在潮湿的腐草间产卵、羽化，古人看见它们从草里飞出，以为是草变成了萤。", noteEn: "Fireflies breed in damp, rotting grass, and the ancients, seeing them rise from it, believed the grass had turned into fireflies." },
+  { id: "pentad:125", zh: "土润溽暑", en: "Damp earth, sultry heat", noteZh: "土地潮湿，空气闷热，是一年里最湿热的时候。", noteEn: "The ground is damp and the air heavy: the most humid heat of the year." },
+  { id: "pentad:130", zh: "大雨时行", en: "Great rains come and go", noteZh: "常有大雷雨，雨过之后，暑气稍退。", noteEn: "Heavy thunderstorms come often, and each one cools the heat a little." },
+  { id: "pentad:135", zh: "凉风至", en: "Cool winds arrive", noteZh: "风里开始有了凉意。", noteEn: "A coolness enters the wind." },
+  { id: "pentad:140", zh: "白露降", en: "White dew descends", noteZh: "清晨，地面开始凝结露水，看上去白茫茫一片。", noteEn: "In the early morning, dew begins to settle, white across the ground." },
+  { id: "pentad:145", zh: "寒蝉鸣", en: "Autumn cicadas sing", noteZh: "寒蝉是一种秋天鸣叫的小蝉，叫声里已有凉意。", noteEn: "The small cicadas of the cool season begin to sing." },
+  { id: "pentad:150", zh: "鹰乃祭鸟", en: "Hawks lay out their prey", noteZh: "鹰大量捕鸟，把猎物摆在地上，古人说它像祭祀一样「先祭而后食」。", noteEn: "Hawks catch many birds and lay them out, and the ancients said they made an offering before eating." },
+  { id: "pentad:155", zh: "天地始肃", en: "Heaven and earth grow solemn", noteZh: "草木开始凋零，天地间多了一份肃杀之气。", noteEn: "Plants begin to fade, and a stern stillness settles over the land." },
+  { id: "pentad:160", zh: "禾乃登", en: "The grain is gathered", noteZh: "谷物成熟，开始收获。「登」就是成熟、收成。", noteEn: "The grain ripens and the harvest begins." },
+  { id: "pentad:165", zh: "鸿雁来", en: "Wild geese arrive", noteZh: "大雁从北方飞来，一路南迁。", noteEn: "Wild geese arrive from the north on their way south." },
+  { id: "pentad:170", zh: "玄鸟归", en: "Swallows depart", noteZh: "春分时归来的燕子，这时又飞回南方。", noteEn: "The swallows that returned at the spring equinox now fly south again." },
+  { id: "pentad:175", zh: "群鸟养羞", en: "Birds store food", noteZh: "「羞」同「馐」，指美食。鸟儿们储存食物，准备过冬。", noteEn: "Birds lay in stores of food for the winter." },
+  { id: "pentad:180", zh: "雷始收声", en: "Thunder falls silent", noteZh: "与春分的「雷乃发声」遥相呼应：阴气渐盛，雷声停了。", noteEn: "An echo of the spring equinox: as yin grows, the thunder that began then falls silent." },
+  { id: "pentad:185", zh: "蛰虫坯户", en: "Insects seal their burrows", noteZh: "准备冬眠的虫子，用细土把洞口封小。", noteEn: "Insects preparing to hibernate narrow their burrow entrances with fine soil." },
+  { id: "pentad:190", zh: "水始涸", en: "Waters begin to dry", noteZh: "雨水减少，河湖的水位开始下降。", noteEn: "Rain grows scarce and rivers and lakes begin to drop." },
+  { id: "pentad:195", zh: "鸿雁来宾", en: "Wild geese come as guests", noteZh: "最后一批大雁到来。古人说，先到的为主，后到的为宾。", noteEn: "The last wild geese arrive. The first to come were hosts, the ancients said; latecomers are guests." },
+  { id: "pentad:200", zh: "雀入大水为蛤", en: "Sparrows enter the sea and become clams", noteZh: "雀鸟少见了，海边却多了蛤蜊，蛤壳的花纹又像雀羽，古人便以为雀变成了蛤。", noteEn: "As sparrows grow scarce, feather-patterned clams fill the shore, and the ancients thought one had become the other." },
+  { id: "pentad:205", zh: "菊有黄华", en: "Chrysanthemums bloom yellow", noteZh: "菊花盛开，是深秋最明亮的颜色。", noteEn: "Chrysanthemums bloom, the brightest colour of late autumn." },
+  { id: "pentad:210", zh: "豺乃祭兽", en: "Jackals lay out their prey", noteZh: "豺捕获猎物后先摆开，像祭祀一样，然后再吃。", noteEn: "Jackals lay out their kill as if making an offering before they eat." },
+  { id: "pentad:215", zh: "草木黄落", en: "Leaves yellow and fall", noteZh: "草木枯黄，落叶纷飞。", noteEn: "Grasses yellow and leaves fall." },
+  { id: "pentad:220", zh: "蛰虫咸俯", en: "Insects lie still", noteZh: "虫子都在洞里垂头不动，进入冬眠。", noteEn: "Insects lie motionless in their burrows, settling into hibernation." },
+  { id: "pentad:225", zh: "水始冰", en: "Water begins to freeze", noteZh: "水面开始结冰。", noteEn: "Water begins to freeze." },
+  { id: "pentad:230", zh: "地始冻", en: "The earth begins to freeze", noteZh: "土地开始上冻。", noteEn: "The ground begins to freeze." },
+  { id: "pentad:235", zh: "雉入大水为蜃", en: "Pheasants enter the sea and become clams", noteZh: "野鸡少见了，海边多了大蛤，花纹又与野鸡相似，古人以为是野鸡所化。", noteEn: "Pheasants grow scarce while large clams appear on the shore with similar markings, and the ancients thought one had become the other." },
+  { id: "pentad:240", zh: "虹藏不见", en: "Rainbows hide", noteZh: "天寒雨少，彩虹不再出现。与清明的「虹始见」正好相对。", noteEn: "Cold, dry air means no more rainbows: the mirror of 'rainbows first appear' in spring." },
+  { id: "pentad:245", zh: "天气上升地气下降", en: "Heaven's air rises, earth's sinks", noteZh: "古人认为，这时天地之气背道而行，不再交融。", noteEn: "The ancients believed the energies of heaven and earth now move apart and no longer mingle." },
+  { id: "pentad:250", zh: "闭塞而成冬", en: "All closes and winter sets in", noteZh: "天地闭塞，万物收藏，真正进入冬天。", noteEn: "Everything closes and is stored away; winter has truly begun." },
+  { id: "pentad:255", zh: "鹖鴠不鸣", en: "The cold-night bird falls silent", noteZh: "鹖鴠就是传说中的寒号鸟，天寒地冻，它也不叫了。", noteEn: "The hedan, the 'cold-crying bird' of legend, stops calling in the deep cold." },
+  { id: "pentad:260", zh: "虎始交", en: "Tigers begin to court", noteZh: "老虎开始求偶。", noteEn: "Tigers begin to seek mates." },
+  { id: "pentad:265", zh: "荔挺出", en: "Iris shoots appear", noteZh: "「荔」是马蔺，一种兰草，这时抽出新芽。", noteEn: "The 'li', a kind of iris, sends up new shoots." },
+  { id: "pentad:270", zh: "蚯蚓结", en: "Earthworms knot together", noteZh: "蚯蚓在土里蜷缩成团过冬。", noteEn: "Earthworms curl together in knots underground." },
+  { id: "pentad:275", zh: "麋角解", en: "Elk shed their antlers", noteZh: "与夏至的「鹿角解」相对：古人认为麋属阴，冬至阳气初生，所以角落。", noteEn: "The counterpart of the summer solstice: the elk, said the ancients, belongs to yin, and at the winter solstice yang begins to return." },
+  { id: "pentad:280", zh: "水泉动", en: "Springs begin to stir", noteZh: "山中泉水开始流动，带着一丝暖意。", noteEn: "Mountain springs begin to move again, with a hint of warmth." },
+  { id: "pentad:285", zh: "雁北乡", en: "Geese turn north", noteZh: "大雁开始向北飞。「乡」通「向」。", noteEn: "Wild geese turn toward the north." },
+  { id: "pentad:290", zh: "鹊始巢", en: "Magpies begin their nests", noteZh: "喜鹊开始筑巢，为春天做准备。", noteEn: "Magpies start building nests, getting ready for spring." },
+  { id: "pentad:295", zh: "雉始雊", en: "Pheasants begin to call", noteZh: "野鸡开始鸣叫求偶。", noteEn: "Pheasants begin calling for mates." },
+  { id: "pentad:300", zh: "鸡始乳", en: "Hens begin to brood", noteZh: "母鸡开始孵蛋育雏。「乳」就是孵育。", noteEn: "Hens begin to sit on their eggs." },
+  { id: "pentad:305", zh: "征鸟厉疾", en: "Birds of prey hunt fiercely", noteZh: "鹰隼等猛禽捕猎凶猛迅疾，为抵御严寒补充能量。", noteEn: "Hawks and falcons hunt hard and fast, fuelling themselves against the cold." },
+  { id: "pentad:310", zh: "水泽腹坚", en: "Ice is solid to the core", noteZh: "河湖的冰一直冻到中央，又厚又坚。", noteEn: "Lakes and marshes freeze solid to their centres." },
+  { id: "pentad:315", zh: "东风解冻", en: "East wind melts the ice", noteZh: "东风送暖，冰雪开始消融。", noteEn: "The east wind brings warmth and the ice begins to thaw." },
+  { id: "pentad:320", zh: "蛰虫始振", en: "Hibernating insects stir", noteZh: "冬眠的虫子开始苏醒。", noteEn: "Hibernating insects begin to wake." },
+  { id: "pentad:325", zh: "鱼陟负冰", en: "Fish rise, carrying ice", noteZh: "鱼游到水面附近，水面上还漂着碎冰，看上去像鱼背着冰在游。", noteEn: "Fish rise toward the surface, where broken ice still floats, as if they swim carrying it." },
+  { id: "pentad:330", zh: "獭祭鱼", en: "Otters lay out fish", noteZh: "水獭捕到鱼后摆在岸边，像祭祀一样。", noteEn: "Otters lay their catch out on the bank, as though making an offering." },
+  { id: "pentad:335", zh: "候雁北", en: "Wild geese fly north", noteZh: "大雁成群北归。", noteEn: "Flocks of wild geese head north." },
+  { id: "pentad:340", zh: "草木萌动", en: "Plants begin to sprout", noteZh: "草木开始抽出嫩芽。", noteEn: "Plants begin to put out shoots." },
+  { id: "pentad:345", zh: "桃始华", en: "Peach trees blossom", noteZh: "桃花开始开放。", noteEn: "Peach trees begin to flower." },
+  { id: "pentad:350", zh: "仓庚鸣", en: "Orioles sing", noteZh: "仓庚就是黄鹂，这时开始鸣叫。", noteEn: "The cang-geng, the oriole, begins to sing." },
+  { id: "pentad:355", zh: "鹰化为鸠", en: "Hawks become doves", noteZh: "鹰隐去，鸠鸟多了起来，古人以为是鹰变成了鸠。", noteEn: "Hawks retreat as doves appear, and the ancients believed the hawks had turned into doves." },
+];
+
 const CATEGORY_WEIGHTS = [
   { key: "world", weight: 20 },
   { key: "poem", weight: 16 },
@@ -2095,6 +4111,7 @@ const CATEGORY_WEIGHTS = [
   { key: "quotes", weight: 8 },
   { key: "classics", weight: 8 },
   { key: "almanac", weight: 4 },
+  { key: "pentad", weight: 8 },
   { key: "astro", weight: 7 },
   { key: "proverbs", weight: 7 },
   { key: "word", weight: 5 },

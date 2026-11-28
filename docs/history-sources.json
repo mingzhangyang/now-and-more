@@ -1,0 +1,2228 @@
+{
+  "schemaVersion": 1,
+  "scope": "HISTORY_MORE in js/data.js",
+  "baselineCommit": "be647d43efc844a651a7b90a4c474951133ef6ce",
+  "statusDefinitions": {
+    "pending": "No durable item-level evidence recorded yet; may have been screened previously.",
+    "corrected": "Text was revised in prior audit; status does not imply all claims independently verified.",
+    "uncertain": "At least one claim or source detail requires further checking.",
+    "verified": "Date and every material claim supported by at least one accessible source with evidenceStatus 'direct'; tertiary-only support is allowed but noted by sourceType.",
+    "revision_required": "Evidence supports a change not yet committed."
+  },
+  "notes": "Initial migration: previous conversation citations without recoverable URLs are not treated as durable sources. Empty sources require backfill. Source links may support only part of a record. Audit pass 2026-11-28: all 8 uncertain records resolved and every previously listed source re-fetched; see docs/history-audit-handoff.md.",
+  "records": {
+    "history:01-01:2": {
+      "year": 1912,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Provisional_Government_of_the_Republic_of_China_(1912)",
+          "claim": "Provisional government established by Sun Yat-sen in Nanjing; Sun first provisional president.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Sun_Yat-sen",
+          "claim": "Sun in office as provisional president from 1 January 1912.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Removed two Philippine-republic links: they concerned the dropped 'Asia's first republic' claim and gave no evidence for this record.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:01-02:2": {
+      "year": 1492,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-03:2": {
+      "year": 1892,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-04:2": {
+      "year": 1958,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-05:2": {
+      "year": 1914,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-06:2": {
+      "year": 1884,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-07:2": {
+      "year": 1927,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-08:2": {
+      "year": 1642,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-09:2": {
+      "year": 1793,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "FAA",
+          "url": "https://www.faa.gov/blog/clearedfortakeoff/first-flight-america",
+          "claim": "Jan. 9, 1793, untethered hydrogen balloon from Walnut Street Prison yard, Philadelphia; Washington in the crowd.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "checkedAt": "2026-11-28"
+    },
+    "history:01-10:2": {
+      "year": 1920,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-11:2": {
+      "year": 1787,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "NASA",
+          "url": "https://science.nasa.gov/uranus/moons/titania/",
+          "claim": "Titania discovered Jan. 11, 1787 by William Herschel.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "NASA",
+          "url": "https://science.nasa.gov/uranus/moons/oberon/",
+          "claim": "Oberon discovered Jan. 11, 1787 by William Herschel.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "checkedAt": "2026-11-28"
+    },
+    "history:01-12:2": {
+      "year": 1876,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-13:2": {
+      "year": 1910,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-14:2": {
+      "year": 1784,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-15:2": {
+      "year": 1759,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-16:2": {
+      "year": 1605,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-17:2": {
+      "year": 1773,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-18:2": {
+      "year": 1871,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-19:2": {
+      "year": 1736,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-20:2": {
+      "year": 1265,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-21:2": {
+      "year": 1954,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-22:2": {
+      "year": 1788,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-23:2": {
+      "year": 1556,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/1556_Shaanxi_earthquake",
+          "claim": "23 January 1556 (Julian; 2 February Gregorian), Huaxian; 830,000 is the reduction in registered population, direct deaths ~100,000 per CEA.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "维基百科",
+          "url": "https://zh.wikipedia.org/zh-cn/%E5%98%89%E9%9D%96%E5%A4%A7%E5%9C%B0%E9%9C%87",
+          "claim": "《明史》“官吏、军民压死八十三万有奇”；现代估计实际死亡在45万以内。",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Rewritten: 830,000 attributed to the Ming History rather than stated as a fact, 'deadliest in recorded history' dropped, date marked as Julian.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:01-24:2": {
+      "year": 1984,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-25:2": {
+      "year": 1924,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/1924_Winter_Olympics",
+          "claim": "Opened 25 January 1924 in Chamonix; IOC granted first Winter Games status at its session of 6 May 1926.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "IOC",
+          "url": "https://www.olympics.com/ioc/news/100-years-of-the-olympic-winter-games-celebrating-mountain-magic-while-looking-to-the-future",
+          "claim": "Winter Games centenary.",
+          "sourceType": "official",
+          "accessStatus": "unreachable",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "unconfirmed",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "olympics.com could not be fetched from the audit environment (connection reset).",
+      "checkedAt": "2026-11-28"
+    },
+    "history:01-26:2": {
+      "year": 1950,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-27:2": {
+      "year": 1756,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-28:2": {
+      "year": 1813,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-29:2": {
+      "year": 1845,
+      "status": "pending",
+      "sources": []
+    },
+    "history:01-30:2": {
+      "year": 1649,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:01-31:2": {
+      "year": 1797,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-01:2": {
+      "year": 2003,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-02:2": {
+      "year": 1922,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-03:2": {
+      "year": 1809,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-04:2": {
+      "year": 1789,
+      "status": "uncertain",
+      "sources": [
+        {
+          "publisher": "US National Archives",
+          "url": "https://www.archives.gov/electoral-college/1789",
+          "claim": "Washington received all 69 electoral votes.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/1788%E2%80%9389_United_States_presidential_election",
+          "claim": "Electors cast votes on the first Wednesday in February (February 4); Washington elected unanimously.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Feb 4 is when electors voted; votes were counted April 6. 'Only president ever elected unanimously' still needs a direct source.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:02-05:2": {
+      "year": 1919,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-06:2": {
+      "year": 1840,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-07:2": {
+      "year": 1812,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-08:2": {
+      "year": 1834,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-09:2": {
+      "year": 1969,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-10:2": {
+      "year": 1763,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-11:2": {
+      "year": 1847,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-12:2": {
+      "year": 1912,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:02-13:2": {
+      "year": 1945,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-14:2": {
+      "year": 1990,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "NASA",
+          "url": "https://www.nasa.gov/history/45-years-ago-voyager-1-begins-its-epic-journey-to-the-outer-planets-and-beyond/",
+          "claim": "Pale blue dot image; Voyager mission history.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "NASA Earth Observatory",
+          "url": "https://science.nasa.gov/earth/earth-observatory/a-voyager-far-from-home-79091/",
+          "claim": "Pale Blue Dot acquired February 14, 1990 at 6.4 billion km; Earth 0.12 pixel.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "checkedAt": "2026-11-28"
+    },
+    "history:02-15:2": {
+      "year": 1867,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-16:2": {
+      "year": 1937,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Google Patents",
+          "url": "https://patents.google.com/patent/US2071250A/en",
+          "claim": "US 2,071,250 'Linear condensation polymers', W. H. Carothers, granted 1937-02-16.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "Google Patents",
+          "url": "https://patents.google.com/patent/US2071253A/en",
+          "claim": "US 2,071,253 'Linear condensation polymers', W. H. Carothers, granted 1937-02-16.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Replaced US 2,130,523 (granted 1938-09-20, wrong date). Rewritten from 'a patent for synthetic fibers' to the actual patent title.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:02-17:2": {
+      "year": 1904,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-18:2": {
+      "year": 1564,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-19:2": {
+      "year": 1473,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-20:2": {
+      "year": 1872,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-21:2": {
+      "year": 1848,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-22:2": {
+      "year": 1857,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-23:2": {
+      "year": 1685,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:02-24:2": {
+      "year": 1786,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-25:2": {
+      "year": 1841,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-26:2": {
+      "year": 1802,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-27:2": {
+      "year": 1807,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-28:2": {
+      "year": 1922,
+      "status": "pending",
+      "sources": []
+    },
+    "history:02-29:2": {
+      "year": 1792,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:03-01:2": {
+      "year": 1781,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-02:2": {
+      "year": 1836,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-03:2": {
+      "year": 1847,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-04:2": {
+      "year": 1678,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-05:2": {
+      "year": 1770,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-06:2": {
+      "year": 1899,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-07:2": {
+      "year": 1274,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-08:2": {
+      "year": 1917,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:03-09:2": {
+      "year": 1959,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-10:2": {
+      "year": 1831,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-11:2": {
+      "year": 2011,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-12:2": {
+      "year": 1925,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Sun_Yat-sen",
+          "claim": "Died 12 March 1925, Beijing, aged 58.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "维基百科",
+          "url": "https://zh.wikipedia.org/zh-cn/%E6%A4%8D%E6%A0%91%E8%8A%82",
+          "claim": "1979年2月全国人大常委会决定3月12日为植树节。",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Replaced event: the 1894 first Coca-Cola bottling has no firm day (Wikipedia says 'summer of 1894'). Salt March is already HISTORY['03-12'].",
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-13:2": {
+      "year": 1733,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-14:2": {
+      "year": 1883,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:03-15:2": {
+      "year": 1493,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-16:2": {
+      "year": 1802,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-17:2": {
+      "year": 1958,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Vanguard_1",
+          "claim": "Launched 17 March 1958; oldest artificial object still in orbit.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "English wording narrowed from 'in space' to 'still in orbit'. Prior Explorer 1 citation rejected: wrong satellite.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-18:2": {
+      "year": 1662,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-19:2": {
+      "year": 1918,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "US Government Publishing Office",
+          "url": "https://www.govinfo.gov/content/pkg/STATUTE-40/pdf/STATUTE-40-Pg451.pdf",
+          "claim": "40 Stat. 450, ch. 24: standard time zones and one-hour advance from last Sunday in March; 'Approved, March 19, 1918.'",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-20:2": {
+      "year": 1800,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-21:2": {
+      "year": 2006,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-22:2": {
+      "year": 1832,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-23:2": {
+      "year": 1857,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:03-24:2": {
+      "year": 1603,
+      "status": "pending",
+      "sources": []
+    },
+    "history:03-25:2": {
+      "year": 1655,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "NASA",
+          "url": "https://science.nasa.gov/saturn/moons/titan/exploration/",
+          "claim": "Huygens discovered Titan, Saturn's largest moon, on March 25, 1655.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-26:2": {
+      "year": 1827,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Death_of_Ludwig_van_Beethoven",
+          "claim": "Died 26 March 1827 in Vienna; funeral 29 March; many thousands lined the streets.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Rewritten: the English said 'tens of thousands' while the Chinese said 'over ten thousand'; both now say 'many thousands', as the source does.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-27:2": {
+      "year": 1845,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Nobel Prize",
+          "url": "https://www.nobelprize.org/prizes/physics/1901/rontgen/facts/",
+          "claim": "Born 27 March 1845, Lennep, Prussia (now Remscheid, Germany); Nobel Prize in Physics 1901.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "University of Würzburg",
+          "url": "https://www.physik.uni-wuerzburg.de/en/about-us/history-of-the-faculty/nobel-prize-winners/wilhelm-conrad-roentgen-1901/",
+          "claim": "Birth and Nobel award.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "Max Planck Institute",
+          "url": "https://www.mpe.mpg.de/467727/W_C_Roentgen",
+          "claim": "Birth and Nobel award.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "partial",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Added '(now Remscheid)' as given by nobelprize.org.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-28:2": {
+      "year": 1910,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Henri_Fabre",
+          "claim": "Took off from the Étang de Berre on 28 March 1910; inventor of the first successful seaplane.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Replaced event: no source ties the Istanbul name change to 28 March 1930 (Wikipedia only says 'beginning in 1930').",
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-29:2": {
+      "year": 1867,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:03-30:2": {
+      "year": 1853,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Vincent_van_Gogh",
+          "claim": "Born 30 March 1853, Zundert, North Brabant; fame came after death.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "vangoghmuseum.nl, vangoghletters.org and rkd.nl returned bot-protection pages; a museum citation would still be an upgrade.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:03-31:2": {
+      "year": 1596,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-01:2": {
+      "year": 1918,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-02:2": {
+      "year": 1792,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-03:2": {
+      "year": 1860,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-04:2": {
+      "year": 1968,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-05:2": {
+      "year": 1588,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-06:2": {
+      "year": 1917,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-07:2": {
+      "year": 1795,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-08:2": {
+      "year": 1904,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Entente_Cordiale",
+          "claim": "Agreements signed 8 April 1904 between the UK and France; significant improvement in relations after colonial disputes.",
+          "sourceType": "tertiary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Replaced event: the Louvre gives only '1820' for the Venus de Milo; 8 April comes from a single narrative account. Picasso's death is already HISTORY['04-08'].",
+      "checkedAt": "2026-11-28"
+    },
+    "history:04-09:2": {
+      "year": 1682,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-10:2": {
+      "year": 1971,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-11:2": {
+      "year": 1814,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-12:2": {
+      "year": 1981,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-13:2": {
+      "year": 1743,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-14:2": {
+      "year": 1865,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-15:2": {
+      "year": 1452,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-16:2": {
+      "year": 1746,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-17:2": {
+      "year": 1895,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-18:2": {
+      "year": 1955,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-19:2": {
+      "year": 1882,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-20:2": {
+      "year": 1862,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:04-21:2": {
+      "year": 1836,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-22:2": {
+      "year": 1724,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-23:2": {
+      "year": 2005,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-24:2": {
+      "year": 1970,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-25:2": {
+      "year": 1859,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-26:2": {
+      "year": 1564,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-27:2": {
+      "year": 1667,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:04-28:2": {
+      "year": 1789,
+      "status": "pending",
+      "sources": []
+    },
+    "history:04-29:2": {
+      "year": 1913,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "Google Patents",
+          "url": "https://patents.google.com/patent/US1060378A/en",
+          "claim": "US 1,060,378 'Separable fastener', Gideon Sundback, granted 1913-04-29.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Removed US 1,219,881 (filed 1914, granted 1917): not this event.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:04-30:2": {
+      "year": 1803,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "US National Archives",
+          "url": "https://www.archives.gov/milestone-documents/louisiana-purchase-treaty",
+          "claim": "Treaty dated/signed April 30, 1803; the US doubled its size.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Some historians date the actual signing to May 2; the record says only that the treaty is dated April 30.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:05-01:2": {
+      "year": 1851,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-02:2": {
+      "year": 1945,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-03:2": {
+      "year": 1469,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-04:2": {
+      "year": 1904,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-05:2": {
+      "year": 1821,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-06:2": {
+      "year": 1840,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-07:2": {
+      "year": 1833,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-08:2": {
+      "year": 1980,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-09:2": {
+      "year": 1671,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-10:2": {
+      "year": 1869,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-11:2": {
+      "year": 330,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-12:2": {
+      "year": 2008,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:05-13:2": {
+      "year": 1787,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-14:2": {
+      "year": 1796,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-15:2": {
+      "year": 1940,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:05-16:2": {
+      "year": 1960,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-17:2": {
+      "year": 1792,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:05-18:2": {
+      "year": 1872,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-19:2": {
+      "year": 1536,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-20:2": {
+      "year": 1873,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "US National Archives",
+          "url": "https://prologue.blogs.archives.gov/2010/05/20/forever-in-blue-jeansand-in-court/",
+          "claim": "May 20, 1873, Jacob W. Davis patent 139,121 for metal rivets at pocket openings; partner Levi Strauss.",
+          "sourceType": "official",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "checkedAt": "2026-11-28"
+    },
+    "history:05-21:2": {
+      "year": 1881,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-22:2": {
+      "year": 1813,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-23:2": {
+      "year": 1785,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-24:2": {
+      "year": 1883,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-25:2": {
+      "year": 1977,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-26:2": {
+      "year": 1897,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-27:2": {
+      "year": 1703,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-28:2": {
+      "year": 1937,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-29:2": {
+      "year": 1453,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-30:2": {
+      "year": 1431,
+      "status": "pending",
+      "sources": []
+    },
+    "history:05-31:2": {
+      "year": 1859,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-01:2": {
+      "year": 1869,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:06-02:2": {
+      "year": 1896,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-03:2": {
+      "year": 1839,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-04:2": {
+      "year": 1783,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-05:2": {
+      "year": 1947,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-06:2": {
+      "year": 1844,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-07:2": {
+      "year": 1494,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-08:2": {
+      "year": 1867,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-09:2": {
+      "year": 1928,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:06-10:2": {
+      "year": 1935,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-11:2": {
+      "year": 1776,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-12:2": {
+      "year": 1898,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-13:2": {
+      "year": 1865,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-14:2": {
+      "year": 1951,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:06-15:2": {
+      "year": 1844,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-16:2": {
+      "year": 1903,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-17:2": {
+      "year": 1631,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-18:2": {
+      "year": 1983,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-19:2": {
+      "year": 1623,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-20:2": {
+      "year": 1837,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-21:2": {
+      "year": 1788,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:06-22:2": {
+      "year": 1633,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-23:2": {
+      "year": 1912,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-24:2": {
+      "year": 1859,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-25:2": {
+      "year": 1876,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-26:2": {
+      "year": 1974,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-27:2": {
+      "year": 1967,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-28:2": {
+      "year": 1919,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:06-29:2": {
+      "year": 1900,
+      "status": "pending",
+      "sources": []
+    },
+    "history:06-30:2": {
+      "year": 1859,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-01:2": {
+      "year": 1867,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-02:2": {
+      "year": 1937,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-03:2": {
+      "year": 1883,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-04:2": {
+      "year": 1826,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-05:2": {
+      "year": 1996,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-06:2": {
+      "year": 1535,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-07:2": {
+      "year": 1928,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-08:2": {
+      "year": 1889,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-09:2": {
+      "year": 1877,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-10:2": {
+      "year": 1856,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-11:2": {
+      "year": 1405,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-12:2": {
+      "year": 1817,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-13:2": {
+      "year": 1793,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-14:2": {
+      "year": 1865,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-15:2": {
+      "year": 1606,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-16:2": {
+      "year": 1969,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-17:2": {
+      "year": 1717,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-18:2": {
+      "year": 1918,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-19:2": {
+      "year": 1848,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-20:2": {
+      "year": 1304,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-21:2": {
+      "year": 1899,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-22:2": {
+      "year": 1812,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-23:2": {
+      "year": 1829,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-24:2": {
+      "year": 1847,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-25:2": {
+      "year": 1909,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-26:2": {
+      "year": 1856,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-27:2": {
+      "year": 1866,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-28:2": {
+      "year": 1976,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-29:2": {
+      "year": 1836,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-30:2": {
+      "year": 1818,
+      "status": "pending",
+      "sources": []
+    },
+    "history:07-31:2": {
+      "year": 1790,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-01:2": {
+      "year": 1774,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-02:2": {
+      "year": 1922,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:08-03:2": {
+      "year": 1958,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-04:2": {
+      "year": 1792,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-05:2": {
+      "year": 1930,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-06:2": {
+      "year": 1945,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-07:2": {
+      "year": 1947,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-08:2": {
+      "year": 1876,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-09:2": {
+      "year": 1945,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-10:2": {
+      "year": 1846,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-11:2": {
+      "year": 1919,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-12:2": {
+      "year": 1990,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-13:2": {
+      "year": 1913,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:08-14:2": {
+      "year": 1959,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-15:2": {
+      "year": 1947,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-16:2": {
+      "year": 1896,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-17:2": {
+      "year": 1807,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-18:2": {
+      "year": 1850,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-19:2": {
+      "year": 1839,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:08-20:2": {
+      "year": 1968,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-21:2": {
+      "year": 1911,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-22:2": {
+      "year": 1485,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-23:2": {
+      "year": 1305,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-24:2": {
+      "year": 2006,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-25:2": {
+      "year": 1609,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-26:2": {
+      "year": 1768,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-27:2": {
+      "year": 1859,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-28:2": {
+      "year": 1749,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-29:2": {
+      "year": 1842,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-30:2": {
+      "year": 1797,
+      "status": "pending",
+      "sources": []
+    },
+    "history:08-31:2": {
+      "year": 1928,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-01:2": {
+      "year": 1923,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-02:2": {
+      "year": 1666,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-03:2": {
+      "year": 1939,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-04:2": {
+      "year": 1882,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:09-05:2": {
+      "year": 1882,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-06:2": {
+      "year": 1620,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:09-07:2": {
+      "year": 1940,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-08:2": {
+      "year": 1504,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-09:2": {
+      "year": 1828,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-10:2": {
+      "year": 1846,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-11:2": {
+      "year": 1297,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:09-12:2": {
+      "year": 1940,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-13:2": {
+      "year": 1916,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-14:2": {
+      "year": 1752,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-15:2": {
+      "year": 1830,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-16:2": {
+      "year": 1908,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-17:2": {
+      "year": 1630,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-18:2": {
+      "year": 1931,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-19:2": {
+      "year": 1991,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:09-20:2": {
+      "year": 1946,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-21:2": {
+      "year": 1866,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-22:2": {
+      "year": 1791,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-23:2": {
+      "year": 1889,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-24:2": {
+      "year": 1896,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-25:2": {
+      "year": 1066,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-26:2": {
+      "year": 1580,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-27:2": {
+      "year": 1905,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:09-28:2": {
+      "year": 1895,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-29:2": {
+      "year": 1758,
+      "status": "pending",
+      "sources": []
+    },
+    "history:09-30:2": {
+      "year": 1938,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-01:2": {
+      "year": 1908,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-02:2": {
+      "year": 1869,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-03:2": {
+      "year": 1942,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-04:2": {
+      "year": 1883,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-05:2": {
+      "year": 1969,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-06:2": {
+      "year": 1889,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-07:2": {
+      "year": 1849,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-08:2": {
+      "year": 1956,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-09:2": {
+      "year": 1604,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:10-10:2": {
+      "year": 1846,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-11:2": {
+      "year": 1962,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-12:2": {
+      "year": 1892,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:10-13:2": {
+      "year": 1792,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-14:2": {
+      "year": 1066,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-15:2": {
+      "year": 2003,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-16:2": {
+      "year": 1846,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:10-17:2": {
+      "year": 1931,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-18:2": {
+      "year": 1922,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-19:2": {
+      "year": 1987,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-20:2": {
+      "year": 1818,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-21:2": {
+      "year": 1805,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-22:2": {
+      "year": 1797,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:10-23:2": {
+      "year": 2001,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-24:2": {
+      "year": 1945,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-25:2": {
+      "year": 1971,
+      "status": "verified",
+      "sources": [
+        {
+          "publisher": "United Nations",
+          "url": "https://www.un.org/zh/ga/26/res/ares2758.html",
+          "claim": "A/RES/2758(XXVI) 全文：恢复中华人民共和国的一切权利，承认其政府代表为唯一合法代表。",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        },
+        {
+          "publisher": "United Nations",
+          "url": "https://digitallibrary.un.org/record/498905/files/S_10378-EN.pdf",
+          "claim": "S/10378: resolution 2758 (XXVI) adopted at the 1976th plenary meeting on 25 October 1971, 76-35-17.",
+          "sourceType": "primary",
+          "accessStatus": "accessible",
+          "accessCheckedAt": "2026-11-28",
+          "evidenceStatus": "direct",
+          "provenance": "direct_fetch"
+        }
+      ],
+      "notes": "Both UN links were marked restricted; both fetched successfully this time.",
+      "checkedAt": "2026-11-28"
+    },
+    "history:10-26:2": {
+      "year": 1881,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-27:2": {
+      "year": 1858,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-28:2": {
+      "year": 1636,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-29:2": {
+      "year": 1923,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-30:2": {
+      "year": 1938,
+      "status": "pending",
+      "sources": []
+    },
+    "history:10-31:2": {
+      "year": 1926,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-01:2": {
+      "year": 1755,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-02:2": {
+      "year": 1920,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-03:2": {
+      "year": 1903,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-04:2": {
+      "year": 1879,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-05:2": {
+      "year": 1872,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-06:2": {
+      "year": 1869,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:11-07:2": {
+      "year": 1867,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-08:2": {
+      "year": 1960,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-09:2": {
+      "year": 1918,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-10:2": {
+      "year": 1483,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-11:2": {
+      "year": 1821,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-12:2": {
+      "year": 1866,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-13:2": {
+      "year": 1850,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-14:2": {
+      "year": 1840,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-15:2": {
+      "year": 1971,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-16:2": {
+      "year": 1532,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-17:2": {
+      "year": 1558,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-18:2": {
+      "year": 1883,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-19:2": {
+      "year": 1493,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-20:2": {
+      "year": 1945,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-21:2": {
+      "year": 1783,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-22:2": {
+      "year": 1718,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-23:2": {
+      "year": 1889,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-24:2": {
+      "year": 1874,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-25:2": {
+      "year": 1952,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:11-26:2": {
+      "year": 1789,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-27:2": {
+      "year": 1701,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-28:2": {
+      "year": 1757,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-29:2": {
+      "year": 1929,
+      "status": "pending",
+      "sources": []
+    },
+    "history:11-30:2": {
+      "year": 1835,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-01:2": {
+      "year": 1913,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-02:2": {
+      "year": 1804,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-03:2": {
+      "year": 1992,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:12-04:2": {
+      "year": 1791,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-05:2": {
+      "year": 1791,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-06:2": {
+      "year": 1240,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-07:2": {
+      "year": 1787,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-08:2": {
+      "year": 1980,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-09:2": {
+      "year": 1608,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-10:2": {
+      "year": 1815,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-11:2": {
+      "year": 1936,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-12:2": {
+      "year": 1821,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-13:2": {
+      "year": 1937,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-14:2": {
+      "year": 1799,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-15:2": {
+      "year": 1939,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-16:2": {
+      "year": 1775,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-17:2": {
+      "year": 1790,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-18:2": {
+      "year": 1978,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-19:2": {
+      "year": 1972,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-20:2": {
+      "year": 1946,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-21:2": {
+      "year": 1968,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-22:2": {
+      "year": 1808,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-23:2": {
+      "year": 1823,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-24:2": {
+      "year": 1968,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-25:2": {
+      "year": 800,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-26:2": {
+      "year": 1776,
+      "status": "corrected",
+      "sources": []
+    },
+    "history:12-27:2": {
+      "year": 1571,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-28:2": {
+      "year": 1612,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-29:2": {
+      "year": 1170,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-30:2": {
+      "year": 1865,
+      "status": "pending",
+      "sources": []
+    },
+    "history:12-31:2": {
+      "year": 1600,
+      "status": "pending",
+      "sources": []
+    }
+  },
+  "sourceFieldDefinitions": {
+    "sourceType": "primary (patent, statute, resolution, original record), official (agency or institution page), secondary (scholarly or press), tertiary (encyclopedia).",
+    "accessStatus": "accessible | restricted (login, paywall or bot wall) | unreachable (network failure from the audit environment).",
+    "evidenceStatus": "direct (states the date and the core claim) | partial (supports only part) | unconfirmed (not read).",
+    "provenance": "direct_fetch (page read during the audit on accessCheckedAt) | prior_conversation_access_report (reported in an earlier chat, not re-read)."
+  }
+}

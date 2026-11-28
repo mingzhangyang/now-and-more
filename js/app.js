@@ -136,6 +136,17 @@ function declination(l) { return Math.asin(Math.sin(OBLIQUITY) * Math.sin(l)); }
 function siderealTime(d, lw) { return RAD * (280.16 + 360.9856235 * d) - lw; }
 function solarTransitJ(ds, m, l) { return J2000 + ds + 0.0053 * Math.sin(m) - 0.0069 * Math.sin(2 * l); }
 
+/* The point on Earth where the Sun is overhead at `date`, in degrees
+   (lon east-positive, −180…180). Same compact model as sunTimes, so the
+   globe's day/night line agrees with the sunrise and sunset on the card. */
+function subsolarPoint(date) {
+  const d = toDays(date);
+  const l = eclipticLongitude(solarMeanAnomaly(d));
+  const ra = Math.atan2(Math.sin(l) * Math.cos(OBLIQUITY), Math.cos(l));
+  const lon = (ra - siderealTime(d, 0)) / RAD;
+  return { lat: declination(l) / RAD, lon: ((lon % 360) + 540) % 360 - 180 };
+}
+
 /* Returns { sunrise: Date|null, sunset: Date|null, dayMinutes, polar: null|'day'|'night' } */
 function sunTimes(date, lat, lon) {
   const lw = RAD * -lon;
@@ -780,6 +791,29 @@ function solarTermInfo(date) {
     name: SOLAR_TERMS[t.idx], nameEn: SOLAR_TERMS_EN[t.idx],
   } : null);
   return { today: named(today), next: named(next), current: named(current) };
+}
+
+/* The pentad (候) in force at `date`. Pentad i runs from the instant the
+   Sun's apparent longitude reaches 5·i° to the instant it reaches 5·(i+1)°,
+   solved with the same Newton solver as the solar terms, so a pentad that
+   opens a term begins at exactly that term's instant. PENTADS (data.js)
+   is indexed the same way, from the first pentad of 春分 at 0°.
+   Returns { idx, start, next, nextIdx }. */
+function pentadInfo(date) {
+  const lon = sunCivilLongitudeDeg(date);
+  const angle = (Math.floor(lon / 5) * 5) % 360;
+  const degPerMs = 360 / (365.2422 * DAY_MS);
+  let start = solveSolarTermInstant(angle, date.getTime() - angDiffDeg(lon, angle) / degPerMs);
+  // Guard the boundary: a longitude a hair past 5° can solve to an instant
+  // a hair after `date`; step back one pentad if so.
+  let idx = angle / 5;
+  if (start > date) {
+    idx = (idx + 71) % 72;
+    start = solveSolarTermInstant(idx * 5, start.getTime() - 5 / degPerMs);
+  }
+  const nextIdx = (idx + 1) % 72;
+  const next = solveSolarTermInstant(nextIdx * 5, start.getTime() + 5 / degPerMs);
+  return { idx, start, next, nextIdx };
 }
 
 function localHM(date) { return `${pad(date.getHours())}:${pad(date.getMinutes())}`; }
@@ -2188,6 +2222,8 @@ function currentCardLabel() {
     }
     case "classics":
       return sel.item && sel.item.source ? sel.item.source : null;
+    case "pentad":
+      return sel.info ? (zh ? PENTADS[sel.info.idx].zh : PENTADS[sel.info.idx].en) : null;
     case "word":
       return sel.item && sel.item.word ? sel.item.word : null;
     case "postcard": {
@@ -2894,8 +2930,8 @@ $("note-fab").addEventListener("click", () => openNoteModal($("note-fab")));
    has actually delivered headlines. */
 function availableCategories(now = new Date()) {
   const base = lang === "zh"
-    ? ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "classics", "almanac", "astro", "chance", "memory"]
-    : ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "proverbs", "word", "astro", "chance", "memory"];
+    ? ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "classics", "almanac", "pentad", "astro", "chance", "memory"]
+    : ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "proverbs", "word", "pentad", "astro", "chance", "memory"];
   const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key) &&
     (c.key !== "history" || deckState.historyAvailable(postcardDayKey(now))));
   if (gossipCandidates().length) {
@@ -2964,17 +3000,28 @@ function makeSelection(cat, now = new Date()) {
       // Recheck at selection as well as eligibility. Count the new
       // encounter in the render draft; language/ambient repaints do not
       // call makeSelection. Use the same local day as the eligibility check.
-      if (!deckState.recordHistory(postcardDayKey(now))) {
+      const day = postcardDayKey(now);
+      if (!deckState.recordHistory(day)) {
         const fallback = NAM_DEDUP.weightedCategory(
           availableCategories(now).filter(c => c.key !== "history"), lastCategory, Math.random);
         return makeSelection(fallback, now);
       }
       const key = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      // Today's entry is date-determined; the deck governs only the
-      // random-day fallback pool. Both consume the daily history budget.
-      if (HISTORY[key]) return { cat, key, entry: HISTORY[key], today: true };
+      // Today's events are date-determined: the nth history encounter of
+      // the local day shows the nth event for the date, rotated by year so
+      // the first card differs from one year to the next. The daily budget
+      // already counts this encounter, so no extra state is stored. Once a
+      // date's events are used up, the deck governs the random-day pool.
+      const todays = (HISTORY[key] ? [HISTORY[key]] : []).concat(HISTORY_MORE[key] || []);
+      const spent = deckState.state.historyDaily.find(item => item.day === day);
+      const nth = spent ? spent.count - 1 : 0;
+      if (nth < todays.length) {
+        return { cat, key, entry: todays[(nth + now.getFullYear()) % todays.length], today: true };
+      }
       const keys = Object.keys(HISTORY);
-      const rk = keys[deckDraw("history")];
+      let rk = keys[deckDraw("history")];
+      // Today's own date was just shown as today's event; draw past it.
+      if (rk === key) rk = keys[deckDraw("history")];
       return { cat, key: rk, entry: HISTORY[rk], today: false };
     }
     case "thought":
@@ -2995,6 +3042,9 @@ function makeSelection(cat, now = new Date()) {
       return { cat, item: CLASSICS[deckDraw("classics")] };
     case "almanac":
       return { cat, data: computeAlmanac(new Date()) };
+    case "pentad":
+      // Date-determined like the almanac: no deck, computed per draw.
+      return { cat, info: pentadInfo(new Date()) };
     case "astro": {
       const subtype = NAM_DECK_IDS["astro:sub"][deckDraw("astro:sub")];
       if (subtype === "horoscope") {
@@ -3049,6 +3099,51 @@ function makeSelection(cat, now = new Date()) {
     default:
       return { cat: "thought", item: THOUGHTS[deckDraw("thought")] };
   }
+}
+
+/* ---------- The Meanwhile globe ----------
+   NAM_GLOBE (js/globe.js) paints; these helpers pick the theme and size.
+   Dark theme = light ink. */
+function globeThemeFrom(pal) {
+  const m = /#([0-9a-f]{6})/i.exec(pal.ink || "");
+  let dark = false;
+  if (m) {
+    const n = parseInt(m[1], 16);
+    dark = ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 > 128;
+  }
+  return { dark, accent: pal.accent };
+}
+function drawGlobeAt(ctx, cx, cy, r, g, theme) {
+  NAM_GLOBE.draw(ctx, cx, cy, r, {
+    lat: g.lat, lon: g.lon, sun: subsolarPoint(new Date(g.when)),
+    dark: theme.dark, accent: theme.accent,
+  });
+}
+/* Paint every globe canvas inside `root` at device resolution, from the
+   inputs stored on the canvas (data-lat/lon/when) and the current theme.
+   Called when a world card renders and again when the effective theme
+   changes; a repaint never draws a new card. Never throws: a globe that
+   cannot be painted (no 2D context, canvas pressure, missing globe.js)
+   is hidden and the city, time and facts stand on their own. */
+function paintGlobes(root) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll("canvas.globe").forEach((cv) => {
+    try {
+      if (typeof NAM_GLOBE === "undefined") throw new Error("globe.js missing");
+      const css = cv.clientWidth || 76;
+      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      cv.width = cv.height = Math.round(css * dpr);
+      const ctx = cv.getContext("2d");
+      if (!ctx) throw new Error("no 2D context");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawGlobeAt(ctx, css / 2, css / 2, css / 2 - 1,
+        { lat: +cv.dataset.lat, lon: +cv.dataset.lon, when: +cv.dataset.when },
+        globeThemeFrom(capturePalette()));
+      cv.hidden = false;
+    } catch (e) {
+      cv.hidden = true; // the card reads fine without it
+    }
+  });
 }
 
 function esc(str) {
@@ -3164,7 +3259,9 @@ function renderSelection(sel, surface) {
       `<span>${s.world.sunrise} <b>${hmInZone(st.sunrise, city.tz)}</b></span>` +
       `<span>${s.world.sunset} <b>${hmInZone(st.sunset, city.tz)}</b></span>` +
       `<span>${s.world.dayLength} <b>${formatDuration(st.dayMinutes)}</b></span>`;
-    body = `<span class="big">${name}</span><div class="fact-row">${facts}</div>`;
+    const where = lang === "zh" ? `${name}在地球上的位置，阴影是此刻的夜半球` : `Where ${name} is on Earth; the shaded half is night right now`;
+    body = `<div class="world-grid"><div><span class="big">${name}</span><div class="fact-row">${facts}</div></div>` +
+      `<canvas class="globe" role="img" aria-label="${esc(where)}" data-lat="${city.lat}" data-lon="${city.lon}" data-when="${now.getTime()}"></canvas></div>`;
   }
 
   if (sel.cat === "sky") {
@@ -3218,7 +3315,18 @@ function renderSelection(sel, surface) {
 
   if (sel.cat === "quotes") {
     const q = lang === "zh" ? sel.quoteZh : sel.quoteEn;
-    body = `<span class="poem-line">${q.text}</span><span class="poem-author">— ${q.author}</span>`;
+    // Chinese attributions take the two-em dash (——) with no space, and
+    // works already sit in 《》. English uses an em dash and a space, with
+    // a book, play or film title in italics; short works such as poems
+    // and essays stay inside `author` in straight single quotes, as the
+    // site's English does (curly quotes fall back to full-width CJK glyphs).
+    const credit = lang === "zh"
+      ? `——${q.author}`
+      : `— ${q.author}${q.work ? `, <i>${q.work}</i>` : ""}`;
+    // A short saying is set larger, like a pull quote, so it fills the
+    // card's reserved height instead of floating in it.
+    const short = q.text.length <= (lang === "zh" ? 20 : 48);
+    body = `<span class="poem-line${short ? " quote-short" : ""}">${q.text}</span><span class="poem-author">${credit}</span>`;
   }
 
   if (sel.cat === "classics") {
@@ -3233,6 +3341,22 @@ function renderSelection(sel, surface) {
     meta = sel.item.pos;
     body = `<span class="big">${sel.item.word}</span><div class="sub">${sel.item.def}</div>` +
       `<div class="fact-row"><span>“${sel.item.example}”</span></div>`;
+  }
+
+  if (sel.cat === "pentad") {
+    const P = s.pentad, info = sel.info;
+    const p = PENTADS[info.idx], nx = PENTADS[info.nextIdx];
+    const zh = lang === "zh";
+    const termIdx = Math.floor(info.idx / 3);
+    const term = zh ? SOLAR_TERMS[termIdx] : SOLAR_TERMS_EN[termIdx];
+    const day = (d) => zh ? `${d.getMonth() + 1}月${d.getDate()}日`
+      : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+    meta = `${term} · ${P.order[info.idx % 3]}`;
+    body = `<span class="big">${zh ? p.zh : p.en}</span>` +
+      (zh ? "" : `<div class="sub">${p.zh}</div>`) +
+      `<div class="sub">${zh ? p.noteZh : p.noteEn}</div>` +
+      `<div class="fact-row"><span>${P.began} <b>${day(info.start)}</b></span>` +
+      `<span>${P.next} <b>${zh ? nx.zh : nx.en}</b> · ${day(info.next)}</span></div>`;
   }
 
   if (sel.cat === "almanac") {
@@ -3379,6 +3503,7 @@ function renderSelection(sel, surface) {
     : s.categories[sel.cat];
   surface.meta.textContent = meta;
   surface.body.innerHTML = body;
+  if (sel.cat === "world") paintGlobes(surface.body);
 
   // Static full passages and generated horoscope explanations get the same
   // quiet reading door, outside the body so keepsakes stay faithful to
@@ -3740,7 +3865,17 @@ function applyTheme() {
   $("theme-auto").classList.toggle("active", theme === "auto");
   $("theme-light").classList.toggle("active", theme === "light");
   $("theme-dark").classList.toggle("active", theme === "dark");
+  // The globe is painted with theme colours; repaint the one on stage.
+  paintGlobes($("card-body"));
 }
+
+// Auto mode follows the system scheme without a reload: repaint then too.
+try {
+  const schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const onScheme = () => { if (theme === "auto") paintGlobes($("card-body")); };
+  if (schemeQuery.addEventListener) schemeQuery.addEventListener("change", onScheme);
+  else if (schemeQuery.addListener) schemeQuery.addListener(onScheme);
+} catch (e) { /* no matchMedia: Auto still works, only the repaint waits */ }
 
 function setTheme(next) {
   if (next === theme) return;
@@ -4152,6 +4287,12 @@ function extractCardBlocks(rootEl) {
     const el = node;
     const cls = el.classList;
     if (el.tagName === "BR") { flush(); return; }
+    if (el.tagName === "CANVAS" && cls.contains("globe")) {
+      // Repainted at keepsake resolution from the same inputs. It leads the
+      // block list so the layout can set it top-right and wrap text beside it.
+      blocks.unshift({ type: "globe", lat: +el.dataset.lat, lon: +el.dataset.lon, when: +el.dataset.when });
+      return;
+    }
     if (el.tagName === "CANVAS" && cls.contains("sky-canvas")) {
       // A painted sky: the keepsake repaints it from the scene (see
       // the sky branch of the layout), so it becomes a visual block.
@@ -4266,6 +4407,7 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
   let y = 0;
   let truncated = false;
   const gap = Math.round(12 * scale);
+  let insetUntil = 0, insetW = 0; // a globe floats top-right; text beside it narrows
   outer:
   for (let bi = 0; bi < blocks.length; bi++) {
     const b = blocks[bi];
@@ -4275,6 +4417,14 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
       if (y + size > maxHeight) { truncated = true; break; }
       items.push({ type: "swatch", color: b.color, yOff: y, size });
       y += size + Math.round(10 * scale);
+      continue;
+    }
+    if (b.type === "globe") {
+      const size = Math.round(150 * scale);
+      items.push({ type: "globe", yOff: y, size, lat: b.lat, lon: b.lon, when: b.when });
+      insetUntil = y + size;
+      insetW = size + Math.round(24 * scale);
+      y -= gap; // takes no height of its own
       continue;
     }
     if (b.type === "sky") {
@@ -4289,9 +4439,10 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
     ctx.font = font;
     const size = Math.max(10, Math.round(spec.size * scale));
     const lineH = Math.round(spec.size * scale * spec.lh);
-    for (const ln of wrapText(ctx, b.text, maxWidth)) {
+    for (const ln of wrapText(ctx, b.text, y < insetUntil ? maxWidth - insetW : maxWidth)) {
       if (y + lineH > maxHeight) { truncated = true; break outer; }
-      items.push({ type: "text", text: ln, font, color: spec.color, yOff: y, lineH, size });
+      // A standalone attribution (quotes, classics) sits flush right, as on the card.
+      items.push({ type: "text", text: ln, font, color: spec.color, yOff: y, lineH, size, right: b.kind === "author" });
       y += lineH;
     }
   }
@@ -4305,7 +4456,7 @@ function layoutKeepsakeBody(ctx, blocks, pal, maxWidth, scale, maxHeight) {
       last.text = txt + "…";
     }
   }
-  return { items, height: y, truncated };
+  return { items, height: Math.max(y, insetUntil), truncated };
 }
 
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -4438,6 +4589,13 @@ function renderKeepsakeCanvas(snap, pal) {
   }
 
   for (const it of layout.items) {
+    if (it.type === "globe") {
+      if (typeof NAM_GLOBE !== "undefined") {
+        const r = it.size / 2;
+        try { drawGlobeAt(ctx, textX + textW - r, bodyTop + it.yOff + r, r, it, globeThemeFrom(pal)); } catch (e) { /* keepsake without globe */ }
+      }
+      continue;
+    }
     if (it.type === "sky") {
       if (snap.skyCanvas && (it.form === "chart" || it.form === "moon")) {
         const side = Math.min(textW, it.h);
@@ -4455,7 +4613,9 @@ function renderKeepsakeCanvas(snap, pal) {
     } else {
       ctx.font = it.font;
       ctx.fillStyle = pal[it.color];
-      ctx.fillText(it.text, textX, bodyTop + it.yOff + (it.lineH - it.size) / 2 + it.size * 0.8);
+      ctx.textAlign = it.right ? "right" : "left";
+      ctx.fillText(it.text, it.right ? textX + textW : textX, bodyTop + it.yOff + (it.lineH - it.size) / 2 + it.size * 0.8);
+      ctx.textAlign = "left";
     }
   }
 
