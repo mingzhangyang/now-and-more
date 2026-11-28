@@ -782,6 +782,29 @@ function solarTermInfo(date) {
   return { today: named(today), next: named(next), current: named(current) };
 }
 
+/* The pentad (候) in force at `date`. Pentad i runs from the instant the
+   Sun's apparent longitude reaches 5·i° to the instant it reaches 5·(i+1)°,
+   solved with the same Newton solver as the solar terms, so a pentad that
+   opens a term begins at exactly that term's instant. PENTADS (data.js)
+   is indexed the same way, from the first pentad of 春分 at 0°.
+   Returns { idx, start, next, nextIdx }. */
+function pentadInfo(date) {
+  const lon = sunCivilLongitudeDeg(date);
+  const angle = (Math.floor(lon / 5) * 5) % 360;
+  const degPerMs = 360 / (365.2422 * DAY_MS);
+  let start = solveSolarTermInstant(angle, date.getTime() - angDiffDeg(lon, angle) / degPerMs);
+  // Guard the boundary: a longitude a hair past 5° can solve to an instant
+  // a hair after `date`; step back one pentad if so.
+  let idx = angle / 5;
+  if (start > date) {
+    idx = (idx + 71) % 72;
+    start = solveSolarTermInstant(idx * 5, start.getTime() - 5 / degPerMs);
+  }
+  const nextIdx = (idx + 1) % 72;
+  const next = solveSolarTermInstant(nextIdx * 5, start.getTime() + 5 / degPerMs);
+  return { idx, start, next, nextIdx };
+}
+
 function localHM(date) { return `${pad(date.getHours())}:${pad(date.getMinutes())}`; }
 
 /* Published almanacs print term times rounded to the minute, so the
@@ -2188,6 +2211,8 @@ function currentCardLabel() {
     }
     case "classics":
       return sel.item && sel.item.source ? sel.item.source : null;
+    case "pentad":
+      return sel.info ? (zh ? PENTADS[sel.info.idx].zh : PENTADS[sel.info.idx].en) : null;
     case "word":
       return sel.item && sel.item.word ? sel.item.word : null;
     case "postcard": {
@@ -2894,8 +2919,8 @@ $("note-fab").addEventListener("click", () => openNoteModal($("note-fab")));
    has actually delivered headlines. */
 function availableCategories(now = new Date()) {
   const base = lang === "zh"
-    ? ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "classics", "almanac", "astro", "chance", "memory"]
-    : ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "proverbs", "word", "astro", "chance", "memory"];
+    ? ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "classics", "almanac", "pentad", "astro", "chance", "memory"]
+    : ["world", "poem", "history", "thought", "science", "land", "math", "art", "tales", "sky", "quotes", "proverbs", "word", "pentad", "astro", "chance", "memory"];
   const list = CATEGORY_WEIGHTS.filter((c) => base.includes(c.key) &&
     (c.key !== "history" || deckState.historyAvailable(postcardDayKey(now))));
   if (gossipCandidates().length) {
@@ -3006,6 +3031,9 @@ function makeSelection(cat, now = new Date()) {
       return { cat, item: CLASSICS[deckDraw("classics")] };
     case "almanac":
       return { cat, data: computeAlmanac(new Date()) };
+    case "pentad":
+      // Date-determined like the almanac: no deck, computed per draw.
+      return { cat, info: pentadInfo(new Date()) };
     case "astro": {
       const subtype = NAM_DECK_IDS["astro:sub"][deckDraw("astro:sub")];
       if (subtype === "horoscope") {
@@ -3255,6 +3283,22 @@ function renderSelection(sel, surface) {
     meta = sel.item.pos;
     body = `<span class="big">${sel.item.word}</span><div class="sub">${sel.item.def}</div>` +
       `<div class="fact-row"><span>“${sel.item.example}”</span></div>`;
+  }
+
+  if (sel.cat === "pentad") {
+    const P = s.pentad, info = sel.info;
+    const p = PENTADS[info.idx], nx = PENTADS[info.nextIdx];
+    const zh = lang === "zh";
+    const termIdx = Math.floor(info.idx / 3);
+    const term = zh ? SOLAR_TERMS[termIdx] : SOLAR_TERMS_EN[termIdx];
+    const day = (d) => zh ? `${d.getMonth() + 1}月${d.getDate()}日`
+      : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+    meta = `${term} · ${P.order[info.idx % 3]}`;
+    body = `<span class="big">${zh ? p.zh : p.en}</span>` +
+      (zh ? "" : `<div class="sub">${p.zh}</div>`) +
+      `<div class="sub">${zh ? p.noteZh : p.noteEn}</div>` +
+      `<div class="fact-row"><span>${P.began} <b>${day(info.start)}</b></span>` +
+      `<span>${P.next} <b>${zh ? nx.zh : nx.en}</b> · ${day(info.next)}</span></div>`;
   }
 
   if (sel.cat === "almanac") {

@@ -74,6 +74,7 @@ function harness(opts = {}) {
       jianchuOf, shaDirectionOf, ZHI, NAM_ALMANAC, tuWangYongShi, almanacRuleContext, almanacFullText, almanacFullDoc, almanacReadingHtml,
       NAM_LUNAR, LUNAR, lunarDate, deltaTSeconds, civilDeltaTSeconds, solarTermInstantsForYear,
       lunarFestivalOn, matchPersonalDay, lunarLabelOf, setMyDays: (days) => { myDays = days; },
+      pentadInfo, PENTADS, setLang: (v) => { lang = v; },
     };
   `;
   const api = new Function("document", "Intl", source)(documentStub, opts.Intl || Intl);
