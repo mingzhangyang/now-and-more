@@ -4111,7 +4111,7 @@ const CATEGORY_WEIGHTS = [
   { key: "quotes", weight: 8 },
   { key: "classics", weight: 8 },
   { key: "almanac", weight: 4 },
-  { key: "pentad", weight: 3 },
+  { key: "pentad", weight: 8 },
   { key: "astro", weight: 7 },
   { key: "proverbs", weight: 7 },
   { key: "word", weight: 5 },
