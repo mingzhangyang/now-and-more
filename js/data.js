@@ -1347,7 +1347,7 @@ const HISTORY = {
    by date because its keys are the frozen random-day deck ids. */
 const HISTORY_MORE = {
   "01-01": [
-    { id: "history:01-01:2", year: 1912, zh: "中华民国在南京成立，孙中山就任临时大总统，亚洲第一个共和国诞生。", en: "The Republic of China is founded in Nanjing, with Sun Yat-sen as provisional president: Asia's first republic." },
+    { id: "history:01-01:2", year: 1912, zh: "中华民国在南京成立，孙中山就任临时大总统，中国进入共和政体的新阶段。", en: "The Republic of China is founded in Nanjing, with Sun Yat-sen taking office as provisional president, marking a new chapter in China's republican history." },
   ],
   "01-02": [
     { id: "history:01-02:2", year: 1492, zh: "格拉纳达向天主教双王投降，伊比利亚半岛上最后一个穆斯林王国就此终结。", en: "Granada surrenders to Ferdinand and Isabella, ending the last Muslim kingdom on the Iberian Peninsula." },
@@ -1365,13 +1365,13 @@ const HISTORY_MORE = {
     { id: "history:01-06:2", year: 1884, zh: "遗传学奠基人孟德尔在布尔诺去世。他的豌豆实验要到 1900 年才被重新发现。", en: "Gregor Mendel, founder of genetics, dies in Brno. His pea experiments will not be rediscovered until 1900." },
   ],
   "01-07": [
-    { id: "history:01-07:2", year: 1927, zh: "伦敦与纽约之间开通第一条商用跨大西洋电话线路，三分钟通话收费 75 美元。", en: "Commercial transatlantic telephone service opens between London and New York, at $75 for three minutes." },
+    { id: "history:01-07:2", year: 1927, zh: "伦敦与纽约之间开通首个商用跨大西洋无线电话服务，三分钟通话收费 75 美元。", en: "Commercial transatlantic radiotelephone service opens between London and New York, at $75 for three minutes." },
   ],
   "01-08": [
     { id: "history:01-08:2", year: 1642, zh: "伽利略在佛罗伦萨附近的阿切特里去世，生命最后几年他一直处于软禁之中。", en: "Galileo Galilei dies at Arcetri near Florence, having spent his final years under house arrest." },
   ],
   "01-09": [
-    { id: "history:01-09:2", year: 1793, zh: "法国人布朗夏尔在费城放飞热气球，完成美洲大陆上第一次载人气球飞行，华盛顿亲临观看。", en: "Jean-Pierre Blanchard makes the first manned balloon flight in North America, from Philadelphia, watched by George Washington." },
+    { id: "history:01-09:2", year: 1793, zh: "法国人布朗夏尔在费城乘充氢气球升空，完成美国首次载人自由气球飞行，华盛顿亲临观看。", en: "Jean-Pierre Blanchard makes the first untethered manned balloon flight in the United States, using a hydrogen-filled balloon in Philadelphia as George Washington watches." },
   ],
   "01-10": [
     { id: "history:01-10:2", year: 1920, zh: "《凡尔赛和约》生效，国际联盟正式成立，这是第一个以维护世界和平为宗旨的国际组织。", en: "The Treaty of Versailles takes effect and the League of Nations comes into being, the first international body devoted to keeping world peace." },
@@ -1398,7 +1398,7 @@ const HISTORY_MORE = {
     { id: "history:01-17:2", year: 1773, zh: "库克船长的「决心号」成为第一艘驶入南极圈的船只。", en: "Captain James Cook's ship Resolution becomes the first known vessel to cross the Antarctic Circle." },
   ],
   "01-18": [
-    { id: "history:01-18:2", year: 1871, zh: "德意志帝国在凡尔赛宫镜厅宣告成立，普鲁士国王威廉一世加冕为德意志皇帝。", en: "The German Empire is proclaimed in the Hall of Mirrors at Versailles, with Wilhelm I of Prussia as emperor." },
+    { id: "history:01-18:2", year: 1871, zh: "德意志帝国在凡尔赛宫镜厅宣告成立，普鲁士国王威廉一世被宣布为德意志皇帝。", en: "The German Empire is proclaimed in the Hall of Mirrors at Versailles, with Wilhelm I of Prussia as emperor." },
   ],
   "01-19": [
     { id: "history:01-19:2", year: 1736, zh: "詹姆斯·瓦特出生于苏格兰格里诺克，他改良的蒸汽机推动了工业革命。", en: "James Watt is born in Greenock, Scotland; his improved steam engine will help drive the Industrial Revolution." },
@@ -1473,7 +1473,7 @@ const HISTORY_MORE = {
     { id: "history:02-11:2", year: 1847, zh: "爱迪生出生于美国俄亥俄州米兰镇，一生拥有一千多项美国专利。", en: "Thomas Edison is born in Milan, Ohio; he will hold more than a thousand U.S. patents." },
   ],
   "02-12": [
-    { id: "history:02-12:2", year: 1912, zh: "清帝溥仪颁布退位诏书，延续两千多年的帝制在中国结束。", en: "The Xuantong Emperor Puyi abdicates, ending more than two thousand years of imperial rule in China." },
+    { id: "history:02-12:2", year: 1912, zh: "隆裕太后代清帝溥仪颁布退位诏书，延续两千多年的帝制在中国结束。", en: "The Xuantong Emperor Puyi abdicates, ending more than two thousand years of imperial rule in China." },
   ],
   "02-13": [
     { id: "history:02-13:2", year: 1945, zh: "盟军开始轰炸德国德累斯顿，这座有「易北河上的佛罗伦萨」之称的古城几乎被夷为平地。", en: "Allied bombers begin their raids on Dresden; the city once called 'Florence on the Elbe' is largely destroyed." },
@@ -1485,7 +1485,7 @@ const HISTORY_MORE = {
     { id: "history:02-15:2", year: 1867, zh: "约翰·施特劳斯的圆舞曲《蓝色多瑙河》在维也纳首演。", en: "Johann Strauss II's waltz The Blue Danube is first performed in Vienna." },
   ],
   "02-16": [
-    { id: "history:02-16:2", year: 1937, zh: "杜邦公司的华莱士·卡罗瑟斯获得尼龙专利，这种合成纤维很快走进丝袜和降落伞。", en: "Wallace Carothers of DuPont is granted a patent for nylon, soon to be found in stockings and parachutes." },
+    { id: "history:02-16:2", year: 1937, zh: "杜邦公司的华莱士·卡罗瑟斯获得合成纤维相关专利，他的研究后来促成尼龙的商业化。", en: "Wallace Carothers of DuPont is granted a patent for synthetic fibers; his research will lead to the commercialization of nylon." },
   ],
   "02-17": [
     { id: "history:02-17:2", year: 1904, zh: "普契尼的歌剧《蝴蝶夫人》在米兰斯卡拉歌剧院首演，首演反响冷淡，修改后才大获成功。", en: "Puccini's opera Madama Butterfly premieres at La Scala in Milan; it fails at first and succeeds only after revision." },
@@ -1524,7 +1524,7 @@ const HISTORY_MORE = {
     { id: "history:02-28:2", year: 1922, zh: "英国单方面宣布结束对埃及的保护，埃及获得名义上的独立。", en: "Britain unilaterally ends its protectorate over Egypt, which gains nominal independence." },
   ],
   "02-29": [
-    { id: "history:02-29:2", year: 1792, zh: "意大利作曲家罗西尼出生，他的生日四年才有一次；《塞维利亚的理发师》出自他手。", en: "Gioachino Rossini is born, with a birthday that comes only once every four years; he will write The Barber of Seville." },
+    { id: "history:02-29:2", year: 1792, zh: "意大利作曲家罗西尼在闰日出生于佩萨罗，《塞维利亚的理发师》出自他手。", en: "Gioachino Rossini is born on leap day in Pesaro; he will write The Barber of Seville." },
   ],
   "03-01": [
     { id: "history:03-01:2", year: 1781, zh: "《邦联条例》获得全部十三个州批准生效，成为美国第一部宪法性文件。", en: "The Articles of Confederation take effect after ratification by all thirteen states, America's first constitution." },
@@ -1611,7 +1611,7 @@ const HISTORY_MORE = {
     { id: "history:03-28:2", year: 1930, zh: "土耳其正式将君士坦丁堡更名为伊斯坦布尔。", en: "Turkey officially renames Constantinople as Istanbul." },
   ],
   "03-29": [
-    { id: "history:03-29:2", year: 1867, zh: "英国议会通过《英属北美法案》，为加拿大联邦的建立奠定法律基础。", en: "The British North America Act receives royal assent, laying the legal foundation for the Canadian Confederation." },
+    { id: "history:03-29:2", year: 1867, zh: "《英属北美法案》获得英国王室御准，为加拿大联邦的建立奠定法律基础。", en: "The British North America Act receives royal assent, laying the legal foundation for the Canadian Confederation." },
   ],
   "03-30": [
     { id: "history:03-30:2", year: 1853, zh: "梵高出生于荷兰津德尔特，他一生只卖出过很少几幅画。", en: "Vincent van Gogh is born in Zundert, Netherlands; he will sell very few paintings in his lifetime." },
@@ -1704,7 +1704,7 @@ const HISTORY_MORE = {
     { id: "history:04-28:2", year: 1789, zh: "「邦蒂号」上发生叛变，船长布莱和 18 名船员被放到一条小艇上漂流。", en: "Mutiny breaks out on HMS Bounty; Captain Bligh and 18 men are set adrift in a small boat." },
   ],
   "04-29": [
-    { id: "history:04-29:2", year: 1913, zh: "吉迪恩·桑德巴克获得现代拉链的专利。", en: "Gideon Sundback is granted a patent for the modern zipper." },
+    { id: "history:04-29:2", year: 1913, zh: "吉迪恩·桑德巴克获得一种可分离扣件的专利，为现代拉链的发展奠定基础。", en: "Gideon Sundback is granted a patent for a separable fastener, a precursor to the modern zipper." },
   ],
   "04-30": [
     { id: "history:04-30:2", year: 1803, zh: "美国与法国签订路易斯安那购地条约，美国国土面积几乎翻了一番。", en: "The United States and France sign the Louisiana Purchase treaty, nearly doubling the size of the U.S." },
@@ -1752,7 +1752,7 @@ const HISTORY_MORE = {
     { id: "history:05-14:2", year: 1796, zh: "英国医生詹纳为一名男孩接种牛痘，开创了疫苗接种。", en: "English physician Edward Jenner inoculates a boy with cowpox, pioneering vaccination." },
   ],
   "05-15": [
-    { id: "history:05-15:2", year: 1940, zh: "麦当劳兄弟在加州圣贝纳迪诺开出第一家餐厅。", en: "The McDonald brothers open their first restaurant in San Bernardino, California." },
+    { id: "history:05-15:2", year: 1940, zh: "麦当劳兄弟在加州圣贝纳迪诺开出第一家麦当劳餐厅。", en: "The McDonald brothers open the first McDonald's restaurant in San Bernardino, California." },
   ],
   "05-16": [
     { id: "history:05-16:2", year: 1960, zh: "梅曼在加州休斯研究实验室让世界上第一台激光器发出光束。", en: "Theodore Maiman fires the world's first working laser at Hughes Research Laboratories in California." },
@@ -1842,7 +1842,7 @@ const HISTORY_MORE = {
     { id: "history:06-13:2", year: 1865, zh: "爱尔兰诗人叶芝出生于都柏林，后来获得诺贝尔文学奖。", en: "Irish poet W. B. Yeats is born in Dublin; he will later win the Nobel Prize in Literature." },
   ],
   "06-14": [
-    { id: "history:06-14:2", year: 1951, zh: "UNIVAC I 交付美国人口普查局使用，成为最早的商用电子计算机之一。", en: "UNIVAC I is dedicated at the U.S. Census Bureau, one of the first commercial electronic computers." },
+    { id: "history:06-14:2", year: 1951, zh: "为美国人口普查局研制的 UNIVAC I 在费城举行正式启用仪式，它是最早的商用电子计算机之一。", en: "A dedication ceremony for the U.S. Census Bureau's UNIVAC I, one of the earliest commercial electronic computers, is held in Philadelphia." },
   ],
   "06-15": [
     { id: "history:06-15:2", year: 1844, zh: "固特异获得橡胶硫化法的专利，橡胶从此不再遇热发黏、遇冷变脆。", en: "Charles Goodyear patents vulcanised rubber, which no longer turns sticky in heat or brittle in cold." },
@@ -1884,7 +1884,7 @@ const HISTORY_MORE = {
     { id: "history:06-27:2", year: 1967, zh: "世界上第一台自动取款机在伦敦恩菲尔德的巴克莱银行投入使用。", en: "The world's first cash machine goes into service at a Barclays branch in Enfield, London." },
   ],
   "06-28": [
-    { id: "history:06-28:2", year: 1919, zh: "协约国与德国签订《凡尔赛和约》，第一次世界大战正式结束。", en: "The Allies and Germany sign the Treaty of Versailles, formally ending the First World War." },
+    { id: "history:06-28:2", year: 1919, zh: "协约国与德国签订《凡尔赛和约》，条约于次年 1 月 10 日生效。", en: "The Allied and Associated Powers sign the Treaty of Versailles with Germany; it enters into force on January 10, 1920." },
   ],
   "06-29": [
     { id: "history:06-29:2", year: 1900, zh: "《小王子》作者圣埃克苏佩里出生于法国里昂。", en: "Antoine de Saint-Exupéry, author of The Little Prince, is born in Lyon, France." },
@@ -2088,7 +2088,7 @@ const HISTORY_MORE = {
     { id: "history:09-03:2", year: 1939, zh: "英国和法国对德国宣战。", en: "Britain and France declare war on Germany." },
   ],
   "09-04": [
-    { id: "history:09-04:2", year: 1882, zh: "爱迪生在纽约珍珠街建成的发电站开始供电，这是世界上第一座商用中心电站。", en: "Edison's Pearl Street Station in New York begins supplying power, the first commercial central power plant." },
+    { id: "history:09-04:2", year: 1882, zh: "爱迪生的纽约珍珠街发电站开始供电，这是他在美国的第一座中心发电站。", en: "Edison's Pearl Street Station in New York begins supplying power, his first central generating station in the United States." },
   ],
   "09-05": [
     { id: "history:09-05:2", year: 1882, zh: "纽约举行第一次劳工节游行，约有一万名工人参加。", en: "The first Labor Day parade is held in New York, with some 10,000 workers marching." },
@@ -2202,7 +2202,7 @@ const HISTORY_MORE = {
     { id: "history:10-11:2", year: 1962, zh: "梵蒂冈第二次大公会议开幕，天主教会开始了一系列改革。", en: "The Second Vatican Council opens, beginning a series of reforms in the Catholic Church." },
   ],
   "10-12": [
-    { id: "history:10-12:2", year: 1892, zh: "美国学校的孩子们第一次集体朗诵《效忠誓词》。", en: "American schoolchildren recite the Pledge of Allegiance together for the first time." },
+    { id: "history:10-12:2", year: 1892, zh: "纽约市学生在哥伦布日纪念活动中率先集体朗诵《效忠誓词》，全国性学校庆典随后于 10 月 21 日举行。", en: "New York City students are the first large group to recite the Pledge of Allegiance; the nationwide school celebration follows on October 21." },
   ],
   "10-13": [
     { id: "history:10-13:2", year: 1792, zh: "美国总统官邸白宫奠基。", en: "The cornerstone of the White House is laid in Washington." },
@@ -2214,7 +2214,7 @@ const HISTORY_MORE = {
     { id: "history:10-15:2", year: 2003, zh: "杨利伟乘神舟五号飞船进入太空，中国成为第三个独立将人送入太空的国家。", en: "Yang Liwei flies aboard Shenzhou 5, making China the third country to send a person into space on its own." },
   ],
   "10-16": [
-    { id: "history:10-16:2", year: 1846, zh: "波士顿麻省总医院首次公开演示乙醚麻醉，病人在手术中没有感到疼痛。", en: "Ether anaesthesia is demonstrated publicly for the first time at Massachusetts General Hospital; the patient feels no pain." },
+    { id: "history:10-16:2", year: 1846, zh: "波士顿麻省总医院公开演示手术中的乙醚麻醉，这次试验成为现代麻醉发展史上的重要里程碑。", en: "Ether anaesthesia is publicly demonstrated during surgery at Massachusetts General Hospital, a milestone in the development of modern anaesthesia." },
   ],
   "10-17": [
     { id: "history:10-17:2", year: 1931, zh: "芝加哥黑帮头目阿尔·卡彭因逃税被判有罪。", en: "Chicago gangster Al Capone is convicted of tax evasion." },
@@ -2232,7 +2232,7 @@ const HISTORY_MORE = {
     { id: "history:10-21:2", year: 1805, zh: "特拉法尔加海战中，纳尔逊率领英国舰队击败法西联合舰队，自己却中弹身亡。", en: "At the Battle of Trafalgar, Nelson's fleet defeats the French and Spanish, but Nelson himself is killed." },
   ],
   "10-22": [
-    { id: "history:10-22:2", year: 1797, zh: "法国人加尔纳兰从热气球上跳下，完成世界上第一次有记录的降落伞跳伞。", en: "André-Jacques Garnerin jumps from a balloon over Paris in the first recorded parachute descent." },
+    { id: "history:10-22:2", year: 1797, zh: "法国人加尔纳兰在巴黎上空从充氢气球进行降落伞下降，完成首次成功的气球跳伞。", en: "André-Jacques Garnerin makes the first successful parachute descent from a balloon, using a hydrogen balloon over Paris." },
   ],
   "10-23": [
     { id: "history:10-23:2", year: 2001, zh: "苹果公司推出第一代 iPod，「把一千首歌装进口袋」。", en: "Apple introduces the first iPod: '1,000 songs in your pocket'." },
@@ -2334,7 +2334,7 @@ const HISTORY_MORE = {
     { id: "history:11-24:2", year: 1874, zh: "格利登获得带刺铁丝网的专利，美国西部的开放牧场从此逐渐被围了起来。", en: "Joseph Glidden patents barbed wire, which will fence in the open range of the American West." },
   ],
   "11-25": [
-    { id: "history:11-25:2", year: 1952, zh: "阿加莎·克里斯蒂的舞台剧《捕鼠器》在伦敦首演，此后一直上演，成为世界上连演时间最长的戏剧。", en: "Agatha Christie's play The Mousetrap opens in London, beginning the longest run of any play in the world." },
+    { id: "history:11-25:2", year: 1952, zh: "阿加莎·克里斯蒂的舞台剧《捕鼠器》在伦敦开演，后来成为世界上演出历史最长的戏剧，曾因疫情短暂停演。", en: "Agatha Christie's play The Mousetrap opens in London and becomes the world's longest-running play, with a later interruption during the COVID-19 pandemic." },
   ],
   "11-26": [
     { id: "history:11-26:2", year: 1789, zh: "美国举行第一个由总统宣布的全国感恩节。", en: "The United States observes the first national Thanksgiving proclaimed by a president." },
