@@ -1581,7 +1581,7 @@ const HISTORY_MORE = {
     { id: "history:03-18:2", year: 1662, zh: "帕斯卡参与创办的公共马车线路在巴黎开通，被视为世界上最早的公共交通。", en: "A public carriage service co-founded by Blaise Pascal begins in Paris, often called the first public transit." },
   ],
   "03-19": [
-    { id: "history:03-19:2", year: 1918, zh: "美国国会通过《标准时间法》，正式确立时区并首次实行夏令时。", en: "The U.S. Congress passes the Standard Time Act, establishing time zones and introducing daylight saving time." },
+    { id: "history:03-19:2", year: 1918, zh: "美国《标准时间法》正式成为法律，确立联邦标准时区制度，并引入夏令时。", en: "The U.S. Standard Time Act is signed into law, establishing federal standard time zones and introducing daylight saving time." },
   ],
   "03-20": [
     { id: "history:03-20:2", year: 1800, zh: "伏打写信给英国皇家学会，介绍他发明的伏打电堆，这是世界上第一个电池。", en: "Alessandro Volta writes to the Royal Society describing his voltaic pile, the first electric battery." },
@@ -1605,7 +1605,7 @@ const HISTORY_MORE = {
     { id: "history:03-26:2", year: 1827, zh: "贝多芬在维也纳去世，据说送葬队伍有上万人。", en: "Ludwig van Beethoven dies in Vienna; tens of thousands are said to line the funeral route." },
   ],
   "03-27": [
-    { id: "history:03-27:2", year: 1845, zh: "伦琴出生于德国伦内普，他后来发现了 X 射线，并获得第一届诺贝尔物理学奖。", en: "Wilhelm Röntgen is born in Lennep, Germany; he will discover X-rays and win the first Nobel Prize in Physics." },
+    { id: "history:03-27:2", year: 1845, zh: "威廉·伦琴出生于普鲁士伦内普（今德国），他后来发现X射线，并获得首届诺贝尔物理学奖。", en: "Wilhelm Röntgen is born in Lennep, Prussia (now Germany); he will discover X-rays and receive the first Nobel Prize in Physics." },
   ],
   "03-28": [
     { id: "history:03-28:2", year: 1930, zh: "土耳其正式将君士坦丁堡更名为伊斯坦布尔。", en: "Turkey officially renames Constantinople as Istanbul." },
@@ -1614,7 +1614,7 @@ const HISTORY_MORE = {
     { id: "history:03-29:2", year: 1867, zh: "《英属北美法案》获得英国王室御准，为加拿大联邦的建立奠定法律基础。", en: "The British North America Act receives royal assent, laying the legal foundation for the Canadian Confederation." },
   ],
   "03-30": [
-    { id: "history:03-30:2", year: 1853, zh: "梵高出生于荷兰津德尔特，他一生只卖出过很少几幅画。", en: "Vincent van Gogh is born in Zundert, Netherlands; he will sell very few paintings in his lifetime." },
+    { id: "history:03-30:2", year: 1853, zh: "文森特·梵高出生于荷兰津德尔特，他的绘画成就在去世后获得广泛认可。", en: "Vincent van Gogh is born in Zundert, the Netherlands; his artistic achievements will gain widespread recognition after his death." },
   ],
   "03-31": [
     { id: "history:03-31:2", year: 1596, zh: "笛卡尔出生于法国，他留下了「我思故我在」这句话。", en: "René Descartes is born in France; he will leave the world 'I think, therefore I am.'" },
