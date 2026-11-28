@@ -1707,7 +1707,7 @@ const HISTORY_MORE = {
     { id: "history:04-29:2", year: 1913, zh: "吉迪恩·桑德巴克获得一种可分离扣件的专利，为现代拉链的发展奠定基础。", en: "Gideon Sundback is granted a patent for a separable fastener, a precursor to the modern zipper." },
   ],
   "04-30": [
-    { id: "history:04-30:2", year: 1803, zh: "美国与法国签订路易斯安那购地条约，美国国土面积几乎翻了一番。", en: "The United States and France sign the Louisiana Purchase treaty, nearly doubling the size of the U.S." },
+    { id: "history:04-30:2", year: 1803, zh: "美国与法国达成路易斯安那购地协议，条约署期为4月30日，使美国领土面积近乎翻倍。", en: "The Louisiana Purchase treaty between the United States and France is dated April 30, nearly doubling the size of the United States." },
   ],
   "05-01": [
     { id: "history:05-01:2", year: 1851, zh: "伦敦万国工业博览会在水晶宫开幕，这是世界上第一届世博会。", en: "The Great Exhibition opens in London's Crystal Palace, the first world's fair." },
@@ -1767,7 +1767,7 @@ const HISTORY_MORE = {
     { id: "history:05-19:2", year: 1536, zh: "英王亨利八世的第二任王后安妮·博林在伦敦塔被处决。", en: "Anne Boleyn, second wife of Henry VIII, is executed at the Tower of London." },
   ],
   "05-20": [
-    { id: "history:05-20:2", year: 1873, zh: "李维·斯特劳斯和雅各布·戴维斯获得铆钉加固工装裤的专利，牛仔裤由此诞生。", en: "Levi Strauss and Jacob Davis receive a patent for riveted work trousers: the birth of blue jeans." },
+    { id: "history:05-20:2", year: 1873, zh: "雅各布·戴维斯与利维·施特劳斯公司获得用金属铆钉加固口袋开口的专利，标志着现代牛仔裤的诞生。", en: "Jacob Davis and Levi Strauss & Co. receive a patent for reinforcing pocket openings with metal rivets, marking the birth of modern blue jeans." },
   ],
   "05-21": [
     { id: "history:05-21:2", year: 1881, zh: "克拉拉·巴顿创立美国红十字会。", en: "Clara Barton founds the American Red Cross." },
